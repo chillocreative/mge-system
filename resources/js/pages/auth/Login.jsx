@@ -124,6 +124,34 @@ export default function Login() {
                         </Link>
                     </p>
                 </div>
+
+                {/* Demo credentials */}
+                <div className="mt-4 rounded-lg border border-accent-400/30 bg-accent-50 p-4">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-accent-700">Demo Accounts</p>
+                    <div className="space-y-2 text-sm">
+                        {[
+                            { role: 'Admin & HR', email: 'admin@mge-pms.test' },
+                            { role: 'Finances & HR', email: 'finance@mge-pms.test' },
+                            { role: 'Projects', email: 'pm@mge-pms.test' },
+                        ].map((acc) => (
+                            <button
+                                key={acc.email}
+                                type="button"
+                                onClick={() => {
+                                    setFormData({ email: acc.email, password: 'password' });
+                                    setErrors({});
+                                }}
+                                className="flex w-full items-center justify-between rounded-md bg-white px-3 py-2 text-left ring-1 ring-primary-200 transition-colors hover:ring-accent-400"
+                            >
+                                <span className="font-medium text-primary-700">{acc.role}</span>
+                                <span className="text-xs text-primary-400">{acc.email}</span>
+                            </button>
+                        ))}
+                        <p className="pt-1 text-center text-xs text-primary-400">
+                            Password: <code className="rounded bg-primary-200 px-1.5 py-0.5 font-mono text-primary-600">password</code>
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     );
