@@ -5,69 +5,76 @@ import toast from 'react-hot-toast';
 
 function BrandPanel() {
     return (
-        <div className="relative hidden lg:flex lg:w-1/2 flex-col bg-primary-700 overflow-hidden">
-            {/* Nature-inspired pattern background */}
-            <div
-                className="absolute inset-0 opacity-10"
+        <div className="relative hidden lg:flex lg:w-1/2 flex-col bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700 overflow-hidden">
+            {/* Decorative abstract shapes */}
+            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-accent-400/10 blur-3xl" />
+            <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-96 h-96 rounded-full bg-primary-500/10 blur-3xl" />
+            
+            <div className="absolute inset-0 opacity-[0.03]" 
                 style={{
-                    backgroundImage:
-                        'radial-gradient(circle at 2px 2px, rgba(163,230,53,0.4) 1px, transparent 0)',
-                    backgroundSize: '32px 32px',
-                }}
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2v-4h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2v-4h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+                }} 
             />
-            {/* Bottom lime accent bar */}
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-accent-400" />
 
-            <div className="relative z-10 flex flex-1 flex-col p-12">
-                {/* Logo */}
-                <div className="flex items-center gap-3">
-                    <svg width="44" height="44" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <ellipse cx="20" cy="22" rx="18" ry="14" stroke="#bef264" strokeWidth="2.5" />
-                        <path d="M12 24C12 20 9 17 9 17C9 17 6 20 6 24C6 28 9 29 9 29C9 29 12 28 12 24Z" fill="#bef264" />
-                        <path d="M23 21C23 16 20 13 20 13C20 13 17 16 17 21C17 26 20 29 20 29C20 29 23 26 23 21Z" fill="#bef264" />
-                        <path d="M34 24C34 20 31 17 31 17C31 17 28 20 28 24C28 28 31 29 31 29C31 29 34 28 34 24Z" fill="#bef264" />
-                    </svg>
-                    <span className="text-xl font-bold tracking-tight text-white">MGE-PMS</span>
+            <div className="relative z-10 flex flex-1 flex-col p-16">
+                {/* Logo Section */}
+                <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md ring-1 ring-white/20">
+                        <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <ellipse cx="20" cy="22" rx="18" ry="14" stroke="#bef264" strokeWidth="2.5" />
+                            <path d="M12 24C12 20 9 17 9 17C9 17 6 20 6 24C6 28 9 29 9 29C9 29 12 28 12 24Z" fill="#bef264" />
+                            <path d="M23 21C23 16 20 13 20 13C20 13 17 16 17 21C17 26 20 29 20 29C20 29 23 26 23 21Z" fill="#bef264" />
+                            <path d="M34 24C34 20 31 17 31 17C31 17 28 20 28 24C28 28 31 29 31 29C31 29 34 28 34 24Z" fill="#bef264" />
+                        </svg>
+                    </div>
+                    <div>
+                        <span className="block text-2xl font-black tracking-tighter text-white">MGE-PMS</span>
+                        <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-accent-300/80">Engineering Excellence</span>
+                    </div>
                 </div>
 
-                {/* Hero text */}
-                <div className="mb-auto mt-auto flex flex-col">
-                    <div className="mb-3 inline-flex">
-                        <span className="rounded-full border border-accent-400/40 bg-accent-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-300">
-                            Multi Green Engineering
+                {/* Content Section */}
+                <div className="mb-auto mt-auto max-w-lg">
+                    <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur-sm">
+                        <span className="relative flex h-2 w-2">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-400 opacity-75"></span>
+                            <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-400"></span>
                         </span>
+                        <span className="text-xs font-bold uppercase tracking-widest text-white/90">v2.0 Enterprise Release</span>
                     </div>
-                    <h1 className="text-4xl font-extrabold leading-tight text-white">
-                        Build Green.<br />
-                        <span className="text-accent-400">Engineering Excellence.</span>
+                    
+                    <h1 className="text-5xl font-black leading-[1.1] text-white">
+                        Constructing the <br />
+                        <span className="bg-gradient-to-r from-accent-300 to-accent-500 bg-clip-text text-transparent">Digital Future.</span>
                     </h1>
-                    <p className="mt-4 max-w-xs text-base leading-relaxed text-primary-100">
-                        A unified platform for project tracking, safety compliance, HR, and finance — tailored for the engineering sector.
+                    
+                    <p className="mt-6 text-lg leading-relaxed text-primary-100/80">
+                        Seamlessly manage civil engineering projects, track resources, and ensure safety compliance with our integrated PMS.
                     </p>
 
-                    {/* Feature pills */}
-                    <div className="mt-8 flex flex-wrap gap-2">
-                        {['Civil Engineering', 'Building Construction', 'Project Management', 'Safety Compliance'].map((f) => (
-                            <span
-                                key={f}
-                                className="rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium text-primary-200 ring-1 ring-white/10"
-                            >
-                                {f}
-                            </span>
+                    <div className="mt-10 grid grid-cols-2 gap-6">
+                        {[
+                            { label: 'Efficiency', desc: 'Optimized workflows' },
+                            { label: 'Compliance', desc: 'ISO 9001 standards' },
+                        ].map((stat) => (
+                            <div key={stat.label} className="border-l-2 border-accent-400/30 pl-4">
+                                <div className="text-sm font-bold text-white">{stat.label}</div>
+                                <div className="text-xs text-primary-200/60">{stat.desc}</div>
+                            </div>
                         ))}
                     </div>
                 </div>
 
-                {/* Decorative hills/growth SVG */}
-                <div className="mt-auto opacity-20">
-                    <svg viewBox="0 0 400 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
-                        <path d="M0 80C100 80 150 20 200 50C250 80 300 10 400 40V80H0Z" fill="#bef264" />
-                    </svg>
+                {/* Footer Section */}
+                <div className="flex items-center justify-between border-t border-white/10 pt-8">
+                    <p className="text-xs font-medium text-primary-300">
+                        © {new Date().getFullYear()} Multi Green Engineering Sdn. Bhd.
+                    </p>
+                    <div className="flex gap-4 text-[10px] font-bold uppercase tracking-widest text-primary-400">
+                        <span>Privacy</span>
+                        <span>Terms</span>
+                    </div>
                 </div>
-
-                <p className="mt-4 text-xs text-primary-300">
-                    © {new Date().getFullYear()} Multi Green Engineering Sdn. Bhd.
-                </p>
             </div>
         </div>
     );
@@ -95,13 +102,13 @@ export default function Login() {
         setErrors({});
         try {
             await login(formData);
-            toast.success('Welcome back!');
+            toast.success('Access Granted. Welcome back.');
             navigate(from, { replace: true });
         } catch (error) {
             if (error.response?.status === 422) {
                 setErrors(error.response.data.errors || {});
             } else {
-                toast.error(error.response?.data?.message || 'Login failed');
+                toast.error(error.response?.data?.message || 'Authentication failed');
             }
         } finally {
             setSubmitting(false);
@@ -114,37 +121,39 @@ export default function Login() {
     };
 
     const inputBase =
-        'w-full rounded-lg border px-4 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-1';
-    const inputOk = `${inputBase} border-primary-200 bg-white text-primary-700 placeholder-primary-300 focus:border-accent-400`;
-    const inputErr = `${inputBase} border-red-400 bg-red-50 text-primary-700 placeholder-primary-300 focus:border-red-500 focus:ring-red-400`;
+        'w-full rounded-xl border px-4 py-3.5 text-sm transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:ring-offset-0';
+    const inputOk = `${inputBase} border-primary-100 bg-white text-primary-900 placeholder-primary-300 hover:border-primary-300 focus:border-primary-600 shadow-sm`;
+    const inputErr = `${inputBase} border-red-200 bg-red-50 text-red-900 placeholder-red-300 focus:border-red-500 shadow-sm`;
 
     return (
-        <div className="flex min-h-screen">
+        <div className="flex min-h-screen bg-white">
             <BrandPanel />
 
             {/* Form panel */}
-            <div className="flex flex-1 flex-col items-center justify-center bg-primary-50 px-6 py-12 lg:px-12">
-                {/* Mobile logo */}
-                <div className="mb-8 flex flex-col items-center lg:hidden">
-                    <svg width="48" height="48" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <ellipse cx="20" cy="22" rx="18" ry="14" stroke="#84cc16" strokeWidth="2.5" />
-                        <path d="M12 24C12 20 9 17 9 17C9 17 6 20 6 24C6 28 9 29 9 29C9 29 12 28 12 24Z" fill="#15803d" />
-                        <path d="M23 21C23 16 20 13 20 13C20 13 17 16 17 21C17 26 20 29 20 29C20 29 23 26 23 21Z" fill="#15803d" />
-                        <path d="M34 24C34 20 31 17 31 17C31 17 28 20 28 24C28 28 31 29 31 29C31 29 34 28 34 24Z" fill="#15803d" />
-                    </svg>
-                    <span className="mt-3 text-xl font-bold text-primary-700">MGE-PMS</span>
+            <div className="flex flex-1 flex-col items-center justify-center px-8 py-12 lg:px-20">
+                {/* Mobile branding */}
+                <div className="mb-12 flex flex-col items-center lg:hidden">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-700 shadow-lg shadow-primary-700/20">
+                        <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <ellipse cx="20" cy="22" rx="18" ry="14" stroke="#bef264" strokeWidth="2.5" />
+                            <path d="M12 24C12 20 9 17 9 17C9 17 6 20 6 24C6 28 9 29 9 29C9 29 12 28 12 24Z" fill="#bef264" />
+                            <path d="M23 21C23 16 20 13 20 13C20 13 17 16 17 21C17 26 20 29 20 29C20 29 23 26 23 21Z" fill="#bef264" />
+                            <path d="M34 24C34 20 31 17 31 17C31 17 28 20 28 24C28 28 31 29 31 29C31 29 34 28 34 24Z" fill="#bef264" />
+                        </svg>
+                    </div>
+                    <span className="mt-4 text-2xl font-black tracking-tighter text-primary-900">MGE-PMS</span>
                 </div>
 
-                <div className="w-full max-w-sm">
-                    <div className="mb-8">
-                        <h2 className="text-2xl font-bold text-primary-700">Welcome back</h2>
-                        <p className="mt-1 text-sm text-primary-400">Sign in to your account to continue</p>
+                <div className="w-full max-w-[400px]">
+                    <div className="mb-10 text-center lg:text-left">
+                        <h2 className="text-3xl font-black tracking-tight text-primary-900">Portal Login</h2>
+                        <p className="mt-2 text-sm font-medium text-primary-500">Enter your credentials to manage infrastructure projects</p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        <div>
-                            <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-primary-600">
-                                Email address
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="space-y-1.5">
+                            <label htmlFor="email" className="text-xs font-bold uppercase tracking-widest text-primary-700">
+                                Corporate Email
                             </label>
                             <input
                                 id="email"
@@ -155,21 +164,21 @@ export default function Login() {
                                 value={formData.email}
                                 onChange={handleChange}
                                 className={errors.email ? inputErr : inputOk}
-                                placeholder="you@mge-eng.com"
+                                placeholder="name@mge-eng.com"
                             />
-                            {errors.email && <p className="mt-1.5 text-xs text-red-600">{errors.email[0]}</p>}
+                            {errors.email && <p className="mt-1.5 text-[11px] font-bold text-red-600">{errors.email[0]}</p>}
                         </div>
 
-                        <div>
-                            <div className="mb-1.5 flex items-center justify-between">
-                                <label htmlFor="password" className="text-sm font-medium text-primary-600">
-                                    Password
+                        <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                                <label htmlFor="password" className="text-xs font-bold uppercase tracking-widest text-primary-700">
+                                    Access Code
                                 </label>
                                 <Link
                                     to="/forgot-password"
-                                    className="text-xs font-medium text-accent-600 hover:text-accent-500"
+                                    className="text-[11px] font-bold text-primary-500 hover:text-primary-900 transition-colors"
                                 >
-                                    Forgot password?
+                                    Recovery Access
                                 </Link>
                             </div>
                             <div className="relative">
@@ -181,85 +190,96 @@ export default function Login() {
                                     required
                                     value={formData.password}
                                     onChange={handleChange}
-                                    className={`${errors.password ? inputErr : inputOk} pr-11`}
-                                    placeholder="Enter your password"
+                                    className={`${errors.password ? inputErr : inputOk} pr-12`}
+                                    placeholder="••••••••"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600"
                                     tabIndex={-1}
                                 >
                                     {showPassword ? (
-                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                                         </svg>
                                     ) : (
-                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                         </svg>
                                     )}
                                 </button>
                             </div>
-                            {errors.password && <p className="mt-1.5 text-xs text-red-600">{errors.password[0]}</p>}
+                            {errors.password && <p className="mt-1.5 text-[11px] font-bold text-red-600">{errors.password[0]}</p>}
                         </div>
 
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="w-full rounded-lg bg-primary-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.98]"
+                            className="group relative flex w-full items-center justify-center overflow-hidden rounded-xl bg-primary-800 px-4 py-4 text-sm font-bold text-white shadow-xl shadow-primary-900/10 transition-all hover:bg-primary-900 hover:shadow-primary-900/20 active:scale-[0.98] disabled:opacity-70"
                         >
-                            {submitting ? (
-                                <span className="flex items-center justify-center gap-2">
-                                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                                    </svg>
-                                    Signing in...
-                                </span>
-                            ) : (
-                                'Sign in'
-                            )}
+                            <span className="relative z-10 flex items-center gap-2">
+                                {submitting ? (
+                                    <>
+                                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                        </svg>
+                                        Authenticating...
+                                    </>
+                                ) : (
+                                    <>
+                                        Sign In to Portal
+                                        <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                        </svg>
+                                    </>
+                                )}
+                            </span>
                         </button>
                     </form>
 
-                    <p className="mt-6 text-center text-sm text-primary-400">
-                        Don't have an account?{' '}
-                        <Link to="/register" className="font-semibold text-accent-600 hover:text-accent-500">
-                            Request access
-                        </Link>
-                    </p>
+                    <div className="mt-10">
+                        <div className="relative flex items-center py-4">
+                            <div className="flex-grow border-t border-primary-100"></div>
+                            <span className="mx-4 flex-shrink text-[10px] font-black uppercase tracking-[0.2em] text-primary-300">Quick Access Tools</span>
+                            <div className="flex-grow border-t border-primary-100"></div>
+                        </div>
 
-                    {/* Demo credentials */}
-                    <div className="mt-8 rounded-xl border border-accent-400/25 bg-accent-50 p-4">
-                        <p className="mb-3 text-xs font-bold uppercase tracking-widest text-accent-700">
-                            Demo Accounts
-                        </p>
-                        <div className="space-y-2">
+                        <div className="mt-6 grid grid-cols-1 gap-3">
                             {[
-                                { role: 'Admin & HR', email: 'admin@mge-pms.test' },
-                                { role: 'Finances & HR', email: 'finance@mge-pms.test' },
-                                { role: 'Projects', email: 'pm@mge-pms.test' },
+                                { role: 'Project Director', email: 'admin@mge-pms.test', icon: '🏗️' },
+                                { role: 'Safety Inspector', email: 'pm@mge-pms.test', icon: '🦺' },
+                                { role: 'Finance Control', email: 'finance@mge-pms.test', icon: '📊' },
                             ].map((acc) => (
                                 <button
                                     key={acc.email}
                                     type="button"
                                     onClick={() => fillDemo(acc.email)}
-                                    className="flex w-full items-center justify-between rounded-lg bg-white px-3 py-2 text-left ring-1 ring-primary-200 transition-all hover:ring-accent-400 hover:shadow-sm"
+                                    className="group flex w-full items-center gap-4 rounded-xl border border-primary-50 bg-white p-3.5 text-left transition-all hover:border-accent-400 hover:bg-accent-50/30 hover:shadow-md active:scale-[0.99]"
                                 >
-                                    <span className="text-sm font-semibold text-primary-700">{acc.role}</span>
-                                    <span className="text-xs text-primary-400">{acc.email}</span>
+                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-lg transition-colors group-hover:bg-accent-100">
+                                        {acc.icon}
+                                    </span>
+                                    <div className="flex-1 overflow-hidden">
+                                        <div className="text-sm font-bold text-primary-900">{acc.role}</div>
+                                        <div className="truncate text-xs text-primary-400">{acc.email}</div>
+                                    </div>
+                                    <svg className="h-4 w-4 opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100 text-accent-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" />
+                                    </svg>
                                 </button>
                             ))}
                         </div>
-                        <p className="mt-2.5 text-center text-xs text-primary-400">
-                            Password:{' '}
-                            <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs text-primary-600 ring-1 ring-primary-200">
-                                password
-                            </code>
-                        </p>
                     </div>
+
+                    <p className="mt-10 text-center text-sm font-medium text-primary-500">
+                        Unauthorized access is prohibited.{' '}
+                        <Link to="/register" className="font-bold text-primary-900 underline decoration-accent-400 decoration-2 underline-offset-4 hover:text-accent-700">
+                            Request Credentials
+                        </Link>
+                    </p>
                 </div>
             </div>
         </div>

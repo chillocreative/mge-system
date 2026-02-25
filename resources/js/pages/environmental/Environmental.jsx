@@ -42,7 +42,7 @@ export default function Environmental() {
     const [showDetail, setShowDetail] = useState(null);
 
     useEffect(() => {
-        projectService.getProjects({ per_page: 100 }).then(r => setProjects(r.data.data?.data || [])).catch(() => {});
+        projectService.list({ per_page: 100 }).then(r => setProjects(r.data?.data || [])).catch(() => {});
     }, []);
 
     const fetchOverview = useCallback(async () => {

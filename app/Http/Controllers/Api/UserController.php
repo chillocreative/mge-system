@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Services\UserService;
-use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -13,14 +12,14 @@ class UserController extends Controller
 {
     public function __construct(
         private UserService $userService,
-        private AuthService $authService,
     ) {}
 
     public function index(Request $request): JsonResponse
     {
         $perPage = $request->integer('per_page', 15);
+        $status = $request->query('status');
 
-        $users = $this->userService->listUsers($perPage);
+        $users = $this->userService->listUsers($perPage, $status);
 
         return $this->success(
             UserResource::collection($users)->response()->getData(true)
@@ -40,8 +39,7 @@ class UserController extends Controller
             'role' => ['required', 'string', 'exists:roles,name'],
         ]);
 
-        $user = $this->authService->register($validated);
-        $user->load(['department', 'designation', 'roles', 'permissions']);
+        $user = $this->userService->createUser($validated);
 
         return $this->created(new UserResource($user), 'User created successfully.');
     }
@@ -61,13 +59,31 @@ class UserController extends Controller
             'phone' => ['nullable', 'string', 'max:20'],
             'department_id' => ['nullable', 'exists:departments,id'],
             'designation_id' => ['nullable', 'exists:designations,id'],
-            'status' => ['sometimes', 'in:active,inactive,suspended'],
+            'status' => ['sometimes', 'in:pending,active,inactive,suspended,rejected'],
             'role' => ['nullable', 'string', 'exists:roles,name'],
         ]);
 
         $user = $this->userService->updateUser($id, $validated);
 
         return $this->success(new UserResource($user), 'User updated successfully.');
+    }
+
+    public function approve(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'role' => ['required', 'string', 'exists:roles,name'],
+        ]);
+
+        $user = $this->userService->approveUser($id, $validated['role']);
+
+        return $this->success(new UserResource($user), 'User approved successfully.');
+    }
+
+    public function reject(int $id): JsonResponse
+    {
+        $user = $this->userService->rejectUser($id);
+
+        return $this->success(new UserResource($user), 'User rejected successfully.');
     }
 
     public function destroy(int $id): JsonResponse

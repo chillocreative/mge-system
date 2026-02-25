@@ -176,6 +176,10 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middleware('permission:users.edit');
         Route::delete('/{user}', [UserController::class, 'destroy'])
             ->middleware('permission:users.delete');
+        Route::patch('/{user}/approve', [UserController::class, 'approve'])
+            ->middleware('permission:users.approve');
+        Route::patch('/{user}/reject', [UserController::class, 'reject'])
+            ->middleware('permission:users.approve');
     });
 
     /*

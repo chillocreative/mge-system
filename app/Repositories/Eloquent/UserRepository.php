@@ -34,4 +34,15 @@ class UserRepository extends BaseRepository implements UserRepositoryInterface
     {
         return $this->model->where('email', $email)->first();
     }
+
+    public function getAllUsers(int $perPage = 15, ?string $status = null): LengthAwarePaginator
+    {
+        $query = $this->model->with(['department', 'designation'])->latest();
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        return $query->paginate($perPage);
+    }
 }

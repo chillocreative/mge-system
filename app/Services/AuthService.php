@@ -22,11 +22,8 @@ class AuthService
             'email' => $data['email'],
             'password' => $data['password'],
             'phone' => $data['phone'] ?? null,
-            'department_id' => $data['department_id'] ?? null,
-            'designation_id' => $data['designation_id'] ?? null,
+            'status' => 'pending',
         ]);
-
-        $user->assignRole($data['role'] ?? 'employee');
 
         return $user;
     }
@@ -42,8 +39,14 @@ class AuthService
         }
 
         if ($user->status !== 'active') {
+            $message = match ($user->status) {
+                'pending' => 'Your account is pending admin approval.',
+                'rejected' => 'Your registration has been rejected.',
+                default => 'Your account is not active. Please contact administrator.',
+            };
+
             throw ValidationException::withMessages([
-                'email' => ['Your account is not active. Please contact administrator.'],
+                'email' => [$message],
             ]);
         }
 

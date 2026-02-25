@@ -107,4 +107,9 @@ class User extends Authenticatable
     {
         return $query->where('status', 'active');
     }
+
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
+    }
 }

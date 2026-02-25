@@ -42,6 +42,7 @@ class RolePermissionSeeder extends Seeder
             'users.create',
             'users.edit',
             'users.delete',
+            'users.approve',
 
             // Departments (HR)
             'departments.view',
@@ -155,11 +156,12 @@ class RolePermissionSeeder extends Seeder
             'dashboard.view-finance-stats',
             'dashboard.view-hr-stats',
 
-            // HR — Users (full CRUD)
+            // HR — Users (full CRUD + approve)
             'users.view',
             'users.create',
             'users.edit',
             'users.delete',
+            'users.approve',
 
             // HR — Departments (full CRUD)
             'departments.view',
@@ -267,6 +269,18 @@ class RolePermissionSeeder extends Seeder
             'environmental.view',
             'environmental.create',
             'environmental.manage',
+        ]);
+
+        /*
+        |------------------------------------------------------------------
+        | ROLE: Employee
+        |------------------------------------------------------------------
+        | Default role for approved self-registered users.
+        | Minimal permissions: dashboard view only.
+        */
+        $employee = Role::firstOrCreate(['name' => 'Employee', 'guard_name' => 'web']);
+        $employee->syncPermissions([
+            'dashboard.view',
         ]);
     }
 }

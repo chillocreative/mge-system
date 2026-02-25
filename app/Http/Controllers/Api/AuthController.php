@@ -17,14 +17,11 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request): JsonResponse
     {
-        $user = $this->authService->register($request->validated());
-        $user->load(['department', 'designation', 'roles', 'permissions']);
+        $this->authService->register($request->validated());
 
-        Auth::login($user);
-
-        return $this->created(
-            new UserResource($user),
-            'Registration successful.'
+        return $this->success(
+            null,
+            'Registration successful. Your account is pending admin approval.'
         );
     }
 
