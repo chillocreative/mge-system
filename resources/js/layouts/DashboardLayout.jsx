@@ -77,8 +77,11 @@ export default function DashboardLayout() {
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 }`}
             >
-                <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
-                    <Logo variant="light" size={32} showText />
+                <div className="flex h-20 items-center justify-between border-b border-white/10 px-4">
+                    <div className="flex flex-col">
+                        <Logo variant="light" size={32} showText />
+                        <span className="ml-10 text-[10px] font-medium tracking-widest text-primary-400 uppercase">Project Management System</span>
+                    </div>
                     <button
                         onClick={() => setSidebarOpen(false)}
                         className="rounded-lg p-1 text-primary-400 hover:text-white lg:hidden"
@@ -101,14 +104,6 @@ export default function DashboardLayout() {
                     ))}
                 </nav>
 
-                <div className="border-t border-white/10 p-4">
-                    <div className="text-xs text-primary-400">
-                        MGE-PMS
-                    </div>
-                    <div className="text-xs text-primary-400">
-                        Project Management System
-                    </div>
-                </div>
             </aside>
 
             {/* Main content */}
