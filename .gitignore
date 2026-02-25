@@ -4,6 +4,7 @@
 .env
 .env.backup
 .env.production
+.env.server
 .phpactor.json
 .phpunit.result.cache
 /.fleet
@@ -14,7 +15,7 @@
 /.zed
 /auth.json
 /node_modules
-/public/build
+# /public/build
 /public/hot
 /public/storage
 /storage/*.key
