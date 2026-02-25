@@ -9,25 +9,25 @@
     --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 
-    /* Navy Blue primary palette (Engineering Theme) */
-    --color-primary-50: #f8fafc;
-    --color-primary-100: #f1f5f9;
-    --color-primary-200: #e2e8f0;
-    --color-primary-300: #cbd5e1;
-    --color-primary-400: #64748b;
-    --color-primary-500: #334155;
-    --color-primary-600: #1e293b;
-    --color-primary-700: #0f172a;
-    --color-primary-800: #0a1120;
-    --color-primary-900: #060c17;
+    /* Multi Green primary palette (Green Theme) */
+    --color-primary-50: #f0fdf4;
+    --color-primary-100: #dcfce7;
+    --color-primary-200: #bbf7d0;
+    --color-primary-300: #86efac;
+    --color-primary-400: #4ade80;
+    --color-primary-500: #22c55e;
+    --color-primary-600: #16a34a;
+    --color-primary-700: #15803d;
+    --color-primary-800: #166534;
+    --color-primary-900: #14532d;
 
-    /* Safety Yellow accent palette */
-    --color-accent-50: #fefce8;
-    --color-accent-100: #fef9c3;
-    --color-accent-200: #fef08a;
-    --color-accent-300: #fde047;
-    --color-accent-400: #facc15;
-    --color-accent-500: #eab308;
-    --color-accent-600: #ca8a04;
-    --color-accent-700: #a16207;
+    /* Lime/Yellow accent palette */
+    --color-accent-50: #f7fee7;
+    --color-accent-100: #ecfcc1;
+    --color-accent-200: #d9f99d;
+    --color-accent-300: #bef264;
+    --color-accent-400: #a3e635;
+    --color-accent-500: #84cc16;
+    --color-accent-600: #65a30d;
+    --color-accent-700: #4d7c0f;
 }

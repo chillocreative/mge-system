@@ -10,26 +10,27 @@ function BrandPanel() {
                 className="absolute inset-0 opacity-10"
                 style={{
                     backgroundImage:
-                        'linear-gradient(rgba(250,204,21,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(250,204,21,0.4) 1px, transparent 1px)',
-                    backgroundSize: '48px 48px',
+                        'radial-gradient(circle at 2px 2px, rgba(163,230,53,0.4) 1px, transparent 0)',
+                    backgroundSize: '32px 32px',
                 }}
             />
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-accent-400" />
 
-            <div className="relative z-10 flex flex-col flex-1 p-12">
+            <div className="relative z-10 flex flex-1 flex-col p-12">
                 {/* Logo */}
                 <div className="flex items-center gap-3">
                     <svg width="44" height="44" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="40" height="40" rx="8" fill="rgba(255,255,255,0.08)" />
-                        <path d="M10 30V12L20 22L30 12V30" stroke="#f1f5f9" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                        <line x1="8" y1="35" x2="32" y2="35" stroke="#facc15" strokeWidth="2.5" strokeLinecap="round" />
+                        <ellipse cx="20" cy="22" rx="18" ry="14" stroke="#bef264" strokeWidth="2.5" />
+                        <path d="M12 24C12 20 9 17 9 17C9 17 6 20 6 24C6 28 9 29 9 29C9 29 12 28 12 24Z" fill="#bef264" />
+                        <path d="M23 21C23 16 20 13 20 13C20 13 17 16 17 21C17 26 20 29 20 29C20 29 23 26 23 21Z" fill="#bef264" />
+                        <path d="M34 24C34 20 31 17 31 17C31 17 28 20 28 24C28 28 31 29 31 29C31 29 34 28 34 24Z" fill="#bef264" />
                     </svg>
                     <span className="text-xl font-bold tracking-tight text-white">MGE-PMS</span>
                 </div>
 
-                <div className="mt-auto mb-auto flex flex-col">
+                <div className="mb-auto mt-auto flex flex-col">
                     <div className="mb-3 inline-flex">
-                        <span className="rounded-full border border-accent-400/40 bg-accent-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-400">
+                        <span className="rounded-full border border-accent-400/40 bg-accent-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-300">
                             New Account
                         </span>
                     </div>
@@ -37,7 +38,7 @@ function BrandPanel() {
                         Join the<br />
                         <span className="text-accent-400">MGE Team.</span>
                     </h1>
-                    <p className="mt-4 max-w-xs text-base leading-relaxed text-primary-300">
+                    <p className="mt-4 max-w-xs text-base leading-relaxed text-primary-100">
                         Create your account and get access to project dashboards, safety logs, and collaboration tools.
                     </p>
 
@@ -49,7 +50,7 @@ function BrandPanel() {
                         ].map((item) => (
                             <div key={item.text} className="flex items-center gap-3">
                                 <span className="text-base">{item.icon}</span>
-                                <span className="text-sm text-primary-300">{item.text}</span>
+                                <span className="text-sm text-primary-200">{item.text}</span>
                             </div>
                         ))}
                     </div>
@@ -57,20 +58,10 @@ function BrandPanel() {
 
                 <div className="mt-auto opacity-20">
                     <svg viewBox="0 0 400 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
-                        <line x1="0" y1="70" x2="400" y2="70" stroke="#facc15" strokeWidth="2" />
-                        <rect x="20" y="20" width="12" height="50" fill="#facc15" />
-                        <rect x="60" y="35" width="12" height="35" fill="#facc15" />
-                        <rect x="100" y="10" width="12" height="60" fill="#facc15" />
-                        <rect x="140" y="30" width="12" height="40" fill="#facc15" />
-                        <rect x="180" y="15" width="12" height="55" fill="#facc15" />
-                        <rect x="220" y="40" width="12" height="30" fill="#facc15" />
-                        <rect x="260" y="25" width="12" height="45" fill="#facc15" />
-                        <rect x="300" y="5" width="12" height="65" fill="#facc15" />
-                        <rect x="340" y="35" width="12" height="35" fill="#facc15" />
-                        <rect x="380" y="50" width="12" height="20" fill="#facc15" />
+                        <path d="M0 80C100 80 150 20 200 50C250 80 300 10 400 40V80H0Z" fill="#bef264" />
                     </svg>
                 </div>
-                <p className="mt-4 text-xs text-primary-500">
+                <p className="mt-4 text-xs text-primary-300">
                     © {new Date().getFullYear()} Multi Green Engineering Sdn. Bhd.
                 </p>
             </div>
@@ -157,9 +148,10 @@ export default function Register() {
                 {/* Mobile logo */}
                 <div className="mb-8 flex flex-col items-center lg:hidden">
                     <svg width="48" height="48" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="40" height="40" rx="8" fill="#0f172a" />
-                        <path d="M10 30V12L20 22L30 12V30" stroke="#f1f5f9" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                        <line x1="8" y1="35" x2="32" y2="35" stroke="#facc15" strokeWidth="2.5" strokeLinecap="round" />
+                        <ellipse cx="20" cy="22" rx="18" ry="14" stroke="#84cc16" strokeWidth="2.5" />
+                        <path d="M12 24C12 20 9 17 9 17C9 17 6 20 6 24C6 28 9 29 9 29C9 29 12 28 12 24Z" fill="#15803d" />
+                        <path d="M23 21C23 16 20 13 20 13C20 13 17 16 17 21C17 26 20 29 20 29C20 29 23 26 23 21Z" fill="#15803d" />
+                        <path d="M34 24C34 20 31 17 31 17C31 17 28 20 28 24C28 28 31 29 31 29C31 29 34 28 34 24Z" fill="#15803d" />
                     </svg>
                     <span className="mt-3 text-xl font-bold text-primary-700">MGE-PMS</span>
                 </div>

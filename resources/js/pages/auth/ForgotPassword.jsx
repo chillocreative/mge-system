@@ -37,9 +37,10 @@ export default function ForgotPassword() {
                 <div className="mb-10 flex flex-col items-center">
                     <Link to="/login" className="flex items-center gap-3 group">
                         <svg width="48" height="48" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect width="40" height="40" rx="8" fill="#0f172a" className="transition-colors group-hover:fill-primary-600" />
-                            <path d="M10 30V12L20 22L30 12V30" stroke="#f1f5f9" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                            <line x1="8" y1="35" x2="32" y2="35" stroke="#facc15" strokeWidth="2.5" strokeLinecap="round" />
+                            <ellipse cx="20" cy="22" rx="18" ry="14" stroke="#84cc16" strokeWidth="2.5" className="transition-colors group-hover:stroke-primary-600" />
+                            <path d="M12 24C12 20 9 17 9 17C9 17 6 20 6 24C6 28 9 29 9 29C9 29 12 28 12 24Z" fill="#15803d" />
+                            <path d="M23 21C23 16 20 13 20 13C20 13 17 16 17 21C17 26 20 29 20 29C20 29 23 26 23 21Z" fill="#15803d" />
+                            <path d="M34 24C34 20 31 17 31 17C31 17 28 20 28 24C28 28 31 29 31 29C31 29 34 28 34 24Z" fill="#15803d" />
                         </svg>
                         <span className="text-xl font-bold text-primary-700 group-hover:text-primary-600 transition-colors">MGE-PMS</span>
                     </Link>
