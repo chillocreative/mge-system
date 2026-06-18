@@ -26,7 +26,7 @@ export default function InvoiceCreate() {
         due_date: '',
         tax_rate: 0,
         discount: 0,
-        currency: 'PKR',
+        currency: 'RM',
         notes: '',
         terms: '',
         items: [{ ...emptyItem }],
@@ -63,7 +63,7 @@ export default function InvoiceCreate() {
                     due_date: inv.due_date || '',
                     tax_rate: inv.tax_rate || 0,
                     discount: inv.discount || 0,
-                    currency: inv.currency || 'PKR',
+                    currency: inv.currency || 'RM',
                     notes: inv.notes || '',
                     terms: inv.terms || '',
                     items: inv.items?.length
@@ -279,7 +279,7 @@ export default function InvoiceCreate() {
                                     className="col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                                 />
                                 <div className="col-span-1 flex items-center justify-end text-sm font-medium text-gray-700">
-                                    {((Number(item.quantity) || 0) * (Number(item.unit_price) || 0)).toLocaleString('en-PK', { minimumFractionDigits: 2 })}
+                                    {((Number(item.quantity) || 0) * (Number(item.unit_price) || 0)).toLocaleString('en-MY', { minimumFractionDigits: 2 })}
                                 </div>
                                 <div className="col-span-1 flex items-center justify-center">
                                     <button
@@ -357,23 +357,23 @@ export default function InvoiceCreate() {
                             <div className="space-y-2 border-t pt-3">
                                 <div className="flex justify-between text-sm text-gray-600">
                                     <span>Subtotal</span>
-                                    <span>{form.currency} {subtotal.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</span>
+                                    <span>{form.currency} {subtotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
                                 </div>
                                 {Number(form.tax_rate) > 0 && (
                                     <div className="flex justify-between text-sm text-gray-600">
                                         <span>Tax ({form.tax_rate}%)</span>
-                                        <span>{form.currency} {taxAmount.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</span>
+                                        <span>{form.currency} {taxAmount.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                 )}
                                 {Number(form.discount) > 0 && (
                                     <div className="flex justify-between text-sm text-gray-600">
                                         <span>Discount</span>
-                                        <span>- {form.currency} {Number(form.discount).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</span>
+                                        <span>- {form.currency} {Number(form.discount).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between border-t pt-2 text-lg font-bold text-primary-700">
                                     <span>Total</span>
-                                    <span>{form.currency} {total.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</span>
+                                    <span>{form.currency} {total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
                                 </div>
                             </div>
                         </div>

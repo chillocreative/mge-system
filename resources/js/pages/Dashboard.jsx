@@ -105,9 +105,9 @@ const chartDefaults = {
 };
 
 function formatCurrency(value) {
-    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-    if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
-    return `$${Number(value).toLocaleString()}`;
+    if (value >= 1_000_000) return `RM ${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 1_000) return `RM ${(value / 1_000).toFixed(0)}K`;
+    return `RM ${Number(value).toLocaleString('en-MY')}`;
 }
 
 // ── Stat card component ──

@@ -39,7 +39,7 @@ class InvoiceService
                 'due_date' => $data['due_date'],
                 'tax_rate' => $data['tax_rate'] ?? 0,
                 'discount' => $data['discount'] ?? 0,
-                'currency' => $data['currency'] ?? 'PKR',
+                'currency' => $data['currency'] ?? 'RM',
                 'notes' => $data['notes'] ?? null,
                 'terms' => $data['terms'] ?? null,
                 'created_by' => $createdBy,

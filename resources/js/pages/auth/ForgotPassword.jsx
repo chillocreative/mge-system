@@ -35,13 +35,8 @@ export default function ForgotPassword() {
                 {/* Brand Header */}
                 <div className="mb-10 flex flex-col items-center">
                     <Link to="/login" className="group flex flex-col items-center gap-4 transition-transform active:scale-95">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-primary-800 shadow-xl shadow-primary-900/20 group-hover:bg-primary-900 transition-colors">
-                            <svg width="36" height="36" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <ellipse cx="20" cy="22" rx="18" ry="14" stroke="#bef264" strokeWidth="2.5" />
-                                <path d="M12 24C12 20 9 17 9 17C9 17 6 20 6 24C6 28 9 29 9 29C9 29 12 28 12 24Z" fill="#bef264" />
-                                <path d="M23 21C23 16 20 13 20 13C20 13 17 16 17 21C17 26 20 29 20 29C20 29 23 26 23 21Z" fill="#bef264" />
-                                <path d="M34 24C34 20 31 17 31 17C31 17 28 20 28 24C28 28 31 29 31 29C31 29 34 28 34 24Z" fill="#bef264" />
-                            </svg>
+                        <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white p-2 ring-1 ring-primary-100 shadow-xl shadow-primary-900/10 transition-transform group-hover:scale-105">
+                            <img src="/logo.png" alt="Multi Green Engineering" className="h-full w-full object-contain" />
                         </div>
                         <div className="text-center">
                             <span className="block text-2xl font-black tracking-tighter text-primary-900">MGE-PMS</span>

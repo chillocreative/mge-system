@@ -21,8 +21,8 @@ const statusColors = {
     cancelled: 'bg-red-100 text-red-600',
 };
 
-function formatCurrency(val, currency = 'PKR') {
-    return `${currency} ${Number(val || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}`;
+function formatCurrency(val, currency = 'RM') {
+    return `${currency} ${Number(val || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 })}`;
 }
 
 export default function InvoiceDetail() {

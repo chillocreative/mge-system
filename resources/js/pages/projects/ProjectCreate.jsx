@@ -254,7 +254,7 @@ export default function ProjectCreate() {
                             {errors.end_date && <p className="mt-1 text-xs text-red-500">{errors.end_date[0]}</p>}
                         </div>
                         <div>
-                            <label className="mb-1 block text-sm font-medium text-gray-700">Budget (PKR)</label>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">Budget (RM)</label>
                             <input
                                 type="number"
                                 name="budget"

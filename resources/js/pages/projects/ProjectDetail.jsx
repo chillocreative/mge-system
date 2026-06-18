@@ -185,8 +185,8 @@ function OverviewTab({ project }) {
                                 <HiOutlineCurrencyDollar className="mt-0.5 h-5 w-5 text-gray-400" />
                                 <div>
                                     <p className="text-xs text-gray-500">Budget</p>
-                                    <p className="text-sm font-medium text-gray-900">PKR {Number(project.budget).toLocaleString()}</p>
-                                    <p className="text-xs text-gray-500">Spent: PKR {Number(project.spent).toLocaleString()}</p>
+                                    <p className="text-sm font-medium text-gray-900">RM {Number(project.budget).toLocaleString('en-MY')}</p>
+                                    <p className="text-xs text-gray-500">Spent: RM {Number(project.spent).toLocaleString('en-MY')}</p>
                                 </div>
                             </div>
                         )}

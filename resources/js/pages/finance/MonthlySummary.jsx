@@ -4,7 +4,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import { HiOutlineChartBar } from 'react-icons/hi';
 
 function formatCurrency(val) {
-    return 'PKR ' + Number(val || 0).toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return 'RM ' + Number(val || 0).toLocaleString('en-MY', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 const months = [

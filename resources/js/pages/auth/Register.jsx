@@ -17,13 +17,8 @@ function BrandPanel() {
 
             <div className="relative z-10 flex flex-1 flex-col p-16">
                 <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md ring-1 ring-white/20">
-                        <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <ellipse cx="20" cy="22" rx="18" ry="14" stroke="#bef264" strokeWidth="2.5" />
-                            <path d="M12 24C12 20 9 17 9 17C9 17 6 20 6 24C6 28 9 29 9 29C9 29 12 28 12 24Z" fill="#bef264" />
-                            <path d="M23 21C23 16 20 13 20 13C20 13 17 16 17 21C17 26 20 29 20 29C20 29 23 26 23 21Z" fill="#bef264" />
-                            <path d="M34 24C34 20 31 17 31 17C31 17 28 20 28 24C28 28 31 29 31 29C31 29 34 28 34 24Z" fill="#bef264" />
-                        </svg>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white p-1.5 ring-1 ring-white/20 shadow-lg">
+                        <img src="/logo.png" alt="Multi Green Engineering" className="h-full w-full object-contain" />
                     </div>
                     <div>
                         <span className="block text-2xl font-black tracking-tighter text-white">MGE-PMS</span>
@@ -151,13 +146,8 @@ export default function Register() {
             <div className="flex flex-1 flex-col items-center justify-center px-8 py-12 lg:px-20 overflow-y-auto">
                 {/* Mobile branding */}
                 <div className="mb-12 flex flex-col items-center lg:hidden">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-700 shadow-lg shadow-primary-700/20">
-                        <svg width="28" height="28" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <ellipse cx="20" cy="22" rx="18" ry="14" stroke="#bef264" strokeWidth="2.5" />
-                            <path d="M12 24C12 20 9 17 9 17C9 17 6 20 6 24C6 28 9 29 9 29C9 29 12 28 12 24Z" fill="#bef264" />
-                            <path d="M23 21C23 16 20 13 20 13C20 13 17 16 17 21C17 26 20 29 20 29C20 29 23 26 23 21Z" fill="#bef264" />
-                            <path d="M34 24C34 20 31 17 31 17C31 17 28 20 28 24C28 28 31 29 31 29C31 29 34 28 34 24Z" fill="#bef264" />
-                        </svg>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white p-1.5 ring-1 ring-primary-100 shadow-lg shadow-primary-700/10">
+                        <img src="/logo.png" alt="Multi Green Engineering" className="h-full w-full object-contain" />
                     </div>
                 </div>
 

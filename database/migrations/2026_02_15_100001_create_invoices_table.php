@@ -23,7 +23,7 @@ return new class extends Migration
             $table->decimal('total', 15, 2)->default(0);
             $table->decimal('amount_paid', 15, 2)->default(0);
             $table->decimal('balance_due', 15, 2)->default(0);
-            $table->string('currency', 10)->default('PKR');
+            $table->string('currency', 10)->default('RM');
             $table->text('notes')->nullable();
             $table->text('terms')->nullable();
             $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();

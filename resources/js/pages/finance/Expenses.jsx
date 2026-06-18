@@ -22,7 +22,7 @@ const statusColors = {
 const categories = ['materials', 'labor', 'equipment', 'subcontractor', 'transport', 'permits', 'utilities', 'office', 'other'];
 
 function formatCurrency(val) {
-    return 'PKR ' + Number(val || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 });
+    return 'RM ' + Number(val || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 });
 }
 
 export default function Expenses() {
