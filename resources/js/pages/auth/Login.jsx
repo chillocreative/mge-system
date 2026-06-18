@@ -30,14 +30,6 @@ function BrandPanel() {
 
                 {/* Content Section */}
                 <div className="mb-auto mt-auto max-w-lg">
-                    <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur-sm">
-                        <span className="relative flex h-2 w-2">
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-400 opacity-75"></span>
-                            <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-400"></span>
-                        </span>
-                        <span className="text-xs font-bold uppercase tracking-widest text-white/90">v2.0 Enterprise Release</span>
-                    </div>
-                    
                     <h1 className="text-5xl font-black leading-[1.1] text-white">
                         Constructing the <br />
                         <span className="bg-gradient-to-r from-accent-300 to-accent-500 bg-clip-text text-transparent">Digital Future.</span>
