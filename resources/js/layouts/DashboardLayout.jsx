@@ -17,6 +17,17 @@ import {
     HiOutlineX,
     HiOutlineLogout,
     HiOutlineChevronDown,
+    HiOutlineIdentification,
+    HiOutlineCalendar,
+    HiOutlineClock,
+    HiOutlineCash,
+    HiOutlineClipboardCheck,
+    HiOutlineTruck,
+    HiOutlineCube,
+    HiOutlineCog,
+    HiOutlineDocumentText,
+    HiOutlineFolderOpen,
+    HiOutlineUsers,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 
@@ -26,6 +37,33 @@ const navigation = [
     { name: 'Tasks', href: '/tasks', icon: HiOutlineClipboardList, permission: 'tasks.view' },
     { name: 'Clients', href: '/clients', icon: HiOutlineOfficeBuilding, permission: 'clients.view' },
     { name: 'Finance', href: '/finance', icon: HiOutlineCurrencyDollar, permission: 'finance.view' },
+    { name: 'Staff', href: '/staff', icon: HiOutlineIdentification, permission: 'staff.view' },
+    {
+        name: 'HR', icon: HiOutlineUsers,
+        children: [
+            { name: 'Attendance', href: '/hr/attendance', icon: HiOutlineClock, permission: 'attendance.view' },
+            { name: 'Leave', href: '/hr/leave', icon: HiOutlineClipboardCheck, permission: 'leave.view' },
+            { name: 'Payroll', href: '/hr/payroll', icon: HiOutlineCash, permission: 'payroll.view' },
+            { name: 'EA Form', href: '/hr/payroll/ea-form', icon: HiOutlineDocumentText, permission: 'payroll.ea-form' },
+            { name: 'Calendar', href: '/hr/calendar', icon: HiOutlineCalendar, permission: 'calendar.view' },
+        ],
+    },
+    {
+        name: 'Assets', icon: HiOutlineCube,
+        children: [
+            { name: 'Vehicles', href: '/assets/vehicles', icon: HiOutlineTruck, permission: 'assets.view' },
+            { name: 'Inventory', href: '/assets/inventory', icon: HiOutlineCube, permission: 'inventory.view' },
+            { name: 'Maintenance', href: '/assets/maintenance', icon: HiOutlineCog, permission: 'maintenance.view' },
+        ],
+    },
+    { name: 'Meetings', href: '/meetings', icon: HiOutlineClipboardList, permission: 'meetings.view' },
+    {
+        name: 'Documents', icon: HiOutlineFolderOpen,
+        children: [
+            { name: 'Company Docs', href: '/documents/company', icon: HiOutlineDocumentText, permission: 'documents.view' },
+            { name: 'Drawings', href: '/documents/drawings', icon: HiOutlineFolderOpen, permission: 'drawings.view' },
+        ],
+    },
     { name: 'Safety', href: '/safety', icon: HiOutlineShieldCheck, permission: 'safety.view' },
     { name: 'Environmental', href: '/environmental', icon: HiOutlineGlobe, permission: 'environmental.view' },
     { name: 'Chat', href: '/chat', icon: HiOutlineChat, permission: null },
@@ -38,6 +76,9 @@ export default function DashboardLayout() {
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
+    const [openGroups, setOpenGroups] = useState({});
+
+    const toggleGroup = (name) => setOpenGroups((p) => ({ ...p, [name]: !p[name] }));
 
     const handleLogout = async () => {
         try {
@@ -57,9 +98,17 @@ export default function DashboardLayout() {
         }`;
 
     // Filter navigation items by user permissions
-    const visibleNavigation = navigation.filter(
-        (item) => item.permission === null || can(item.permission)
-    );
+    const visibleNavigation = navigation
+        .map((item) => {
+            if (item.children) {
+                const children = item.children.filter(
+                    (c) => c.permission == null || can(c.permission)
+                );
+                return children.length ? { ...item, children } : null;
+            }
+            return item.permission == null || can(item.permission) ? item : null;
+        })
+        .filter(Boolean);
 
     return (
         <div className="min-h-screen bg-primary-100">
@@ -90,18 +139,60 @@ export default function DashboardLayout() {
                     </button>
                 </div>
 
-                <nav className="flex-1 space-y-1 p-4">
-                    {visibleNavigation.map((item) => (
-                        <NavLink
-                            key={item.name}
-                            to={item.href}
-                            className={navLinkClass}
-                            onClick={() => setSidebarOpen(false)}
-                        >
-                            <item.icon className="h-5 w-5 shrink-0" />
-                            {item.name}
-                        </NavLink>
-                    ))}
+                <nav className="flex-1 space-y-1 overflow-y-auto p-4">
+                    {visibleNavigation.map((item) => {
+                        if (item.children) {
+                            const isOpen = !!openGroups[item.name];
+                            return (
+                                <div key={item.name}>
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleGroup(item.name)}
+                                        className="group flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-primary-300 transition-colors hover:bg-white/5 hover:text-white"
+                                    >
+                                        <span className="flex items-center gap-3">
+                                            <item.icon className="h-5 w-5 shrink-0" />
+                                            {item.name}
+                                        </span>
+                                        <HiOutlineChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {isOpen && (
+                                        <div className="mt-1 space-y-1 border-l border-white/10 pl-3 ml-3">
+                                            {item.children.map((child) => (
+                                                <NavLink
+                                                    key={child.name}
+                                                    to={child.href}
+                                                    end
+                                                    className={({ isActive }) =>
+                                                        `flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+                                                            isActive
+                                                                ? 'bg-accent-400/10 text-accent-400'
+                                                                : 'text-primary-400 hover:bg-white/5 hover:text-white'
+                                                        }`
+                                                    }
+                                                    onClick={() => setSidebarOpen(false)}
+                                                >
+                                                    <child.icon className="h-4 w-4 shrink-0" />
+                                                    {child.name}
+                                                </NavLink>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        }
+                        return (
+                            <NavLink
+                                key={item.name}
+                                to={item.href}
+                                className={navLinkClass}
+                                onClick={() => setSidebarOpen(false)}
+                            >
+                                <item.icon className="h-5 w-5 shrink-0" />
+                                {item.name}
+                            </NavLink>
+                        );
+                    })}
                 </nav>
 
             </aside>

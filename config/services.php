@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    /*
+    | Google Calendar — OAuth integration. The in-app calendar works without
+    | these; Google two-way sync activates only once client_id/secret are set.
+    */
+    'google' => [
+        'client_id'     => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect_uri'  => env('GOOGLE_CALENDAR_REDIRECT_URI'),
+        'calendar_id'   => env('GOOGLE_CALENDAR_ID', 'primary'),
+    ],
+
 ];

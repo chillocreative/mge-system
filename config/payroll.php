@@ -114,4 +114,59 @@ return [
         'clock_out'   => 'clock_out',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Malaysian Statutory Deduction Rates (configurable, editable per payslip)
+    |--------------------------------------------------------------------------
+    |
+    | EPF (KWSP): for employees below 60. Employee contributes 11%. Employer
+    | contributes 13% when monthly wage <= RM5,000, otherwise 12%. Contributions
+    | are rounded up to the next ringgit per EPF rules.
+    |
+    | SOCSO & EIS: contribution is capped at the RM6,000 monthly wage ceiling.
+    | SOCSO Category 1 (under 60) max = employer RM104.65 + employee RM29.90.
+    | EIS = 0.2% employer + 0.2% employee, max RM11.90 each at the ceiling.
+    |
+    | These are defaults — every payslip allows manual override, and Zakat/PCB
+    | are always entered manually. Verify rates against KWSP/PERKESO/LHDN.
+    |
+    */
+    'statutory' => [
+        'epf' => [
+            'enabled'                => env('PAYROLL_EPF_ENABLED', true),
+            'employee_rate'          => env('PAYROLL_EPF_EMPLOYEE_RATE', 0.11), // 11%
+            'employer_rate_low'      => env('PAYROLL_EPF_EMPLOYER_LOW', 0.13),  // <= threshold
+            'employer_rate_high'     => env('PAYROLL_EPF_EMPLOYER_HIGH', 0.12), // > threshold
+            'employer_wage_threshold'=> env('PAYROLL_EPF_THRESHOLD', 5000),
+        ],
+        'socso' => [
+            'enabled'        => env('PAYROLL_SOCSO_ENABLED', true),
+            'wage_ceiling'   => env('PAYROLL_SOCSO_CEILING', 6000),
+            'employer_rate'  => env('PAYROLL_SOCSO_EMPLOYER_RATE', 0.0175), // ~1.75% (Cat 1)
+            'employee_rate'  => env('PAYROLL_SOCSO_EMPLOYEE_RATE', 0.005),  // ~0.5% (Cat 1)
+            'employer_max'   => env('PAYROLL_SOCSO_EMPLOYER_MAX', 104.65),
+            'employee_max'   => env('PAYROLL_SOCSO_EMPLOYEE_MAX', 29.90),
+        ],
+        'eis' => [
+            'enabled'        => env('PAYROLL_EIS_ENABLED', true),
+            'wage_ceiling'   => env('PAYROLL_EIS_CEILING', 6000),
+            'employer_rate'  => env('PAYROLL_EIS_EMPLOYER_RATE', 0.002), // 0.2%
+            'employee_rate'  => env('PAYROLL_EIS_EMPLOYEE_RATE', 0.002), // 0.2%
+            'employer_max'   => env('PAYROLL_EIS_EMPLOYER_MAX', 11.90),
+            'employee_max'   => env('PAYROLL_EIS_EMPLOYEE_MAX', 11.90),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Company details (for payslip & EA Form headers)
+    |--------------------------------------------------------------------------
+    */
+    'company' => [
+        'name'    => env('COMPANY_NAME', 'Multi Green Engineering Sdn. Bhd.'),
+        'reg_no'  => env('COMPANY_REG_NO', ''),
+        'address' => env('COMPANY_ADDRESS', ''),
+        'employer_no' => env('COMPANY_EMPLOYER_NO', ''), // LHDN E number
+    ],
+
 ];

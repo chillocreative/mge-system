@@ -9,6 +9,7 @@ class AttendanceRecord extends Model
 {
     protected $fillable = [
         'user_id',
+        'employee_id',
         'date',
         'clock_in',
         'clock_out',
@@ -37,6 +38,11 @@ class AttendanceRecord extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class);
     }
 
     public function uploader(): BelongsTo

@@ -91,6 +91,51 @@ class RolePermissionSeeder extends Seeder
             'payroll.view',
             'payroll.generate',
             'payroll.approve',
+            'payroll.email',
+            'payroll.ea-form',
+
+            // Staff (employee registry)
+            'staff.view',
+            'staff.create',
+            'staff.edit',
+            'staff.delete',
+
+            // Leave
+            'leave.view',
+            'leave.request',
+            'leave.approve',
+            'leave.manage',
+
+            // Calendar
+            'calendar.view',
+            'calendar.manage',
+
+            // Assets — vehicles
+            'assets.view',
+            'assets.manage',
+
+            // Inventory
+            'inventory.view',
+            'inventory.manage',
+
+            // Maintenance
+            'maintenance.view',
+            'maintenance.manage',
+
+            // Meeting Minutes
+            'meetings.view',
+            'meetings.create',
+            'meetings.manage',
+
+            // Documents (company library)
+            'documents.view',
+            'documents.upload',
+            'documents.manage',
+
+            // Drawings
+            'drawings.view',
+            'drawings.upload',
+            'drawings.manage',
 
             // Reports
             'reports.view',
@@ -199,6 +244,29 @@ class RolePermissionSeeder extends Seeder
             'payroll.view',
             'payroll.generate',
             'payroll.approve',
+            'payroll.email',
+            'payroll.ea-form',
+
+            // Staff (full access — HR)
+            'staff.view',
+            'staff.create',
+            'staff.edit',
+            'staff.delete',
+
+            // Leave (full access — HR)
+            'leave.view',
+            'leave.request',
+            'leave.approve',
+            'leave.manage',
+
+            // Calendar
+            'calendar.view',
+            'calendar.manage',
+
+            // Meetings (view) + Documents (view)
+            'meetings.view',
+            'documents.view',
+            'drawings.view',
 
             // Reports
             'reports.view',
@@ -269,6 +337,31 @@ class RolePermissionSeeder extends Seeder
             'environmental.view',
             'environmental.create',
             'environmental.manage',
+
+            // Staff (read-only — see team)
+            'staff.view',
+
+            // Calendar
+            'calendar.view',
+            'calendar.manage',
+
+            // Meetings (full)
+            'meetings.view',
+            'meetings.create',
+            'meetings.manage',
+
+            // Documents & Drawings (full — project teams need drawings)
+            'documents.view',
+            'documents.upload',
+            'documents.manage',
+            'drawings.view',
+            'drawings.upload',
+            'drawings.manage',
+
+            // Assets / Inventory / Maintenance (view)
+            'assets.view',
+            'inventory.view',
+            'maintenance.view',
         ]);
 
         /*
@@ -281,6 +374,9 @@ class RolePermissionSeeder extends Seeder
         $employee = Role::firstOrCreate(['name' => 'Employee', 'guard_name' => 'web']);
         $employee->syncPermissions([
             'dashboard.view',
+            'leave.view',
+            'leave.request',
+            'calendar.view',
         ]);
     }
 }

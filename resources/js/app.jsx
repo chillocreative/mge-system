@@ -28,6 +28,28 @@ import Safety from '@/pages/safety/Safety';
 import Environmental from '@/pages/environmental/Environmental';
 import Chat from '@/pages/chat/Chat';
 import Email from '@/pages/email/Email';
+import StaffList from '@/pages/staff/StaffList';
+import StaffForm from '@/pages/staff/StaffForm';
+import StaffDetail from '@/pages/staff/StaffDetail';
+import Attendance from '@/pages/hr/attendance/Attendance';
+import LeaveList from '@/pages/hr/leave/LeaveList';
+import LeaveRequestForm from '@/pages/hr/leave/LeaveRequestForm';
+import LeaveApproval from '@/pages/hr/leave/LeaveApproval';
+import LeaveBalance from '@/pages/hr/leave/LeaveBalance';
+import Calendar from '@/pages/hr/calendar/Calendar';
+import PayrollList from '@/pages/hr/payroll/PayrollList';
+import PayslipDetail from '@/pages/hr/payroll/PayslipDetail';
+import EaForm from '@/pages/hr/payroll/EaForm';
+import Vehicles from '@/pages/assets/Vehicles';
+import VehicleDetail from '@/pages/assets/VehicleDetail';
+import Inventory from '@/pages/assets/Inventory';
+import ItemDetail from '@/pages/assets/ItemDetail';
+import Maintenance from '@/pages/assets/Maintenance';
+import Meetings from '@/pages/meetings/Meetings';
+import MeetingForm from '@/pages/meetings/MeetingForm';
+import MeetingDetail from '@/pages/meetings/MeetingDetail';
+import CompanyDocuments from '@/pages/documents/CompanyDocuments';
+import Drawings from '@/pages/documents/Drawings';
 import Unauthorized from '@/pages/Unauthorized';
 import NotFound from '@/pages/NotFound';
 
@@ -91,6 +113,68 @@ function AppRoutes() {
                     {/* Environmental — requires environmental.view */}
                     <Route element={<PermissionGate permission="environmental.view" />}>
                         <Route path="/environmental" element={<Environmental />} />
+                    </Route>
+
+                    {/* Staff — requires staff.view */}
+                    <Route element={<PermissionGate permission="staff.view" />}>
+                        <Route path="/staff" element={<StaffList />} />
+                        <Route path="/staff/create" element={<StaffForm />} />
+                        <Route path="/staff/:id" element={<StaffDetail />} />
+                        <Route path="/staff/:id/edit" element={<StaffForm />} />
+                    </Route>
+
+                    {/* HR — Attendance */}
+                    <Route element={<PermissionGate permission="attendance.view" />}>
+                        <Route path="/hr/attendance" element={<Attendance />} />
+                    </Route>
+
+                    {/* HR — Leave */}
+                    <Route element={<PermissionGate permission="leave.view" />}>
+                        <Route path="/hr/leave" element={<LeaveList />} />
+                        <Route path="/hr/leave/apply" element={<LeaveRequestForm />} />
+                        <Route path="/hr/leave/approvals" element={<LeaveApproval />} />
+                        <Route path="/hr/leave/balances" element={<LeaveBalance />} />
+                    </Route>
+
+                    {/* HR — Calendar */}
+                    <Route element={<PermissionGate permission="calendar.view" />}>
+                        <Route path="/hr/calendar" element={<Calendar />} />
+                    </Route>
+
+                    {/* HR — Payroll */}
+                    <Route element={<PermissionGate permission="payroll.view" />}>
+                        <Route path="/hr/payroll" element={<PayrollList />} />
+                        <Route path="/hr/payroll/ea-form" element={<EaForm />} />
+                        <Route path="/hr/payroll/:id" element={<PayslipDetail />} />
+                    </Route>
+
+                    {/* Assets — Vehicles / Inventory / Maintenance */}
+                    <Route element={<PermissionGate permission="assets.view" />}>
+                        <Route path="/assets/vehicles" element={<Vehicles />} />
+                        <Route path="/assets/vehicles/:id" element={<VehicleDetail />} />
+                    </Route>
+                    <Route element={<PermissionGate permission="inventory.view" />}>
+                        <Route path="/assets/inventory" element={<Inventory />} />
+                        <Route path="/assets/inventory/:id" element={<ItemDetail />} />
+                    </Route>
+                    <Route element={<PermissionGate permission="maintenance.view" />}>
+                        <Route path="/assets/maintenance" element={<Maintenance />} />
+                    </Route>
+
+                    {/* Meeting Minutes */}
+                    <Route element={<PermissionGate permission="meetings.view" />}>
+                        <Route path="/meetings" element={<Meetings />} />
+                        <Route path="/meetings/create" element={<MeetingForm />} />
+                        <Route path="/meetings/:id" element={<MeetingDetail />} />
+                        <Route path="/meetings/:id/edit" element={<MeetingForm />} />
+                    </Route>
+
+                    {/* Documents library */}
+                    <Route element={<PermissionGate permission="documents.view" />}>
+                        <Route path="/documents/company" element={<CompanyDocuments />} />
+                    </Route>
+                    <Route element={<PermissionGate permission="drawings.view" />}>
+                        <Route path="/documents/drawings" element={<Drawings />} />
                     </Route>
 
                     {/* Chat & Email — all authenticated users */}

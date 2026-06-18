@@ -2,6 +2,16 @@
 
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CalendarController;
+use App\Http\Controllers\Api\CompanyDocumentController;
+use App\Http\Controllers\Api\DrawingController;
+use App\Http\Controllers\Api\EmployeeController;
+use App\Http\Controllers\Api\InventoryController;
+use App\Http\Controllers\Api\LeaveController;
+use App\Http\Controllers\Api\MaintenanceController;
+use App\Http\Controllers\Api\MeetingController;
+use App\Http\Controllers\Api\PayrollController;
+use App\Http\Controllers\Api\VehicleController;
 use App\Http\Controllers\Api\CalendarEventController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\ClientController;
@@ -275,12 +285,23 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middleware('permission:payroll.view');
         Route::get('/config', [AttendanceController::class, 'payrollConfig'])
             ->middleware('permission:payroll.view');
+        // Statutory / payslip / EA form (literal segments before /{payroll})
+        Route::post('/batch-email', [PayrollController::class, 'batchEmail'])
+            ->middleware('permission:payroll.email');
+        Route::get('/ea-form/{employee}/{year}', [PayrollController::class, 'eaForm'])
+            ->middleware('permission:payroll.ea-form');
         Route::get('/{payroll}', [AttendanceController::class, 'payrollShow'])
             ->middleware('permission:payroll.view');
         Route::patch('/{payroll}/approve', [AttendanceController::class, 'payrollApprove'])
             ->middleware('permission:payroll.approve');
         Route::patch('/{payroll}/mark-paid', [AttendanceController::class, 'payrollMarkPaid'])
             ->middleware('permission:payroll.approve');
+        Route::patch('/{payroll}/recalculate', [PayrollController::class, 'recalculate'])
+            ->middleware('permission:payroll.generate');
+        Route::get('/{payroll}/payslip', [PayrollController::class, 'payslip'])
+            ->middleware('permission:payroll.view');
+        Route::post('/{payroll}/email-payslip', [PayrollController::class, 'emailPayslip'])
+            ->middleware('permission:payroll.email');
     });
 
     /*
@@ -499,5 +520,134 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
         Route::patch('/{notification}/read', [NotificationController::class, 'markAsRead']);
         Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | Staff — employee registry
+    |----------------------------------------------------------------------
+    */
+    Route::prefix('employees')->group(function () {
+        Route::get('/', [EmployeeController::class, 'index'])->middleware('permission:staff.view');
+        Route::post('/', [EmployeeController::class, 'store'])->middleware('permission:staff.create');
+        Route::get('/{id}', [EmployeeController::class, 'show'])->middleware('permission:staff.view');
+        Route::get('/{id}/photo', [EmployeeController::class, 'photo'])->middleware('permission:staff.view');
+        Route::put('/{id}', [EmployeeController::class, 'update'])->middleware('permission:staff.edit');
+        Route::delete('/{id}', [EmployeeController::class, 'destroy'])->middleware('permission:staff.delete');
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | Leave Management (HR)
+    |----------------------------------------------------------------------
+    */
+    Route::prefix('leaves')->group(function () {
+        Route::get('/', [LeaveController::class, 'index'])->middleware('permission:leave.view');
+        Route::get('/balance', [LeaveController::class, 'balance'])->middleware('permission:leave.view');
+        Route::post('/', [LeaveController::class, 'store'])->middleware('permission:leave.request');
+        Route::get('/{id}', [LeaveController::class, 'show'])->middleware('permission:leave.view');
+        Route::get('/{id}/attachment', [LeaveController::class, 'downloadAttachment'])->middleware('permission:leave.view');
+        Route::post('/{id}/approve', [LeaveController::class, 'approve'])->middleware('permission:leave.approve');
+        Route::post('/{id}/reject', [LeaveController::class, 'reject'])->middleware('permission:leave.approve');
+        Route::post('/{id}/cancel', [LeaveController::class, 'cancel'])->middleware('permission:leave.request');
+    });
+    Route::prefix('leave-types')->group(function () {
+        Route::get('/', [LeaveController::class, 'types'])->middleware('permission:leave.view');
+        Route::post('/', [LeaveController::class, 'storeType'])->middleware('permission:leave.manage');
+        Route::put('/{id}', [LeaveController::class, 'updateType'])->middleware('permission:leave.manage');
+        Route::delete('/{id}', [LeaveController::class, 'destroyType'])->middleware('permission:leave.manage');
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | Calendar (HR) — in-app, Google-sync-ready
+    |----------------------------------------------------------------------
+    */
+    Route::prefix('calendar')->group(function () {
+        Route::get('/events', [CalendarController::class, 'index'])->middleware('permission:calendar.view');
+        Route::post('/events', [CalendarController::class, 'store'])->middleware('permission:calendar.manage');
+        Route::put('/events/{id}', [CalendarController::class, 'update'])->middleware('permission:calendar.manage');
+        Route::delete('/events/{id}', [CalendarController::class, 'destroy'])->middleware('permission:calendar.manage');
+        Route::get('/google/status', [CalendarController::class, 'googleStatus'])->middleware('permission:calendar.view');
+        Route::get('/google/connect', [CalendarController::class, 'googleConnect'])->middleware('permission:calendar.manage');
+        Route::get('/google/callback', [CalendarController::class, 'googleCallback'])->middleware('permission:calendar.manage');
+        Route::post('/google/sync', [CalendarController::class, 'googleSync'])->middleware('permission:calendar.manage');
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | Asset Management — Vehicles, Inventory, Maintenance
+    |----------------------------------------------------------------------
+    */
+    Route::prefix('vehicles')->group(function () {
+        Route::get('/', [VehicleController::class, 'index'])->middleware('permission:assets.view');
+        Route::post('/', [VehicleController::class, 'store'])->middleware('permission:assets.manage');
+        Route::get('/{id}', [VehicleController::class, 'show'])->middleware('permission:assets.view');
+        Route::put('/{id}', [VehicleController::class, 'update'])->middleware('permission:assets.manage');
+        Route::delete('/{id}', [VehicleController::class, 'destroy'])->middleware('permission:assets.manage');
+        Route::post('/{vehicle}/documents', [VehicleController::class, 'storeDocument'])->middleware('permission:assets.manage');
+        Route::delete('/{vehicle}/documents/{document}', [VehicleController::class, 'destroyDocument'])->middleware('permission:assets.manage');
+        Route::get('/{vehicle}/documents/{document}/download', [VehicleController::class, 'downloadDocument'])->middleware('permission:assets.view');
+    });
+    Route::get('assets/expiring', [VehicleController::class, 'expiring'])->middleware('permission:assets.view');
+    Route::prefix('inventory')->group(function () {
+        Route::get('categories', [InventoryController::class, 'categories'])->middleware('permission:inventory.view');
+        Route::post('categories', [InventoryController::class, 'storeCategory'])->middleware('permission:inventory.manage');
+        Route::put('categories/{id}', [InventoryController::class, 'updateCategory'])->middleware('permission:inventory.manage');
+        Route::delete('categories/{id}', [InventoryController::class, 'destroyCategory'])->middleware('permission:inventory.manage');
+        Route::get('items/low-stock', [InventoryController::class, 'lowStock'])->middleware('permission:inventory.view');
+        Route::get('items', [InventoryController::class, 'items'])->middleware('permission:inventory.view');
+        Route::post('items', [InventoryController::class, 'storeItem'])->middleware('permission:inventory.manage');
+        Route::get('items/{id}', [InventoryController::class, 'showItem'])->middleware('permission:inventory.view');
+        Route::put('items/{id}', [InventoryController::class, 'updateItem'])->middleware('permission:inventory.manage');
+        Route::delete('items/{id}', [InventoryController::class, 'destroyItem'])->middleware('permission:inventory.manage');
+        Route::get('items/{item}/transactions', [InventoryController::class, 'transactions'])->middleware('permission:inventory.view');
+        Route::post('items/{item}/transactions', [InventoryController::class, 'storeTransaction'])->middleware('permission:inventory.manage');
+    });
+    Route::prefix('maintenance')->group(function () {
+        Route::get('upcoming', [MaintenanceController::class, 'upcoming'])->middleware('permission:maintenance.view');
+        Route::get('/', [MaintenanceController::class, 'index'])->middleware('permission:maintenance.view');
+        Route::post('/', [MaintenanceController::class, 'store'])->middleware('permission:maintenance.manage');
+        Route::get('/{id}', [MaintenanceController::class, 'show'])->middleware('permission:maintenance.view');
+        Route::put('/{id}', [MaintenanceController::class, 'update'])->middleware('permission:maintenance.manage');
+        Route::delete('/{id}', [MaintenanceController::class, 'destroy'])->middleware('permission:maintenance.manage');
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | Meeting Minutes
+    |----------------------------------------------------------------------
+    */
+    Route::prefix('meetings')->group(function () {
+        Route::get('/employees', [MeetingController::class, 'employees'])->middleware('permission:meetings.view');
+        Route::get('/files/{fileId}/download', [MeetingController::class, 'downloadFile'])->middleware('permission:meetings.view');
+        Route::get('/', [MeetingController::class, 'index'])->middleware('permission:meetings.view');
+        Route::post('/', [MeetingController::class, 'store'])->middleware('permission:meetings.create');
+        Route::get('/{id}', [MeetingController::class, 'show'])->middleware('permission:meetings.view');
+        Route::put('/{id}', [MeetingController::class, 'update'])->middleware('permission:meetings.manage');
+        Route::delete('/{id}', [MeetingController::class, 'destroy'])->middleware('permission:meetings.manage');
+        Route::post('/{id}/files', [MeetingController::class, 'storeFiles'])->middleware('permission:meetings.manage');
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | Documents library (global) — Company Documents + Drawings
+    |----------------------------------------------------------------------
+    */
+    Route::prefix('documents')->group(function () {
+        Route::get('/', [CompanyDocumentController::class, 'index'])->middleware('permission:documents.view');
+        Route::post('/', [CompanyDocumentController::class, 'store'])->middleware('permission:documents.upload');
+        Route::get('/{id}', [CompanyDocumentController::class, 'show'])->middleware('permission:documents.view');
+        Route::put('/{id}', [CompanyDocumentController::class, 'update'])->middleware('permission:documents.manage');
+        Route::delete('/{id}', [CompanyDocumentController::class, 'destroy'])->middleware('permission:documents.manage');
+        Route::get('/{id}/download', [CompanyDocumentController::class, 'download'])->middleware('permission:documents.view');
+    });
+    Route::prefix('drawings')->group(function () {
+        Route::get('/', [DrawingController::class, 'index'])->middleware('permission:drawings.view');
+        Route::post('/', [DrawingController::class, 'store'])->middleware('permission:drawings.upload');
+        Route::get('/{id}', [DrawingController::class, 'show'])->middleware('permission:drawings.view');
+        Route::put('/{id}', [DrawingController::class, 'update'])->middleware('permission:drawings.manage');
+        Route::delete('/{id}', [DrawingController::class, 'destroy'])->middleware('permission:drawings.manage');
+        Route::get('/{id}/download', [DrawingController::class, 'download'])->middleware('permission:drawings.view');
     });
 });
