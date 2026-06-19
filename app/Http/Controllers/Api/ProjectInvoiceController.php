@@ -26,6 +26,11 @@ class ProjectInvoiceController extends Controller
         return $this->success($this->service->summary($request->only(['project_id'])));
     }
 
+    public function summaryByProject(): JsonResponse
+    {
+        return $this->success($this->service->summaryByProject());
+    }
+
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([

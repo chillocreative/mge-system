@@ -50,6 +50,33 @@ class ProjectInvoiceService
         ];
     }
 
+    /**
+     * Per-project profit breakdown (one row per project that has invoices).
+     */
+    public function summaryByProject(): array
+    {
+        return ProjectInvoice::query()
+            ->selectRaw("project_id,
+                SUM(CASE WHEN type = 'client' THEN amount ELSE 0 END) as total_client,
+                SUM(CASE WHEN type = 'subcon' THEN amount ELSE 0 END) as total_subcon,
+                COUNT(*) as invoice_count")
+            ->groupBy('project_id')
+            ->with('project:id,name,code')
+            ->get()
+            ->map(fn ($r) => [
+                'project_id' => $r->project_id,
+                'project_name' => $r->project?->name ?? 'Unknown project',
+                'project_code' => $r->project?->code,
+                'total_client' => round((float) $r->total_client, 2),
+                'total_subcon' => round((float) $r->total_subcon, 2),
+                'profit' => round((float) $r->total_client - (float) $r->total_subcon, 2),
+                'invoice_count' => (int) $r->invoice_count,
+            ])
+            ->sortByDesc('profit')
+            ->values()
+            ->all();
+    }
+
     public function create(array $data, int $userId, array $files = []): ProjectInvoice
     {
         return DB::transaction(function () use ($data, $userId, $files) {

@@ -34,6 +34,7 @@ export default function ProjectInvoices() {
     const [pagination, setPagination] = useState({});
     const [projects, setProjects] = useState([]);
     const [summary, setSummary] = useState({ total_client: 0, total_subcon: 0, profit: 0 });
+    const [byProject, setByProject] = useState([]);
 
     const [projectFilter, setProjectFilter] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
@@ -81,11 +82,19 @@ export default function ProjectInvoices() {
 
     useEffect(() => { fetchSummary(); }, [fetchSummary]);
 
-    useEffect(() => {
-        projectService.list({ per_page: 100 }).then((r) => setProjects(r.data?.data || [])).catch(() => {});
+    const fetchByProject = useCallback(async () => {
+        try {
+            const res = await projectInvoiceService.byProject();
+            setByProject(res.data || []);
+        } catch { /* ignore */ }
     }, []);
 
-    const refresh = () => { fetchInvoices(); fetchSummary(); };
+    useEffect(() => {
+        projectService.list({ per_page: 100 }).then((r) => setProjects(r.data?.data || [])).catch(() => {});
+        fetchByProject();
+    }, [fetchByProject]);
+
+    const refresh = () => { fetchInvoices(); fetchSummary(); fetchByProject(); };
 
     const openCreate = () => { setEditId(null); setForm({ ...emptyForm, project_id: projectFilter || '' }); setFiles([]); setExistingFiles([]); setErrors({}); setShowForm(true); };
     const openEdit = (inv) => {
@@ -193,6 +202,49 @@ export default function ProjectInvoices() {
                     <p className="text-xs text-white/70">Client invoiced − Subcon cost{projectFilter ? ' (this project)' : ' (all projects)'}</p>
                 </div>
             </div>
+
+            {/* Per-project profit breakdown */}
+            {byProject.length > 0 && (
+                <div className="mb-6">
+                    <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">Profit by Project</h2>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {byProject.map((p) => {
+                            const positive = (p.profit ?? 0) >= 0;
+                            const active = String(projectFilter) === String(p.project_id);
+                            return (
+                                <button
+                                    key={p.project_id}
+                                    type="button"
+                                    onClick={() => setProjectFilter(active ? '' : String(p.project_id))}
+                                    className={`rounded-xl bg-white p-4 text-left shadow-sm ring-1 transition-all hover:shadow-md ${active ? 'ring-2 ring-primary-500' : 'ring-gray-200 hover:ring-primary-300'}`}
+                                >
+                                    <div className="mb-3 flex items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-bold text-gray-900">{p.project_name}</p>
+                                            {p.project_code && <p className="text-xs text-gray-400">{p.project_code}</p>}
+                                        </div>
+                                        <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500">{p.invoice_count} inv</span>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-gray-500">Invoiced to Client</span>
+                                            <span className="font-semibold text-emerald-700">{fmt(p.total_client)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-gray-500">Paid to Subcon</span>
+                                            <span className="font-semibold text-orange-700">{fmt(p.total_subcon)}</span>
+                                        </div>
+                                        <div className="mt-1 flex items-center justify-between border-t pt-1.5 text-sm">
+                                            <span className="font-medium text-gray-700">Net Profit</span>
+                                            <span className={`font-bold ${positive ? 'text-primary-700' : 'text-red-600'}`}>{fmt(p.profit)}</span>
+                                        </div>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Filters */}
             <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
