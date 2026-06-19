@@ -52,6 +52,11 @@ class ProjectContract extends Model
         return $this->hasMany(ProjectContractFile::class);
     }
 
+    public function pics(): HasMany
+    {
+        return $this->hasMany(ContractPic::class)->orderBy('sort_order')->orderBy('id');
+    }
+
     // Scopes
 
     public function scopeForProject($query, int $projectId)

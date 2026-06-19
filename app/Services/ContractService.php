@@ -16,6 +16,7 @@ class ContractService
             'project:id,name,code',
             'creator:id,first_name,last_name',
             'files',
+            'pics',
         ])->orderByDesc('created_at');
 
         if (!empty($filters['project_id'])) $query->forProject($filters['project_id']);
@@ -24,7 +25,7 @@ class ContractService
             $search = $filters['search'];
             $query->where(fn ($q) => $q->where('title', 'like', "%{$search}%")
                 ->orWhere('contract_no', 'like', "%{$search}%")
-                ->orWhere('pic_name', 'like', "%{$search}%"));
+                ->orWhereHas('pics', fn ($p) => $p->where('name', 'like', "%{$search}%")));
         }
 
         return $query->paginate($perPage);
@@ -36,31 +37,61 @@ class ContractService
             'project:id,name,code',
             'creator:id,first_name,last_name',
             'files',
+            'pics',
         ])->findOrFail($id);
     }
 
-    public function create(array $data, int $userId, array $files = []): ProjectContract
+    public function create(array $data, int $userId, array $files = [], ?array $pics = null): ProjectContract
     {
-        return DB::transaction(function () use ($data, $userId, $files) {
+        return DB::transaction(function () use ($data, $userId, $files, $pics) {
             $data['created_by'] = $userId;
             $contract = ProjectContract::create($data);
 
             $this->storeFiles($contract, $files);
+            $this->syncPics($contract, $pics);
 
             return $this->getOne($contract->id);
         });
     }
 
-    public function update(int $id, array $data, array $files = []): ProjectContract
+    public function update(int $id, array $data, array $files = [], ?array $pics = null): ProjectContract
     {
-        return DB::transaction(function () use ($id, $data, $files) {
+        return DB::transaction(function () use ($id, $data, $files, $pics) {
             $contract = ProjectContract::findOrFail($id);
             $contract->update($data);
 
             $this->storeFiles($contract, $files);
+            $this->syncPics($contract, $pics);
 
             return $this->getOne($contract->id);
         });
+    }
+
+    /**
+     * Replace the contract's correspondence PICs with the provided list.
+     * Passing null leaves them unchanged (e.g. file-only updates).
+     */
+    private function syncPics(ProjectContract $contract, ?array $pics): void
+    {
+        if ($pics === null) {
+            return;
+        }
+
+        $contract->pics()->delete();
+
+        foreach (array_values($pics) as $i => $pic) {
+            if (empty($pic['name'])) {
+                continue;
+            }
+            $contract->pics()->create([
+                'name' => $pic['name'],
+                'email' => $pic['email'] ?? null,
+                'phone' => $pic['phone'] ?? null,
+                'company' => $pic['company'] ?? null,
+                'designation' => $pic['designation'] ?? null,
+                'sort_order' => $i,
+            ]);
+        }
     }
 
     public function delete(int $id): void

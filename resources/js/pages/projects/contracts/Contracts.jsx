@@ -32,6 +32,8 @@ function formatCurrency(val) {
     return 'RM ' + Number(val).toLocaleString('en-MY', { minimumFractionDigits: 2 });
 }
 
+const emptyPic = () => ({ name: '', email: '', phone: '', company: '', designation: '' });
+
 function emptyForm() {
     return {
         project_id: '',
@@ -40,9 +42,7 @@ function emptyForm() {
         contract_value: '',
         start_date: '',
         end_date: '',
-        pic_name: '',
-        pic_email: '',
-        pic_phone: '',
+        pics: [emptyPic()],
         status: 'active',
         notes: '',
         files: [],
@@ -110,15 +110,19 @@ export default function Contracts() {
             contract_value: c.contract_value ?? '',
             start_date: c.start_date ? String(c.start_date).split('T')[0] : '',
             end_date: c.end_date ? String(c.end_date).split('T')[0] : '',
-            pic_name: c.pic_name || '',
-            pic_email: c.pic_email || '',
-            pic_phone: c.pic_phone || '',
+            pics: c.pics?.length
+                ? c.pics.map((p) => ({ name: p.name || '', email: p.email || '', phone: p.phone || '', company: p.company || '', designation: p.designation || '' }))
+                : [emptyPic()],
             status: c.status || 'active',
             notes: c.notes || '',
             files: [],
         });
         setShowForm(true);
     };
+
+    const addPic = () => setForm((p) => ({ ...p, pics: [...p.pics, emptyPic()] }));
+    const removePic = (idx) => setForm((p) => ({ ...p, pics: p.pics.filter((_, i) => i !== idx) }));
+    const updatePic = (idx, field, value) => setForm((p) => ({ ...p, pics: p.pics.map((pic, i) => i === idx ? { ...pic, [field]: value } : pic) }));
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -132,10 +136,16 @@ export default function Contracts() {
             if (form.contract_value !== '') fd.append('contract_value', form.contract_value);
             if (form.start_date) fd.append('start_date', form.start_date);
             if (form.end_date) fd.append('end_date', form.end_date);
-            if (form.pic_name) fd.append('pic_name', form.pic_name);
-            if (form.pic_email) fd.append('pic_email', form.pic_email);
-            if (form.pic_phone) fd.append('pic_phone', form.pic_phone);
             if (form.notes) fd.append('notes', form.notes);
+            // Correspondence PICs (only rows with a name); flag tells the API the list is authoritative
+            fd.append('pics_sync', '1');
+            form.pics.filter((p) => p.name?.trim()).forEach((pic, i) => {
+                fd.append(`pics[${i}][name]`, pic.name);
+                if (pic.email) fd.append(`pics[${i}][email]`, pic.email);
+                if (pic.phone) fd.append(`pics[${i}][phone]`, pic.phone);
+                if (pic.company) fd.append(`pics[${i}][company]`, pic.company);
+                if (pic.designation) fd.append(`pics[${i}][designation]`, pic.designation);
+            });
             form.files.forEach((f) => fd.append('files[]', f));
 
             if (editing) {
@@ -262,7 +272,11 @@ export default function Contracts() {
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{c.start_date ? String(c.start_date).split('T')[0] : '-'}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{c.end_date ? String(c.end_date).split('T')[0] : '-'}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{c.pic_name || '-'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">
+                                            {c.pics?.length
+                                                ? <>{c.pics[0].name}{c.pics.length > 1 && <span className="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500">+{c.pics.length - 1}</span>}</>
+                                                : (c.pic_name || '-')}
+                                        </td>
                                         <td className="px-4 py-3">
                                             <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[c.status] || 'bg-gray-100 text-gray-600'}`}>
                                                 {c.status}
@@ -421,35 +435,47 @@ export default function Contracts() {
                             </div>
 
                             <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                                <p className="mb-3 text-xs font-semibold uppercase text-gray-500">Correspondence PIC</p>
-                                <div className="grid gap-4 sm:grid-cols-3">
-                                    <div>
-                                        <label className="mb-1 block text-sm font-medium text-gray-700">PIC Name</label>
-                                        <input
-                                            type="text"
-                                            value={form.pic_name}
-                                            onChange={(e) => setForm((p) => ({ ...p, pic_name: e.target.value }))}
-                                            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="mb-1 block text-sm font-medium text-gray-700">PIC Email</label>
-                                        <input
-                                            type="email"
-                                            value={form.pic_email}
-                                            onChange={(e) => setForm((p) => ({ ...p, pic_email: e.target.value }))}
-                                            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="mb-1 block text-sm font-medium text-gray-700">PIC Phone</label>
-                                        <input
-                                            type="text"
-                                            value={form.pic_phone}
-                                            onChange={(e) => setForm((p) => ({ ...p, pic_phone: e.target.value }))}
-                                            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                                        />
-                                    </div>
+                                <div className="mb-3 flex items-center justify-between">
+                                    <p className="text-xs font-semibold uppercase text-gray-500">Correspondence PICs</p>
+                                    <button type="button" onClick={addPic} className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700">
+                                        <HiOutlinePlus className="h-4 w-4" /> Add PIC
+                                    </button>
+                                </div>
+                                <div className="space-y-3">
+                                    {form.pics.map((pic, i) => (
+                                        <div key={i} className="rounded-lg border border-gray-200 bg-white p-3">
+                                            <div className="mb-2 flex items-center justify-between">
+                                                <span className="text-xs font-semibold text-gray-400">PIC #{i + 1}</span>
+                                                {form.pics.length > 1 && (
+                                                    <button type="button" onClick={() => removePic(i)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600" title="Remove PIC">
+                                                        <HiOutlineX className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                <div>
+                                                    <label className="mb-1 block text-xs font-medium text-gray-600">Name</label>
+                                                    <input type="text" value={pic.name} onChange={(e) => updatePic(i, 'name', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                                </div>
+                                                <div>
+                                                    <label className="mb-1 block text-xs font-medium text-gray-600">Company</label>
+                                                    <input type="text" value={pic.company} onChange={(e) => updatePic(i, 'company', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                                </div>
+                                                <div>
+                                                    <label className="mb-1 block text-xs font-medium text-gray-600">Designation</label>
+                                                    <input type="text" value={pic.designation} onChange={(e) => updatePic(i, 'designation', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                                </div>
+                                                <div>
+                                                    <label className="mb-1 block text-xs font-medium text-gray-600">Email</label>
+                                                    <input type="email" value={pic.email} onChange={(e) => updatePic(i, 'email', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                                </div>
+                                                <div>
+                                                    <label className="mb-1 block text-xs font-medium text-gray-600">Phone</label>
+                                                    <input type="text" value={pic.phone} onChange={(e) => updatePic(i, 'phone', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 
@@ -536,12 +562,26 @@ export default function Contracts() {
                         </div>
 
                         <div className="mt-4 rounded-lg border border-gray-100 bg-gray-50 p-4">
-                            <p className="mb-3 text-xs font-semibold uppercase text-gray-500">Correspondence PIC</p>
-                            <div className="space-y-2 text-sm text-gray-700">
-                                <p className="flex items-center gap-2"><HiOutlineUser className="h-4 w-4 text-gray-400" />{detail.pic_name || '-'}</p>
-                                <p className="flex items-center gap-2"><HiOutlineMail className="h-4 w-4 text-gray-400" />{detail.pic_email || '-'}</p>
-                                <p className="flex items-center gap-2"><HiOutlinePhone className="h-4 w-4 text-gray-400" />{detail.pic_phone || '-'}</p>
-                            </div>
+                            <p className="mb-3 text-xs font-semibold uppercase text-gray-500">Correspondence PICs</p>
+                            {detail.pics?.length ? (
+                                <div className="space-y-2">
+                                    {detail.pics.map((p) => (
+                                        <div key={p.id} className="rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-700">
+                                            <p className="flex items-center gap-2 font-semibold text-gray-900">
+                                                <HiOutlineUser className="h-4 w-4 text-gray-400" />
+                                                {p.name}{p.designation ? <span className="font-normal text-gray-500"> — {p.designation}</span> : ''}
+                                            </p>
+                                            {p.company && <p className="mt-0.5 pl-6 text-xs text-gray-500">{p.company}</p>}
+                                            <div className="mt-1 space-y-0.5 pl-6">
+                                                {p.email && <p className="flex items-center gap-2"><HiOutlineMail className="h-4 w-4 text-gray-400" />{p.email}</p>}
+                                                {p.phone && <p className="flex items-center gap-2"><HiOutlinePhone className="h-4 w-4 text-gray-400" />{p.phone}</p>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-gray-400">No PIC recorded</p>
+                            )}
                         </div>
 
                         {detail.notes && (

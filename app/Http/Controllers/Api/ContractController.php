@@ -24,9 +24,10 @@ class ContractController extends Controller
         $validated = $this->validatePayload($request, true);
 
         $files = $request->file('files', []);
-        unset($validated['files']);
+        $pics = $validated['pics'] ?? [];
+        unset($validated['files'], $validated['pics']);
 
-        $contract = $this->contractService->create($validated, $request->user()->id, $files);
+        $contract = $this->contractService->create($validated, $request->user()->id, $files, $pics);
 
         return $this->created($contract, 'Contract created successfully.');
     }
@@ -41,9 +42,10 @@ class ContractController extends Controller
         $validated = $this->validatePayload($request, false);
 
         $files = $request->file('files', []);
-        unset($validated['files']);
+        $pics = ($request->boolean('pics_sync') || $request->has('pics')) ? ($validated['pics'] ?? []) : null;
+        unset($validated['files'], $validated['pics']);
 
-        $contract = $this->contractService->update($id, $validated, $files);
+        $contract = $this->contractService->update($id, $validated, $files, $pics);
 
         return $this->success($contract, 'Contract updated successfully.');
     }
@@ -83,9 +85,12 @@ class ContractController extends Controller
             'contract_value' => ['nullable', 'numeric', 'min:0'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],
-            'pic_name' => ['nullable', 'string', 'max:255'],
-            'pic_email' => ['nullable', 'email', 'max:255'],
-            'pic_phone' => ['nullable', 'string', 'max:50'],
+            'pics' => ['nullable', 'array'],
+            'pics.*.name' => ['required_with:pics', 'string', 'max:255'],
+            'pics.*.email' => ['nullable', 'email', 'max:255'],
+            'pics.*.phone' => ['nullable', 'string', 'max:50'],
+            'pics.*.company' => ['nullable', 'string', 'max:255'],
+            'pics.*.designation' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:active,completed,terminated'],
             'notes' => ['nullable', 'string'],
             'files' => ['nullable', 'array', 'max:10'],
