@@ -238,10 +238,10 @@ export default function DashboardLayout() {
             {/* Main content */}
             <div className={`transition-all duration-200 ${collapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
                 {/* Header */}
-                <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-primary-200 bg-white px-4 shadow-sm lg:px-6">
+                <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/10 bg-gradient-to-r from-primary-700 to-primary-800 px-4 shadow-sm shadow-black/10 lg:px-6">
                     <button
                         onClick={() => setSidebarOpen(true)}
-                        className="rounded-lg p-2 text-primary-400 hover:text-primary-600 lg:hidden"
+                        className="rounded-lg p-2 text-white/70 hover:bg-white/10 hover:text-white lg:hidden"
                     >
                         <HiOutlineMenu className="h-6 w-6" />
                     </button>
@@ -252,16 +252,16 @@ export default function DashboardLayout() {
                     <div className="relative">
                         <button
                             onClick={() => setProfileOpen(!profileOpen)}
-                            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-primary-500 hover:bg-primary-50"
+                            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/90 transition-colors hover:bg-white/10"
                         >
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-700 text-sm font-medium text-white">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-400 text-sm font-bold text-primary-900">
                                 {user?.first_name?.[0]}
                                 {user?.last_name?.[0]}
                             </div>
                             <span className="hidden md:block">
                                 {user?.full_name}
                             </span>
-                            <HiOutlineChevronDown className="h-4 w-4" />
+                            <HiOutlineChevronDown className="h-4 w-4 text-white/60" />
                         </button>
 
                         {profileOpen && (

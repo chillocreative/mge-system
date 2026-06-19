@@ -99,7 +99,7 @@ function Aurora() {
 function StatCard({ label, value, icon: Icon, accent, subtitle, format }) {
     const displayValue = format === 'currency' ? formatCurrency(value ?? 0) : (value ?? 0);
     return (
-        <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.07] p-5 shadow-lg shadow-black/20 backdrop-blur-xl transition-all hover:border-white/20 hover:bg-white/[0.1]">
+        <div className="group relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.08] p-5 shadow-lg shadow-black/20 backdrop-blur-xl transition-all hover:border-white/20 hover:bg-white/[0.1]">
             <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-emerald-100/60">{label}</p>
@@ -117,7 +117,7 @@ function StatCard({ label, value, icon: Icon, accent, subtitle, format }) {
 
 function ChartCard({ title, children, className = '' }) {
     return (
-        <div className={`rounded-2xl border border-white/10 bg-white/[0.07] p-5 shadow-lg shadow-black/20 backdrop-blur-xl ${className}`}>
+        <div className={`rounded-2xl border border-white/15 bg-white/[0.08] p-5 shadow-lg shadow-black/20 backdrop-blur-xl ${className}`}>
             <h3 className="mb-4 text-sm font-semibold text-emerald-50">{title}</h3>
             {children}
         </div>
@@ -211,8 +211,8 @@ export default function Dashboard() {
     const recentProjects = data?.recent_projects || [];
 
     return (
-        <div className="relative -m-4 min-h-[calc(100vh-4rem)] overflow-hidden bg-[#03140c] p-4 lg:-m-6 lg:p-6">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#03130b] via-[#052016] to-[#03241a]" />
+        <div className="relative -m-4 min-h-[calc(100vh-4rem)] overflow-hidden bg-primary-900 p-4 lg:-m-6 lg:p-6">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary-900 via-[#0f4827] to-[#0c3c20]" />
             <Aurora />
 
             <div className="relative z-10 space-y-6">
@@ -261,7 +261,7 @@ export default function Dashboard() {
                 {/* Tables Row */}
                 <div className="grid gap-6 lg:grid-cols-2">
                     {/* My Tasks */}
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.07] shadow-lg shadow-black/20 backdrop-blur-xl">
+                    <div className="rounded-2xl border border-white/15 bg-white/[0.08] shadow-lg shadow-black/20 backdrop-blur-xl">
                         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
                             <div className="flex items-center gap-2">
                                 <HiOutlineClipboardList className="h-5 w-5 text-emerald-200/50" />
@@ -293,7 +293,7 @@ export default function Dashboard() {
 
                     {/* Recent Projects */}
                     {recentProjects.length > 0 && (
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.07] shadow-lg shadow-black/20 backdrop-blur-xl">
+                        <div className="rounded-2xl border border-white/15 bg-white/[0.08] shadow-lg shadow-black/20 backdrop-blur-xl">
                             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
                                 <div className="flex items-center gap-2">
                                     <HiOutlineBriefcase className="h-5 w-5 text-emerald-200/50" />
