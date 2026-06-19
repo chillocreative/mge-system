@@ -16,8 +16,10 @@ class UserResource extends JsonResource
             'full_name' => $this->full_name,
             'email' => $this->email,
             'phone' => $this->phone,
+            'ic_number' => $this->ic_number,
             'avatar' => $this->avatar,
             'status' => $this->status,
+            'is_protected' => $this->email === config('app.super_admin_email', 'admin@mge-pms.test'),
             'department' => $this->whenLoaded('department', fn () => [
                 'id' => $this->department->id,
                 'name' => $this->department->name,

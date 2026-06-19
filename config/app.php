@@ -16,6 +16,12 @@ return [
     'name' => env('APP_NAME', 'Laravel'),
 
     /*
+    | The protected System Administrator account. This user cannot be edited,
+    | deleted, or rejected from the Users management screen.
+    */
+    'super_admin_email' => env('SUPER_ADMIN_EMAIL', 'admin@mge-pms.test'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------

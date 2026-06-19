@@ -16,12 +16,15 @@ class AuthService
 
     public function register(array $data): User
     {
+        $name = User::splitName($data['full_name'] ?? '');
+
         $user = $this->userRepository->create([
-            'first_name' => $data['first_name'],
-            'last_name' => $data['last_name'],
+            'first_name' => $name['first_name'],
+            'last_name' => $name['last_name'],
             'email' => $data['email'],
             'password' => $data['password'],
             'phone' => $data['phone'] ?? null,
+            'ic_number' => $data['ic_number'] ?? null,
             'status' => 'pending',
         ]);
 

@@ -34,6 +34,7 @@ class UserService
             'email' => $data['email'],
             'password' => $data['password'],
             'phone' => $data['phone'] ?? null,
+            'ic_number' => $data['ic_number'] ?? null,
             'department_id' => $data['department_id'] ?? null,
             'designation_id' => $data['designation_id'] ?? null,
             'status' => 'active',

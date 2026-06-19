@@ -101,25 +101,11 @@ export default function Login() {
 
                 <div className="my-10 hidden max-w-lg lg:block">
                     <h1 className="text-5xl font-black leading-[1.05] tracking-tight text-white">
-                        Constructing the{' '}
+                        Constructing{' '}
                         <span className="bg-gradient-to-r from-lime-300 via-lime-400 to-emerald-400 bg-clip-text text-transparent">
-                            Digital Future.
+                            The Future.
                         </span>
                     </h1>
-                    <p className="mt-6 text-lg leading-relaxed text-emerald-100/70">
-                        Seamlessly manage civil engineering projects, track resources, and ensure safety compliance with our integrated PMS.
-                    </p>
-                    <div className="mt-10 grid grid-cols-2 gap-6">
-                        {[
-                            { label: 'Efficiency', desc: 'Optimized workflows' },
-                            { label: 'Compliance', desc: 'ISO 9001 standards' },
-                        ].map((stat) => (
-                            <div key={stat.label} className="border-l-2 border-lime-400/40 pl-4">
-                                <div className="text-sm font-bold text-white">{stat.label}</div>
-                                <div className="text-xs text-emerald-200/50">{stat.desc}</div>
-                            </div>
-                        ))}
-                    </div>
                 </div>
 
                 <div className="hidden items-center justify-between border-t border-white/10 pt-8 lg:flex">
@@ -143,7 +129,7 @@ export default function Login() {
 
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="space-y-1.5">
-                            <label htmlFor="email" className="text-xs font-bold uppercase tracking-widest text-lime-200/80">Corporate Email</label>
+                            <label htmlFor="email" className="text-xs font-bold uppercase tracking-widest text-lime-200/80">Email Address</label>
                             <input id="email" name="email" type="email" autoComplete="email" required
                                 value={formData.email} onChange={handleChange}
                                 className={errors.email ? inputErr : inputOk} placeholder="name@mge-eng.com" />

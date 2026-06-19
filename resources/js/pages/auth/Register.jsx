@@ -26,7 +26,7 @@ function Aurora() {
 
 export default function Register() {
     const [formData, setFormData] = useState({
-        first_name: '', last_name: '', email: '', password: '', password_confirmation: '', phone: '',
+        full_name: '', ic_number: '', email: '', password: '', password_confirmation: '', phone: '',
     });
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
@@ -116,18 +116,6 @@ export default function Register() {
                     <p className="mt-6 text-lg leading-relaxed text-emerald-100/70">
                         Become part of Malaysia's leading civil engineering team. Access specialized tools for project oversight and safety management.
                     </p>
-                    <div className="mt-10 space-y-4">
-                        {[
-                            { icon: '🏗️', text: 'Centralized Project Control' },
-                            { icon: '🦺', text: 'Automated Safety Reporting' },
-                            { icon: '📊', text: 'Real-time Financial Analytics' },
-                        ].map((item) => (
-                            <div key={item.text} className="group flex items-center gap-4">
-                                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10 transition-all group-hover:bg-lime-400/20 group-hover:ring-lime-400/40">{item.icon}</span>
-                                <span className="text-sm font-bold text-emerald-100/90">{item.text}</span>
-                            </div>
-                        ))}
-                    </div>
                 </div>
 
                 <div className="hidden items-center justify-between border-t border-white/10 pt-8 lg:flex">
@@ -144,21 +132,20 @@ export default function Register() {
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div className="space-y-1.5">
-                                <label htmlFor="first_name" className="text-[10px] font-bold uppercase tracking-widest text-lime-200/80">First Name</label>
-                                <input id="first_name" name="first_name" type="text" required value={formData.first_name} onChange={handleChange} className={field('first_name')} placeholder="Ahmad" />
-                                {errors.first_name && <p className="mt-1 text-[10px] font-bold text-red-300">{errors.first_name[0]}</p>}
-                            </div>
-                            <div className="space-y-1.5">
-                                <label htmlFor="last_name" className="text-[10px] font-bold uppercase tracking-widest text-lime-200/80">Last Name</label>
-                                <input id="last_name" name="last_name" type="text" required value={formData.last_name} onChange={handleChange} className={field('last_name')} placeholder="Razif" />
-                                {errors.last_name && <p className="mt-1 text-[10px] font-bold text-red-300">{errors.last_name[0]}</p>}
-                            </div>
+                        <div className="space-y-1.5">
+                            <label htmlFor="full_name" className="text-[10px] font-bold uppercase tracking-widest text-lime-200/80">Full Name</label>
+                            <input id="full_name" name="full_name" type="text" required value={formData.full_name} onChange={handleChange} className={field('full_name')} placeholder="Ahmad Razif" />
+                            {errors.full_name && <p className="mt-1 text-[10px] font-bold text-red-300">{errors.full_name[0]}</p>}
                         </div>
 
                         <div className="space-y-1.5">
-                            <label htmlFor="email" className="text-[10px] font-bold uppercase tracking-widest text-lime-200/80">Work Email</label>
+                            <label htmlFor="ic_number" className="text-[10px] font-bold uppercase tracking-widest text-lime-200/80">IC Number</label>
+                            <input id="ic_number" name="ic_number" type="text" value={formData.ic_number} onChange={handleChange} className={field('ic_number')} placeholder="e.g. 901231-14-5678" />
+                            {errors.ic_number && <p className="mt-1 text-[10px] font-bold text-red-300">{errors.ic_number[0]}</p>}
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label htmlFor="email" className="text-[10px] font-bold uppercase tracking-widest text-lime-200/80">Email Address</label>
                             <input id="email" name="email" type="email" autoComplete="email" required value={formData.email} onChange={handleChange} className={field('email')} placeholder="name@mge-eng.com" />
                             {errors.email && <p className="mt-1 text-[10px] font-bold text-red-300">{errors.email[0]}</p>}
                         </div>

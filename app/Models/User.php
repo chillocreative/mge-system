@@ -22,11 +22,27 @@ class User extends Authenticatable
         'email',
         'password',
         'phone',
+        'ic_number',
         'avatar',
         'department_id',
         'designation_id',
         'status',
     ];
+
+    /**
+     * Split a single "Full Name" string into first/last for storage.
+     * The system stores names as first_name + last_name under the hood,
+     * but is presented and entered as one Full Name field.
+     */
+    public static function splitName(string $fullName): array
+    {
+        $parts = preg_split('/\s+/', trim($fullName), 2);
+
+        return [
+            'first_name' => $parts[0] ?? '',
+            'last_name' => $parts[1] ?? '',
+        ];
+    }
 
     protected $hidden = [
         'password',
@@ -45,7 +61,7 @@ class User extends Authenticatable
 
     public function getFullNameAttribute(): string
     {
-        return "{$this->first_name} {$this->last_name}";
+        return trim("{$this->first_name} {$this->last_name}");
     }
 
     // Relationships
