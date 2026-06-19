@@ -190,7 +190,7 @@ function AppRoutes() {
                         <Route path="/documents/company" element={<CompanyDocuments />} />
                     </Route>
                     <Route element={<PermissionGate permission="drawings.view" />}>
-                        <Route path="/documents/drawings" element={<Drawings />} />
+                        <Route path="/projects/drawings" element={<Drawings />} />
                     </Route>
 
                     {/* Chat & Email — all authenticated users */}
