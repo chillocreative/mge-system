@@ -97,11 +97,17 @@ class UserController extends Controller
             'full_name' => ['sometimes', 'string', 'max:255'],
             'ic_number' => ['nullable', 'string', 'max:50'],
             'phone' => ['nullable', 'string', 'max:20'],
+            'password' => ['nullable', 'string', 'min:8'],
             'department_id' => ['nullable', 'exists:departments,id'],
             'designation_id' => ['nullable', 'exists:designations,id'],
             'status' => ['sometimes', 'in:pending,active,inactive,suspended,rejected'],
             'role' => ['nullable', 'string', 'exists:roles,name'],
         ]);
+
+        // Leave password unchanged when the field is blank.
+        if (empty($validated['password'])) {
+            unset($validated['password']);
+        }
 
         // Only block when the Super Admin role is being newly granted (not on
         // an unchanged role while editing other fields).
