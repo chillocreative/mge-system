@@ -36,6 +36,23 @@ const correspondenceService = {
     getFileDownloadUrl(fileId) {
         return `/api/correspondence/files/${fileId}/download`;
     },
+    // ── Correspondence types (dynamic tabs) ──
+    async types() {
+        const response = await apiClient.get('/correspondence-types');
+        return response.data;
+    },
+    async createType(data) {
+        const response = await apiClient.post('/correspondence-types', data);
+        return response.data;
+    },
+    async updateType(id, data) {
+        const response = await apiClient.put(`/correspondence-types/${id}`, data);
+        return response.data;
+    },
+    async deleteType(id) {
+        const response = await apiClient.delete(`/correspondence-types/${id}`);
+        return response.data;
+    },
     async downloadFile(fileId, fileName) {
         const response = await apiClient.get(`/correspondence/files/${fileId}/download`, {
             responseType: 'blob',

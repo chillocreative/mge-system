@@ -23,7 +23,7 @@ class CorrespondenceController extends Controller
     {
         $validated = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
-            'type' => ['required', 'in:ncr,rfa,rfi,rfwi'],
+            'type' => ['required', 'exists:correspondence_types,code'],
             'reference_no' => ['nullable', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -52,7 +52,7 @@ class CorrespondenceController extends Controller
     {
         $validated = $request->validate([
             'project_id' => ['sometimes', 'exists:projects,id'],
-            'type' => ['sometimes', 'in:ncr,rfa,rfi,rfwi'],
+            'type' => ['sometimes', 'exists:correspondence_types,code'],
             'reference_no' => ['nullable', 'string', 'max:255'],
             'title' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],

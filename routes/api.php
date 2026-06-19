@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CalendarController;
 use App\Http\Controllers\Api\CompanyDocumentController;
 use App\Http\Controllers\Api\ContractController;
+use App\Http\Controllers\Api\CorrespondenceTypeController;
 use App\Http\Controllers\Api\CorrespondenceController;
 use App\Http\Controllers\Api\DiscussionController;
 use App\Http\Controllers\Api\ProjectInvoiceController;
@@ -189,6 +190,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{id}', [ProjectInvoiceController::class, 'update'])->middleware('permission:projects.edit');
         Route::delete('/{id}', [ProjectInvoiceController::class, 'destroy'])->middleware('permission:projects.edit');
         Route::post('/{id}/files', [ProjectInvoiceController::class, 'storeFiles'])->middleware('permission:projects.edit');
+    });
+
+    // Admin-managed correspondence types (drives the dynamic tabs)
+    Route::prefix('correspondence-types')->group(function () {
+        Route::get('/', [CorrespondenceTypeController::class, 'index'])->middleware('permission:projects.view');
+        Route::post('/', [CorrespondenceTypeController::class, 'store'])->middleware('permission:projects.edit');
+        Route::put('/{id}', [CorrespondenceTypeController::class, 'update'])->middleware('permission:projects.edit');
+        Route::delete('/{id}', [CorrespondenceTypeController::class, 'destroy'])->middleware('permission:projects.edit');
     });
 
     Route::prefix('correspondence')->group(function () {
