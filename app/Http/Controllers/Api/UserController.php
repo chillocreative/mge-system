@@ -28,6 +28,21 @@ class UserController extends Controller
         return null;
     }
 
+    /**
+     * Only the System Administrator may grant the Super Admin role to a user.
+     */
+    private function guardSuperAdminRole(Request $request, ?string $role): ?JsonResponse
+    {
+        $superRole = config('app.super_admin_role', 'Admin & HR');
+        $superEmail = config('app.super_admin_email', 'admin@mge-pms.test');
+
+        if ($role === $superRole && $request->user()?->email !== $superEmail) {
+            return $this->error('Only the System Administrator can assign the Super Admin role.', 403);
+        }
+
+        return null;
+    }
+
     public function index(Request $request): JsonResponse
     {
         $perPage = $request->integer('per_page', 15);
@@ -52,6 +67,10 @@ class UserController extends Controller
             'designation_id' => ['nullable', 'exists:designations,id'],
             'role' => ['required', 'string', 'exists:roles,name'],
         ]);
+
+        if ($resp = $this->guardSuperAdminRole($request, $validated['role'])) {
+            return $resp;
+        }
 
         $validated = array_merge($validated, User::splitName($validated['full_name']));
         unset($validated['full_name']);
@@ -84,6 +103,15 @@ class UserController extends Controller
             'role' => ['nullable', 'string', 'exists:roles,name'],
         ]);
 
+        // Only block when the Super Admin role is being newly granted (not on
+        // an unchanged role while editing other fields).
+        $newRole = $validated['role'] ?? null;
+        if ($newRole && $newRole !== User::find($id)?->roles()->pluck('name')->first()) {
+            if ($resp = $this->guardSuperAdminRole($request, $newRole)) {
+                return $resp;
+            }
+        }
+
         if (isset($validated['full_name'])) {
             $validated = array_merge($validated, User::splitName($validated['full_name']));
             unset($validated['full_name']);
@@ -99,6 +127,10 @@ class UserController extends Controller
         $validated = $request->validate([
             'role' => ['required', 'string', 'exists:roles,name'],
         ]);
+
+        if ($resp = $this->guardSuperAdminRole($request, $validated['role'])) {
+            return $resp;
+        }
 
         $user = $this->userService->approveUser($id, $validated['role']);
 

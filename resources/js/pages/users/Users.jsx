@@ -22,12 +22,14 @@ const statusTabs = [
     { key: 'rejected', label: 'Rejected' },
 ];
 
+const SUPER_ADMIN_ROLE = 'Admin & HR';
 const initials = (name = '') => name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 const emptyForm = { full_name: '', ic_number: '', email: '', password: '', phone: '', department_id: '', designation_id: '', role: '', status: 'active' };
 const unwrap = (r) => r.data?.data?.data || r.data?.data || [];
 
 export default function Users() {
-    const { can } = useAuth();
+    const { can, user } = useAuth();
+    const canGrantSuper = !!user?.is_protected; // only the System Administrator
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState('');
@@ -317,8 +319,13 @@ export default function Users() {
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Role {editId ? '' : '*'}</label>
                                     <select value={form.role} onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))} required={!editId} className={fieldClass('role')}>
                                         <option value="">Select role...</option>
-                                        {roles.map((r) => <option key={r.id} value={r.name}>{r.name}</option>)}
+                                        {roles
+                                            .filter((r) => r.name !== SUPER_ADMIN_ROLE || canGrantSuper || r.name === form.role)
+                                            .map((r) => <option key={r.id} value={r.name}>{r.name}</option>)}
                                     </select>
+                                    {!canGrantSuper && (
+                                        <p className="mt-1 text-[11px] text-gray-400">Only the System Administrator can assign the Super Admin role.</p>
+                                    )}
                                 </div>
                                 {editId && (
                                     <div>
@@ -354,7 +361,9 @@ export default function Users() {
                         <select value={approveModal.role} onChange={(e) => setApproveModal({ ...approveModal, role: e.target.value })}
                             className="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400">
                             <option value="">Select a role...</option>
-                            {roles.map((role) => <option key={role.id} value={role.name}>{role.name}</option>)}
+                            {roles
+                                .filter((role) => role.name !== SUPER_ADMIN_ROLE || canGrantSuper)
+                                .map((role) => <option key={role.id} value={role.name}>{role.name}</option>)}
                         </select>
                         <div className="flex justify-end gap-2">
                             <button onClick={() => setApproveModal({ open: false, user: null, role: '' })} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100">Cancel</button>

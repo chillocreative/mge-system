@@ -17,9 +17,16 @@ return [
 
     /*
     | The protected System Administrator account. This user cannot be edited,
-    | deleted, or rejected from the Users management screen.
+    | deleted, or rejected from the Users management screen, and is the only
+    | account allowed to grant the Super Admin role below.
     */
     'super_admin_email' => env('SUPER_ADMIN_EMAIL', 'admin@mge-pms.test'),
+
+    /*
+    | The Super Admin role (full system access via Gate::before). Only the
+    | System Administrator account may assign this role to other users.
+    */
+    'super_admin_role' => env('SUPER_ADMIN_ROLE', 'Admin & HR'),
 
     /*
     |--------------------------------------------------------------------------
