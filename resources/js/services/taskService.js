@@ -11,8 +11,10 @@ const taskService = {
         return response.data;
     },
 
-    async create(data) {
-        const response = await apiClient.post('/tasks', data);
+    async create(formData) {
+        const response = await apiClient.post('/tasks', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
         return response.data;
     },
 
@@ -24,6 +26,10 @@ const taskService = {
     async delete(id) {
         const response = await apiClient.delete(`/tasks/${id}`);
         return response.data;
+    },
+
+    attachmentDownloadUrl(id) {
+        return `/api/tasks/attachments/${id}/download`;
     },
 };
 

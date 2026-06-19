@@ -226,6 +226,8 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middleware('permission:tasks.view');
         Route::post('/', [TaskController::class, 'store'])
             ->middleware('permission:tasks.create');
+        Route::get('/attachments/{attachment}/download', [TaskController::class, 'downloadAttachment'])
+            ->middleware('permission:tasks.view');
         Route::get('/{task}', [TaskController::class, 'show'])
             ->middleware('permission:tasks.view');
         Route::put('/{task}', [TaskController::class, 'update'])

@@ -20,9 +20,9 @@ class TaskController extends Controller
         $projectId = $request->integer('project_id');
 
         if ($projectId) {
-            $tasks = $this->taskService->getProjectTasks($projectId, $filters);
+            $tasks = $this->taskService->getProjectTasks($projectId, $filters, $request->user());
         } else {
-            $tasks = $this->taskService->getMyTasks(auth()->id(), $filters);
+            $tasks = $this->taskService->getMyTasks($request->user()->id, $filters);
         }
 
         return $this->success(
@@ -32,9 +32,18 @@ class TaskController extends Controller
 
     public function store(StoreTaskRequest $request): JsonResponse
     {
-        $task = $this->taskService->createTask($request->validated());
+        $data = collect($request->validated())->except(['assignee_ids', 'attachments'])->toArray();
+        $assigneeIds = $request->input('assignee_ids', []);
+        $files = $request->file('attachments', []);
+
+        $task = $this->taskService->createTask($data, $assigneeIds, $files);
 
         return $this->created(new TaskResource($task), 'Task created successfully.');
+    }
+
+    public function downloadAttachment(int $attachment)
+    {
+        return $this->taskService->downloadAttachment($attachment);
     }
 
     public function show(int $id): JsonResponse
@@ -46,7 +55,10 @@ class TaskController extends Controller
 
     public function update(UpdateTaskRequest $request, int $id): JsonResponse
     {
-        $task = $this->taskService->updateTask($id, $request->validated());
+        $data = collect($request->validated())->except(['assignee_ids'])->toArray();
+        $assigneeIds = $request->has('assignee_ids') ? $request->input('assignee_ids', []) : null;
+
+        $task = $this->taskService->updateTask($id, $data, $assigneeIds);
 
         return $this->success(new TaskResource($task), 'Task updated successfully.');
     }
