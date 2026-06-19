@@ -78,6 +78,13 @@ export default function Tasks() {
         setAssigneeIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
     };
 
+    const addFiles = (e) => {
+        const picked = Array.from(e.target.files);
+        setFiles((prev) => [...prev, ...picked]);
+        e.target.value = ''; // let the same file be re-picked / add more in another go
+    };
+    const removeFile = (idx) => setFiles((prev) => prev.filter((_, i) => i !== idx));
+
     const filteredUsers = users.filter((u) => u.full_name?.toLowerCase().includes(userSearch.toLowerCase()));
     const selectedUsers = users.filter((u) => assigneeIds.includes(u.id));
 
@@ -287,13 +294,16 @@ export default function Tasks() {
 
                             {/* Multiple attachments */}
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Attachments</label>
-                                <input type="file" multiple onChange={(e) => setFiles([...e.target.files])}
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Attachments <span className="font-normal text-gray-400">(add multiple — click again to add more)</span></label>
+                                <input type="file" multiple onChange={addFiles}
                                     className="w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-primary-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-700 hover:file:bg-primary-100" />
                                 {files.length > 0 && (
                                     <ul className="mt-2 space-y-1">
                                         {files.map((f, i) => (
-                                            <li key={i} className="flex items-center gap-2 text-xs text-gray-500"><HiOutlinePaperClip className="h-3.5 w-3.5" />{f.name}</li>
+                                            <li key={i} className="flex items-center justify-between gap-2 rounded bg-gray-50 px-2 py-1 text-xs text-gray-600">
+                                                <span className="flex min-w-0 items-center gap-2"><HiOutlinePaperClip className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{f.name}</span></span>
+                                                <button type="button" onClick={() => removeFile(i)} className="shrink-0 text-gray-400 hover:text-red-600"><HiOutlineX className="h-3.5 w-3.5" /></button>
+                                            </li>
                                         ))}
                                     </ul>
                                 )}

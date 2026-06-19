@@ -135,6 +135,13 @@ export default function ProjectInvoices() {
         catch (err) { toast.error(err.response?.data?.message || 'Failed to delete'); }
     };
 
+    const addFiles = (e) => {
+        const picked = Array.from(e.target.files);
+        setFiles((prev) => [...prev, ...picked]);
+        e.target.value = '';
+    };
+    const removeFile = (idx) => setFiles((prev) => prev.filter((_, i) => i !== idx));
+
     const deleteExistingFile = async (fileId) => {
         try { await projectInvoiceService.deleteFile(fileId); setExistingFiles((p) => p.filter((f) => f.id !== fileId)); toast.success('File removed'); }
         catch { toast.error('Failed to remove file'); }
@@ -359,12 +366,17 @@ export default function ProjectInvoices() {
 
                             {/* Attachments (IPC) */}
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">{form.type === 'client' ? 'IPC / Supporting Documents' : 'Invoice Documents'}</label>
-                                <input type="file" multiple onChange={(e) => setFiles([...e.target.files])}
+                                <label className="mb-1 block text-sm font-medium text-gray-700">{form.type === 'client' ? 'IPC / Supporting Documents' : 'Invoice Documents'} <span className="font-normal text-gray-400">(add multiple — click again to add more)</span></label>
+                                <input type="file" multiple onChange={addFiles}
                                     className="w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-primary-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-700 hover:file:bg-primary-100" />
                                 {files.length > 0 && (
                                     <ul className="mt-2 space-y-1">
-                                        {files.map((f, i) => <li key={i} className="flex items-center gap-2 text-xs text-gray-500"><HiOutlinePaperClip className="h-3.5 w-3.5" />{f.name}</li>)}
+                                        {files.map((f, i) => (
+                                            <li key={i} className="flex items-center justify-between gap-2 rounded bg-gray-50 px-2 py-1 text-xs text-gray-600">
+                                                <span className="flex min-w-0 items-center gap-2"><HiOutlinePaperClip className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{f.name}</span></span>
+                                                <button type="button" onClick={() => removeFile(i)} className="shrink-0 text-gray-400 hover:text-red-600"><HiOutlineTrash className="h-3.5 w-3.5" /></button>
+                                            </li>
+                                        ))}
                                     </ul>
                                 )}
                                 {existingFiles.length > 0 && (
