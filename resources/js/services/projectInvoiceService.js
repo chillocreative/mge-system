@@ -5,6 +5,10 @@ const projectInvoiceService = {
         const response = await apiClient.get('/project-invoices', { params });
         return response.data;
     },
+    async summary(params = {}) {
+        const response = await apiClient.get('/project-invoices/summary', { params });
+        return response.data;
+    },
     async get(id) {
         const response = await apiClient.get(`/project-invoices/${id}`);
         return response.data;

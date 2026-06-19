@@ -19,13 +19,35 @@ class ProjectInvoiceService
         ])->orderByDesc('invoice_date');
 
         if (!empty($filters['project_id'])) $query->forProject($filters['project_id']);
+        if (!empty($filters['type'])) $query->byType($filters['type']);
         if (!empty($filters['status'])) $query->byStatus($filters['status']);
         if (!empty($filters['search'])) {
             $query->where(fn ($q) => $q->where('invoice_no', 'like', "%{$filters['search']}%")
+                ->orWhere('party_name', 'like', "%{$filters['search']}%")
                 ->orWhere('notes', 'like', "%{$filters['search']}%"));
         }
 
         return $query->paginate($perPage);
+    }
+
+    /**
+     * Profit summary: total invoiced MGE→Client vs total Subcon→MGE.
+     */
+    public function summary(array $filters): array
+    {
+        $base = ProjectInvoice::query();
+        if (!empty($filters['project_id'])) $base->forProject($filters['project_id']);
+
+        $client = (float) (clone $base)->byType('client')->sum('amount');
+        $subcon = (float) (clone $base)->byType('subcon')->sum('amount');
+
+        return [
+            'total_client' => round($client, 2),   // revenue: MGE invoices Client
+            'total_subcon' => round($subcon, 2),    // cost: Subcon invoices MGE
+            'profit' => round($client - $subcon, 2),
+            'client_count' => (clone $base)->byType('client')->count(),
+            'subcon_count' => (clone $base)->byType('subcon')->count(),
+        ];
     }
 
     public function create(array $data, int $userId, array $files = []): ProjectInvoice

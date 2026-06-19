@@ -13,6 +13,8 @@ class ProjectInvoice extends Model
 
     protected $fillable = [
         'project_id',
+        'type',
+        'party_name',
         'invoice_no',
         'invoice_date',
         'amount',
@@ -49,6 +51,11 @@ class ProjectInvoice extends Model
     public function scopeByStatus($q, string $s)
     {
         return $q->where('status', $s);
+    }
+
+    public function scopeByType($q, string $t)
+    {
+        return $q->where('type', $t);
     }
 
     public function scopeForProject($q, int $id)

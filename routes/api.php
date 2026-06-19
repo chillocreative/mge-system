@@ -181,6 +181,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('project-invoices')->group(function () {
         Route::get('/files/{fileId}/download', [ProjectInvoiceController::class, 'downloadFile'])->middleware('permission:projects.view');
         Route::delete('/files/{fileId}', [ProjectInvoiceController::class, 'destroyFile'])->middleware('permission:projects.edit');
+        Route::get('/summary', [ProjectInvoiceController::class, 'summary'])->middleware('permission:projects.view');
         Route::get('/', [ProjectInvoiceController::class, 'index'])->middleware('permission:projects.view');
         Route::post('/', [ProjectInvoiceController::class, 'store'])->middleware('permission:projects.edit');
         Route::get('/{id}', [ProjectInvoiceController::class, 'show'])->middleware('permission:projects.view');
