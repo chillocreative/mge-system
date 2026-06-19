@@ -7,8 +7,7 @@ import toast from 'react-hot-toast';
 
 const emptyForm = {
     employee_no: '',
-    first_name: '',
-    last_name: '',
+    full_name: '',
     ic_passport_no: '',
     email: '',
     phone: '',
@@ -174,12 +173,11 @@ export default function StaffForm() {
                         <Field label="IC / Passport No" name="ic_passport_no" errors={errors}>
                             <input value={form.ic_passport_no} onChange={(e) => set('ic_passport_no', e.target.value)} className={inputClass} />
                         </Field>
-                        <Field label="First Name *" name="first_name" errors={errors}>
-                            <input value={form.first_name} onChange={(e) => set('first_name', e.target.value)} className={inputClass} />
-                        </Field>
-                        <Field label="Last Name" name="last_name" errors={errors}>
-                            <input value={form.last_name} onChange={(e) => set('last_name', e.target.value)} className={inputClass} />
-                        </Field>
+                        <div className="sm:col-span-2">
+                            <Field label="Full Name *" name="full_name" errors={errors}>
+                                <input value={form.full_name} onChange={(e) => set('full_name', e.target.value)} className={inputClass} />
+                            </Field>
+                        </div>
                         <Field label="Email" name="email" errors={errors}>
                             <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} className={inputClass} />
                         </Field>

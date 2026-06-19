@@ -38,6 +38,20 @@ class Employee extends Model
         return trim("{$this->first_name} {$this->last_name}");
     }
 
+    /**
+     * Staff are entered and shown as a single Full Name, but stored as
+     * first_name + last_name under the hood. Split for storage.
+     */
+    public static function splitName(string $fullName): array
+    {
+        $parts = preg_split('/\s+/', trim($fullName), 2);
+
+        return [
+            'first_name' => $parts[0] ?? '',
+            'last_name' => $parts[1] ?? '',
+        ];
+    }
+
     // ── Relationships ──
 
     public function department(): BelongsTo

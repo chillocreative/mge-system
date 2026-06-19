@@ -24,8 +24,7 @@ class EmployeeController extends Controller
     {
         $validated = $request->validate([
             'employee_no' => ['required', 'string', 'max:50', 'unique:employees,employee_no'],
-            'first_name' => ['required', 'string', 'max:100'],
-            'last_name' => ['nullable', 'string', 'max:100'],
+            'full_name' => ['required', 'string', 'max:200'],
             'ic_passport_no' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
@@ -49,7 +48,8 @@ class EmployeeController extends Controller
             'photo' => ['nullable', 'image', 'max:5120'],
         ]);
 
-        unset($validated['photo']);
+        $validated = array_merge($validated, \App\Models\Employee::splitName($validated['full_name']));
+        unset($validated['photo'], $validated['full_name']);
 
         $employee = $this->employeeService->create($validated, $request->user()->id, $request->file('photo'));
 
@@ -65,8 +65,7 @@ class EmployeeController extends Controller
     {
         $validated = $request->validate([
             'employee_no' => ['sometimes', 'string', 'max:50', 'unique:employees,employee_no,' . $id],
-            'first_name' => ['sometimes', 'string', 'max:100'],
-            'last_name' => ['nullable', 'string', 'max:100'],
+            'full_name' => ['sometimes', 'required', 'string', 'max:200'],
             'ic_passport_no' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
@@ -90,6 +89,10 @@ class EmployeeController extends Controller
             'photo' => ['nullable', 'image', 'max:5120'],
         ]);
 
+        if (isset($validated['full_name'])) {
+            $validated = array_merge($validated, \App\Models\Employee::splitName($validated['full_name']));
+            unset($validated['full_name']);
+        }
         unset($validated['photo']);
 
         $employee = $this->employeeService->update($id, $validated, $request->file('photo'));
