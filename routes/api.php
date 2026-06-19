@@ -50,6 +50,30 @@ Route::post('/register', [AuthController::class, 'register']);
 
 /*
 |--------------------------------------------------------------------------
+| Token-based auth (native/mobile clients — e.g. Flutter)
+|--------------------------------------------------------------------------
+| The web SPA uses the cookie-based /login above. Native apps use these to
+| obtain a Sanctum Bearer token, then call any /api/* route with
+| `Authorization: Bearer <token>`.
+*/
+Route::post('/auth/login', [AuthController::class, 'tokenLogin'])->middleware('throttle:6,1');
+Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:6,1');
+
+// Health / version probe (connectivity + mobile force-update checks)
+Route::get('/health', function () {
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'status' => 'ok',
+            'app' => config('app.name'),
+            'api_version' => 'v1',
+            'time' => now()->toISOString(),
+        ],
+    ]);
+});
+
+/*
+|--------------------------------------------------------------------------
 | Authenticated Routes
 |--------------------------------------------------------------------------
 */
@@ -59,6 +83,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth — available to all authenticated users
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+
+    // Token-based auth (mobile/native) — works with Bearer token
+    Route::post('/auth/logout', [AuthController::class, 'tokenLogout']);
+    Route::post('/auth/logout-all', [AuthController::class, 'logoutAll']);
+    Route::get('/auth/me', [AuthController::class, 'me']);
 
     // Broadcasting auth endpoint for private/presence channels
     Route::post('/broadcasting/auth', function (\Illuminate\Http\Request $request) {

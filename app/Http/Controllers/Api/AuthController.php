@@ -53,4 +53,60 @@ class AuthController extends Controller
 
         return $this->success(new UserResource($user));
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Token-based auth (for native/mobile clients — e.g. Flutter)
+    |--------------------------------------------------------------------------
+    | The web SPA uses cookie/session auth above. Native apps cannot use
+    | cookies, so these endpoints issue a Sanctum Bearer token. Every existing
+    | `auth:sanctum` route already accepts `Authorization: Bearer <token>`.
+    */
+
+    public function tokenLogin(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+            'device_name' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        // Reuse the same credential + account-status checks as the SPA login.
+        $user = $this->authService->login($validated);
+        $user->load(['department', 'designation', 'roles', 'permissions']);
+
+        $device = $validated['device_name'] ?? ($request->userAgent() ?: 'mobile');
+        $token = $user->createToken($device)->plainTextToken;
+
+        return $this->success([
+            'user' => new UserResource($user),
+            'token' => $token,
+            'token_type' => 'Bearer',
+        ], 'Login successful.');
+    }
+
+    public function tokenLogout(Request $request): JsonResponse
+    {
+        $token = $request->user()->currentAccessToken();
+        if ($token && method_exists($token, 'delete')) {
+            $token->delete(); // revoke only the current device's token
+        }
+
+        return $this->success(null, 'Logged out successfully.');
+    }
+
+    public function logoutAll(Request $request): JsonResponse
+    {
+        $request->user()->tokens()->delete(); // revoke tokens on all devices
+
+        return $this->success(null, 'Logged out from all devices.');
+    }
+
+    public function me(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $user->load(['department', 'designation', 'roles', 'permissions']);
+
+        return $this->success(new UserResource($user));
+    }
 }
