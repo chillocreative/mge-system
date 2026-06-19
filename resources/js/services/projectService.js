@@ -70,6 +70,14 @@ const projectService = {
         });
         return response.data;
     },
+    async uploadDocumentsBulk(projectId, files) {
+        const fd = new FormData();
+        files.forEach((f) => fd.append('files[]', f));
+        const response = await apiClient.post(`/projects/${projectId}/documents/bulk`, fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
     async deleteDocument(projectId, documentId) {
         const response = await apiClient.delete(`/projects/${projectId}/documents/${documentId}`);
         return response.data;

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import projectInvoiceService from '@/services/projectInvoiceService';
 import projectService from '@/services/projectService';
+import ProjectFilesPanel from '@/components/ProjectFilesPanel';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 import {
@@ -415,6 +416,13 @@ export default function ProjectInvoices() {
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Notes</label>
                                 <textarea rows={2} value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} className={fieldClass('notes')} />
                             </div>
+
+                            {form.project_id && (
+                                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                    <label className="mb-2 block text-xs font-bold uppercase text-gray-500">Project Files (reference)</label>
+                                    <ProjectFilesPanel projectId={form.project_id} readOnly />
+                                </div>
+                            )}
 
                             {/* Attachments (IPC) */}
                             <div>

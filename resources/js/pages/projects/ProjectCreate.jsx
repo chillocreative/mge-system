@@ -4,7 +4,7 @@ import projectService from '@/services/projectService';
 import apiClient from '@/services/apiClient';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
-import { HiOutlineArrowLeft } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlinePaperClip, HiOutlineX } from 'react-icons/hi';
 
 const defaultForm = {
     name: '',
@@ -33,6 +33,13 @@ export default function ProjectCreate() {
     const [saving, setSaving] = useState(false);
     const [clients, setClients] = useState([]);
     const [users, setUsers] = useState([]);
+    const [attachFiles, setAttachFiles] = useState([]);
+
+    const addFiles = (e) => {
+        setAttachFiles((prev) => [...prev, ...Array.from(e.target.files)]);
+        e.target.value = '';
+    };
+    const removeFile = (idx) => setAttachFiles((prev) => prev.filter((_, i) => i !== idx));
 
     useEffect(() => {
         const fetchOptions = async () => {
@@ -105,15 +112,24 @@ export default function ProjectCreate() {
                 manager_id: form.manager_id || null,
             };
 
+            let targetId = id;
             if (isEdit) {
                 await projectService.update(id, payload);
-                toast.success('Project updated');
-                navigate(`/projects/${id}`);
             } else {
                 const res = await projectService.create(payload);
-                toast.success('Project created');
-                navigate(`/projects/${res.data?.id || ''}`);
+                targetId = res.data?.id;
             }
+
+            if (attachFiles.length && targetId) {
+                try {
+                    await projectService.uploadDocumentsBulk(targetId, attachFiles);
+                } catch {
+                    toast.error('Project saved, but some attachments failed to upload');
+                }
+            }
+
+            toast.success(isEdit ? 'Project updated' : 'Project created');
+            navigate(`/projects/${targetId || ''}`);
         } catch (err) {
             if (err.response?.status === 422) {
                 setErrors(err.response.data?.errors || {});
@@ -352,6 +368,27 @@ export default function ProjectCreate() {
                         placeholder="Internal notes..."
                         className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                     />
+                </div>
+
+                {/* Attachments */}
+                <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
+                    <h2 className="mb-1 text-lg font-semibold text-gray-900">Attachments</h2>
+                    <p className="mb-4 text-sm text-gray-500">Upload multiple files (drawings, contracts, etc.). These become the project's shared files, available across related modules.</p>
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-600 hover:border-primary-400 hover:text-primary-700">
+                        <HiOutlinePaperClip className="h-4 w-4" />
+                        Choose files (add multiple)
+                        <input type="file" multiple className="hidden" onChange={addFiles} />
+                    </label>
+                    {attachFiles.length > 0 && (
+                        <ul className="mt-3 space-y-1">
+                            {attachFiles.map((f, i) => (
+                                <li key={i} className="flex items-center justify-between gap-2 rounded bg-gray-50 px-3 py-1.5 text-sm text-gray-600">
+                                    <span className="flex min-w-0 items-center gap-2"><HiOutlinePaperClip className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{f.name}</span></span>
+                                    <button type="button" onClick={() => removeFile(i)} className="shrink-0 text-gray-400 hover:text-red-600"><HiOutlineX className="h-4 w-4" /></button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </div>
 
                 {/* Submit */}

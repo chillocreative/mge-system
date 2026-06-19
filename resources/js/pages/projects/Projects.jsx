@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import projectService from '@/services/projectService';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { HiOutlinePlus, HiOutlineSearch, HiOutlineBriefcase } from 'react-icons/hi';
+import ProjectFilesPanel from '@/components/ProjectFilesPanel';
+import { HiOutlinePlus, HiOutlineSearch, HiOutlineBriefcase, HiOutlinePaperClip, HiOutlineX } from 'react-icons/hi';
 
 const statusColors = {
     draft: 'bg-gray-100 text-gray-700',
@@ -25,6 +26,9 @@ export default function Projects() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
+    const [filesModal, setFilesModal] = useState(null);
+
+    const openFiles = (e, project) => { e.preventDefault(); e.stopPropagation(); setFilesModal(project); };
 
     const fetchProjects = async () => {
         setLoading(true);
@@ -151,8 +155,34 @@ export default function Projects() {
                                     </span>
                                 )}
                             </div>
+
+                            <button
+                                type="button"
+                                onClick={(e) => openFiles(e, project)}
+                                className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-500 hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700"
+                                title="View project files"
+                            >
+                                <HiOutlinePaperClip className="h-3.5 w-3.5" />
+                                {project.documents_count ?? 0} file{(project.documents_count ?? 0) === 1 ? '' : 's'}
+                            </button>
                         </Link>
                     ))}
+                </div>
+            )}
+
+            {/* Project files modal */}
+            {filesModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setFilesModal(null)}>
+                    <div className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="mb-4 flex items-start justify-between">
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900">{filesModal.name}</h3>
+                                <p className="text-sm text-gray-500">Project files</p>
+                            </div>
+                            <button onClick={() => setFilesModal(null)} className="rounded p-1 text-gray-400 hover:bg-gray-100"><HiOutlineX className="h-5 w-5" /></button>
+                        </div>
+                        <ProjectFilesPanel projectId={filesModal.id} />
+                    </div>
                 </div>
             )}
         </div>

@@ -146,6 +146,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', [ProjectDocumentController::class, 'index']);
             Route::post('/', [ProjectDocumentController::class, 'store'])
                 ->middleware('permission:projects.edit');
+            Route::post('/bulk', [ProjectDocumentController::class, 'storeBulk'])
+                ->middleware('permission:projects.edit');
             Route::get('/{document}', [ProjectDocumentController::class, 'show']);
             Route::get('/{document}/download', [ProjectDocumentController::class, 'download']);
             Route::delete('/{document}', [ProjectDocumentController::class, 'destroy'])

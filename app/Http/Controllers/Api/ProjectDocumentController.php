@@ -34,7 +34,7 @@ class ProjectDocumentController extends Controller
         ]);
 
         $file = $request->file('file');
-        $path = $file->store("projects/{$project->id}/documents", 'public');
+        $path = $file->store("projects/{$project->id}/documents", 'local');
 
         $document = ProjectDocument::create([
             'project_id' => $project->id,
@@ -51,6 +51,38 @@ class ProjectDocumentController extends Controller
         return $this->created($document->load('uploader:id,first_name,last_name'), 'Document uploaded.');
     }
 
+    /**
+     * Upload multiple files at once (used by the New Project form and the
+     * "Add files" action). Each file becomes a ProjectDocument.
+     */
+    public function storeBulk(int $projectId, Request $request): JsonResponse
+    {
+        $project = Project::findOrFail($projectId);
+
+        $request->validate([
+            'files' => ['required', 'array', 'min:1', 'max:20'],
+            'files.*' => ['file', 'max:51200', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg,gif,dwg,dxf,zip,txt,csv'],
+            'category' => ['nullable', 'in:drawing,contract,permit,report,photo,specification,invoice,other'],
+        ]);
+
+        $created = [];
+        foreach ($request->file('files', []) as $file) {
+            $path = $file->store("projects/{$project->id}/documents", 'local');
+            $created[] = ProjectDocument::create([
+                'project_id' => $project->id,
+                'title' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
+                'file_path' => $path,
+                'file_name' => $file->getClientOriginalName(),
+                'file_type' => $file->getClientMimeType(),
+                'file_size' => $file->getSize(),
+                'category' => $request->category ?? 'other',
+                'uploaded_by' => $request->user()->id,
+            ]);
+        }
+
+        return $this->created(['count' => count($created)], count($created) . ' file(s) uploaded.');
+    }
+
     public function show(int $projectId, int $documentId): JsonResponse
     {
         $document = ProjectDocument::where('project_id', $projectId)
@@ -64,7 +96,8 @@ class ProjectDocumentController extends Controller
     {
         $document = ProjectDocument::where('project_id', $projectId)->findOrFail($documentId);
 
-        Storage::disk('public')->delete($document->file_path);
+        $disk = $this->diskFor($document->file_path);
+        Storage::disk($disk)->delete($document->file_path);
         $document->delete();
 
         return $this->success(null, 'Document deleted.');
@@ -74,6 +107,15 @@ class ProjectDocumentController extends Controller
     {
         $document = ProjectDocument::where('project_id', $projectId)->findOrFail($documentId);
 
-        return Storage::disk('public')->download($document->file_path, $document->file_name);
+        return Storage::disk($this->diskFor($document->file_path))->download($document->file_path, $document->file_name);
+    }
+
+    /**
+     * New uploads live on the private 'local' disk; older ones may be on
+     * 'public'. Pick whichever actually has the file.
+     */
+    private function diskFor(string $path): string
+    {
+        return Storage::disk('local')->exists($path) ? 'local' : 'public';
     }
 }
