@@ -100,13 +100,6 @@ export default function Login() {
                 </div>
 
                 <div className="my-10 hidden max-w-lg lg:block">
-                    <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-lime-300/20 bg-lime-300/5 px-4 py-1.5 backdrop-blur">
-                        <span className="relative flex h-2 w-2">
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-lime-400 opacity-75" />
-                            <span className="relative inline-flex h-2 w-2 rounded-full bg-lime-400" />
-                        </span>
-                        <span className="text-xs font-bold uppercase tracking-widest text-lime-200/90">Integrated PMS Platform</span>
-                    </div>
                     <h1 className="text-5xl font-black leading-[1.05] tracking-tight text-white">
                         Constructing the{' '}
                         <span className="bg-gradient-to-r from-lime-300 via-lime-400 to-emerald-400 bg-clip-text text-transparent">
@@ -205,8 +198,6 @@ export default function Login() {
                         <div className="mt-4 grid grid-cols-1 gap-2.5">
                             {[
                                 { role: 'Project Director', email: 'admin@mge-pms.test', icon: '🏗️' },
-                                { role: 'Safety Inspector', email: 'pm@mge-pms.test', icon: '🦺' },
-                                { role: 'Finance Control', email: 'finance@mge-pms.test', icon: '📊' },
                             ].map((acc) => (
                                 <button key={acc.email} type="button" onClick={() => fillDemo(acc.email)}
                                     className="group flex w-full items-center gap-4 rounded-xl border border-white/10 bg-white/5 p-3 text-left transition-all hover:border-lime-400/40 hover:bg-lime-400/5 active:scale-[0.99]">

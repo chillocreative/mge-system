@@ -22,6 +22,7 @@ import Discussions from '@/pages/projects/discussions/Discussions';
 import Contracts from '@/pages/projects/contracts/Contracts';
 import Clients from '@/pages/clients/Clients';
 import Users from '@/pages/users/Users';
+import Roles from '@/pages/roles/Roles';
 import FinanceOverview from '@/pages/finance/FinanceOverview';
 import Invoices from '@/pages/finance/Invoices';
 import InvoiceCreate from '@/pages/finance/InvoiceCreate';
@@ -101,6 +102,11 @@ function AppRoutes() {
                     {/* Users — requires users.view */}
                     <Route element={<PermissionGate permission="users.view" />}>
                         <Route path="/users" element={<Users />} />
+                    </Route>
+
+                    {/* Roles & Permissions — requires roles.view */}
+                    <Route element={<PermissionGate permission="roles.view" />}>
+                        <Route path="/roles" element={<Roles />} />
                     </Route>
 
                     {/* Finance — requires finance.view */}

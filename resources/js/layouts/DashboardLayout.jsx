@@ -32,6 +32,7 @@ import {
     HiOutlineFlag,
     HiOutlineDocumentDuplicate,
     HiOutlineChatAlt2,
+    HiOutlineKey,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 
@@ -83,6 +84,7 @@ const navigation = [
     { name: 'Chat', href: '/chat', icon: HiOutlineChat, permission: null },
     { name: 'Email', href: '/email', icon: HiOutlineMail, permission: null },
     { name: 'Users', href: '/users', icon: HiOutlineUserGroup, permission: 'users.view' },
+    { name: 'Roles & Permissions', href: '/roles', icon: HiOutlineKey, permission: 'roles.view' },
 ];
 
 export default function DashboardLayout() {
