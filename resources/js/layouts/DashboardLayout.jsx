@@ -28,6 +28,7 @@ import {
     HiOutlineDocumentText,
     HiOutlineFolderOpen,
     HiOutlineUsers,
+    HiOutlineChevronDoubleLeft,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 
@@ -77,8 +78,16 @@ export default function DashboardLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
     const [openGroups, setOpenGroups] = useState({});
+    const [collapsed, setCollapsed] = useState(() => {
+        try { return localStorage.getItem('sidebarCollapsed') === '1'; } catch { return false; }
+    });
 
     const toggleGroup = (name) => setOpenGroups((p) => ({ ...p, [name]: !p[name] }));
+    const toggleCollapsed = () => setCollapsed((c) => {
+        const next = !c;
+        try { localStorage.setItem('sidebarCollapsed', next ? '1' : '0'); } catch { /* ignore */ }
+        return next;
+    });
 
     const handleLogout = async () => {
         try {
@@ -89,13 +98,6 @@ export default function DashboardLayout() {
             toast.error('Logout failed');
         }
     };
-
-    const navLinkClass = ({ isActive }) =>
-        `group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-            isActive
-                ? 'bg-accent-400/10 text-accent-400'
-                : 'text-primary-300 hover:bg-white/5 hover:text-white'
-        }`;
 
     // Filter navigation items by user permissions
     const visibleNavigation = navigation
@@ -122,15 +124,29 @@ export default function DashboardLayout() {
 
             {/* Sidebar — Dark Navy */}
             <aside
-                className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-primary-700 transition-transform duration-200 lg:translate-x-0 ${
-                    sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-                }`}
+                className={`fixed inset-y-0 left-0 z-50 flex transform flex-col bg-primary-700 transition-all duration-200 lg:translate-x-0 w-64 ${
+                    collapsed ? 'lg:w-20' : 'lg:w-64'
+                } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
             >
-                <div className="flex h-20 items-center justify-between border-b border-white/10 px-4">
-                    <div className="flex flex-col">
+                <div className={`flex h-20 shrink-0 items-center justify-between border-b border-white/10 px-4 ${collapsed ? 'lg:px-2' : ''}`}>
+                    <div className={`flex flex-col ${collapsed ? 'lg:hidden' : ''}`}>
                         <Logo variant="light" size={32} showText />
                         <span className="ml-10 text-[10px] font-medium tracking-widest text-primary-400 uppercase">Project Management System</span>
                     </div>
+                    {collapsed && (
+                        <div className="mx-auto hidden lg:block">
+                            <Logo variant="light" size={32} />
+                        </div>
+                    )}
+                    {/* Desktop collapse toggle */}
+                    <button
+                        onClick={toggleCollapsed}
+                        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                        className={`hidden rounded-lg p-1 text-primary-400 hover:bg-white/5 hover:text-white lg:block ${collapsed ? 'lg:absolute lg:right-1 lg:top-2' : ''}`}
+                    >
+                        <HiOutlineChevronDoubleLeft className={`h-5 w-5 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
+                    </button>
+                    {/* Mobile close */}
                     <button
                         onClick={() => setSidebarOpen(false)}
                         className="rounded-lg p-1 text-primary-400 hover:text-white lg:hidden"
@@ -139,7 +155,7 @@ export default function DashboardLayout() {
                     </button>
                 </div>
 
-                <nav className="flex-1 space-y-1 overflow-y-auto p-4">
+                <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
                     {visibleNavigation.map((item) => {
                         if (item.children) {
                             const isOpen = !!openGroups[item.name];
@@ -147,17 +163,18 @@ export default function DashboardLayout() {
                                 <div key={item.name}>
                                     <button
                                         type="button"
-                                        onClick={() => toggleGroup(item.name)}
-                                        className="group flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-primary-300 transition-colors hover:bg-white/5 hover:text-white"
+                                        onClick={() => { if (collapsed) setCollapsed(false); toggleGroup(item.name); }}
+                                        title={collapsed ? item.name : undefined}
+                                        className={`group flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium text-primary-300 transition-colors hover:bg-white/5 hover:text-white ${collapsed ? 'lg:justify-center' : 'justify-between gap-3'}`}
                                     >
                                         <span className="flex items-center gap-3">
                                             <item.icon className="h-5 w-5 shrink-0" />
-                                            {item.name}
+                                            <span className={collapsed ? 'lg:hidden' : ''}>{item.name}</span>
                                         </span>
-                                        <HiOutlineChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                                        <HiOutlineChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''} ${collapsed ? 'lg:hidden' : ''}`} />
                                     </button>
-                                    {isOpen && (
-                                        <div className="mt-1 space-y-1 border-l border-white/10 pl-3 ml-3">
+                                    {isOpen && !collapsed && (
+                                        <div className="mt-1 ml-3 space-y-1 border-l border-white/10 pl-3">
                                             {item.children.map((child) => (
                                                 <NavLink
                                                     key={child.name}
@@ -185,20 +202,26 @@ export default function DashboardLayout() {
                             <NavLink
                                 key={item.name}
                                 to={item.href}
-                                className={navLinkClass}
+                                title={collapsed ? item.name : undefined}
+                                className={({ isActive }) =>
+                                    `group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${collapsed ? 'lg:justify-center gap-3' : 'gap-3'} ${
+                                        isActive
+                                            ? 'bg-accent-400/10 text-accent-400'
+                                            : 'text-primary-300 hover:bg-white/5 hover:text-white'
+                                    }`
+                                }
                                 onClick={() => setSidebarOpen(false)}
                             >
                                 <item.icon className="h-5 w-5 shrink-0" />
-                                {item.name}
+                                <span className={collapsed ? 'lg:hidden' : ''}>{item.name}</span>
                             </NavLink>
                         );
                     })}
                 </nav>
-
             </aside>
 
             {/* Main content */}
-            <div className="lg:pl-64">
+            <div className={`transition-all duration-200 ${collapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
                 {/* Header */}
                 <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-primary-200 bg-white px-4 shadow-sm lg:px-6">
                     <button
