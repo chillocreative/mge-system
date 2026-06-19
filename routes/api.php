@@ -4,6 +4,10 @@ use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CalendarController;
 use App\Http\Controllers\Api\CompanyDocumentController;
+use App\Http\Controllers\Api\ContractController;
+use App\Http\Controllers\Api\CorrespondenceController;
+use App\Http\Controllers\Api\DiscussionController;
+use App\Http\Controllers\Api\ProjectInvoiceController;
 use App\Http\Controllers\Api\DrawingController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\InventoryController;
@@ -129,6 +133,57 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/{event}', [CalendarEventController::class, 'destroy'])
                 ->middleware('permission:projects.edit');
         });
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | Project sub-features (global lists) — Milestones, Invoices,
+    | Correspondence (NCR/RFA/RFI/RFWI), Discussions, Contracts
+    | All gated by projects.view (read) / projects.edit (write)
+    |----------------------------------------------------------------------
+    */
+    Route::prefix('milestones')->group(function () {
+        Route::get('/', [MilestoneController::class, 'globalIndex'])->middleware('permission:projects.view');
+        Route::post('/', [MilestoneController::class, 'globalStore'])->middleware('permission:projects.edit');
+        Route::put('/{id}', [MilestoneController::class, 'globalUpdate'])->middleware('permission:projects.edit');
+        Route::delete('/{id}', [MilestoneController::class, 'globalDestroy'])->middleware('permission:projects.edit');
+    });
+
+    Route::prefix('project-invoices')->group(function () {
+        Route::get('/files/{fileId}/download', [ProjectInvoiceController::class, 'downloadFile'])->middleware('permission:projects.view');
+        Route::delete('/files/{fileId}', [ProjectInvoiceController::class, 'destroyFile'])->middleware('permission:projects.edit');
+        Route::get('/', [ProjectInvoiceController::class, 'index'])->middleware('permission:projects.view');
+        Route::post('/', [ProjectInvoiceController::class, 'store'])->middleware('permission:projects.edit');
+        Route::get('/{id}', [ProjectInvoiceController::class, 'show'])->middleware('permission:projects.view');
+        Route::put('/{id}', [ProjectInvoiceController::class, 'update'])->middleware('permission:projects.edit');
+        Route::delete('/{id}', [ProjectInvoiceController::class, 'destroy'])->middleware('permission:projects.edit');
+        Route::post('/{id}/files', [ProjectInvoiceController::class, 'storeFiles'])->middleware('permission:projects.edit');
+    });
+
+    Route::prefix('correspondence')->group(function () {
+        Route::get('/files/{fileId}/download', [CorrespondenceController::class, 'downloadFile'])->middleware('permission:projects.view');
+        Route::get('/', [CorrespondenceController::class, 'index'])->middleware('permission:projects.view');
+        Route::post('/', [CorrespondenceController::class, 'store'])->middleware('permission:projects.edit');
+        Route::get('/{id}', [CorrespondenceController::class, 'show'])->middleware('permission:projects.view');
+        Route::put('/{id}', [CorrespondenceController::class, 'update'])->middleware('permission:projects.edit');
+        Route::delete('/{id}', [CorrespondenceController::class, 'destroy'])->middleware('permission:projects.edit');
+        Route::post('/{id}/files', [CorrespondenceController::class, 'storeFiles'])->middleware('permission:projects.edit');
+    });
+
+    Route::prefix('project-discussions')->group(function () {
+        Route::get('/', [DiscussionController::class, 'index'])->middleware('permission:projects.view');
+        Route::post('/', [DiscussionController::class, 'store'])->middleware('permission:projects.view');
+        Route::delete('/{id}', [DiscussionController::class, 'destroy'])->middleware('permission:projects.view');
+    });
+
+    Route::prefix('project-contracts')->group(function () {
+        Route::get('/files/{fileId}/download', [ContractController::class, 'downloadFile'])->middleware('permission:projects.view');
+        Route::get('/', [ContractController::class, 'index'])->middleware('permission:projects.view');
+        Route::post('/', [ContractController::class, 'store'])->middleware('permission:projects.edit');
+        Route::get('/{id}', [ContractController::class, 'show'])->middleware('permission:projects.view');
+        Route::put('/{id}', [ContractController::class, 'update'])->middleware('permission:projects.edit');
+        Route::delete('/{id}', [ContractController::class, 'destroy'])->middleware('permission:projects.edit');
+        Route::post('/{id}/files', [ContractController::class, 'storeFiles'])->middleware('permission:projects.edit');
     });
 
     /*

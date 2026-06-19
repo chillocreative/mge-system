@@ -29,19 +29,32 @@ import {
     HiOutlineFolderOpen,
     HiOutlineUsers,
     HiOutlineChevronDoubleLeft,
+    HiOutlineFlag,
+    HiOutlineDocumentDuplicate,
+    HiOutlineChatAlt2,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 
 const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: HiOutlineHome, permission: null },
-    { name: 'Projects', href: '/projects', icon: HiOutlineBriefcase, permission: 'projects.view' },
-    { name: 'Tasks', href: '/tasks', icon: HiOutlineClipboardList, permission: 'tasks.view' },
+    {
+        name: 'Projects', icon: HiOutlineBriefcase,
+        children: [
+            { name: 'All Projects', href: '/projects', icon: HiOutlineBriefcase, permission: 'projects.view' },
+            { name: 'Tasks', href: '/tasks', icon: HiOutlineClipboardList, permission: 'tasks.view' },
+            { name: 'Milestones', href: '/projects/milestones', icon: HiOutlineFlag, permission: 'projects.view' },
+            { name: 'Invoices', href: '/projects/invoices', icon: HiOutlineDocumentText, permission: 'projects.view' },
+            { name: 'Correspondence', href: '/projects/correspondence', icon: HiOutlineDocumentDuplicate, permission: 'projects.view' },
+            { name: 'Discussions', href: '/projects/discussions', icon: HiOutlineChatAlt2, permission: 'projects.view' },
+            { name: 'Contracts', href: '/projects/contracts', icon: HiOutlineClipboardCheck, permission: 'projects.view' },
+        ],
+    },
     { name: 'Clients', href: '/clients', icon: HiOutlineOfficeBuilding, permission: 'clients.view' },
     { name: 'Finance', href: '/finance', icon: HiOutlineCurrencyDollar, permission: 'finance.view' },
-    { name: 'Staff', href: '/staff', icon: HiOutlineIdentification, permission: 'staff.view' },
     {
         name: 'HR', icon: HiOutlineUsers,
         children: [
+            { name: 'Staff', href: '/staff', icon: HiOutlineIdentification, permission: 'staff.view' },
             { name: 'Attendance', href: '/hr/attendance', icon: HiOutlineClock, permission: 'attendance.view' },
             { name: 'Leave', href: '/hr/leave', icon: HiOutlineClipboardCheck, permission: 'leave.view' },
             { name: 'Payroll', href: '/hr/payroll', icon: HiOutlineCash, permission: 'payroll.view' },

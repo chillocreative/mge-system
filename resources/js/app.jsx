@@ -15,6 +15,11 @@ import Projects from '@/pages/projects/Projects';
 import ProjectCreate from '@/pages/projects/ProjectCreate';
 import ProjectDetail from '@/pages/projects/ProjectDetail';
 import Tasks from '@/pages/tasks/Tasks';
+import Milestones from '@/pages/projects/milestones/Milestones';
+import ProjectInvoices from '@/pages/projects/invoices/ProjectInvoices';
+import Correspondence from '@/pages/projects/correspondence/Correspondence';
+import Discussions from '@/pages/projects/discussions/Discussions';
+import Contracts from '@/pages/projects/contracts/Contracts';
 import Clients from '@/pages/clients/Clients';
 import Users from '@/pages/users/Users';
 import FinanceOverview from '@/pages/finance/FinanceOverview';
@@ -74,6 +79,11 @@ function AppRoutes() {
                     <Route element={<PermissionGate permission="projects.view" />}>
                         <Route path="/projects" element={<Projects />} />
                         <Route path="/projects/create" element={<ProjectCreate />} />
+                        <Route path="/projects/milestones" element={<Milestones />} />
+                        <Route path="/projects/invoices" element={<ProjectInvoices />} />
+                        <Route path="/projects/correspondence" element={<Correspondence />} />
+                        <Route path="/projects/discussions" element={<Discussions />} />
+                        <Route path="/projects/contracts" element={<Contracts />} />
                         <Route path="/projects/:id" element={<ProjectDetail />} />
                         <Route path="/projects/:id/edit" element={<ProjectCreate />} />
                     </Route>

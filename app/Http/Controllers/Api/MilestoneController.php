@@ -10,6 +10,74 @@ use Illuminate\Http\Request;
 
 class MilestoneController extends Controller
 {
+    // ── Global (cross-project) milestone management ──
+
+    public function globalIndex(Request $request): JsonResponse
+    {
+        $perPage = min($request->integer('per_page', 15), 100);
+
+        $milestones = Milestone::with(['project:id,name,code', 'creator:id,first_name,last_name'])
+            ->when($request->integer('project_id'), fn ($q, $id) => $q->where('project_id', $id))
+            ->when($request->status, fn ($q, $s) => $q->byStatus($s))
+            ->when($request->search, fn ($q, $s) => $q->where('title', 'like', "%{$s}%"))
+            ->orderByDesc('due_date')
+            ->paginate($perPage);
+
+        return $this->success($milestones);
+    }
+
+    public function globalStore(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'project_id' => ['required', 'exists:projects,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'due_date' => ['nullable', 'date'],
+            'status' => ['nullable', 'in:pending,in_progress,completed,overdue'],
+            'progress' => ['nullable', 'integer', 'min:0', 'max:100'],
+        ]);
+        $validated['created_by'] = $request->user()->id;
+
+        $milestone = Milestone::create($validated);
+
+        return $this->created(
+            $milestone->load(['project:id,name', 'creator:id,first_name,last_name']),
+            'Milestone created.'
+        );
+    }
+
+    public function globalUpdate(int $milestoneId, Request $request): JsonResponse
+    {
+        $milestone = Milestone::findOrFail($milestoneId);
+
+        $validated = $request->validate([
+            'title' => ['sometimes', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'due_date' => ['nullable', 'date'],
+            'status' => ['nullable', 'in:pending,in_progress,completed,overdue'],
+            'progress' => ['nullable', 'integer', 'min:0', 'max:100'],
+        ]);
+
+        if (isset($validated['status']) && $validated['status'] === 'completed' && ! $milestone->completed_date) {
+            $validated['completed_date'] = now()->toDateString();
+            $validated['progress'] = 100;
+        }
+
+        $milestone->update($validated);
+
+        return $this->success(
+            $milestone->fresh()->load(['project:id,name', 'creator:id,first_name,last_name']),
+            'Milestone updated.'
+        );
+    }
+
+    public function globalDestroy(int $milestoneId): JsonResponse
+    {
+        Milestone::findOrFail($milestoneId)->delete();
+
+        return $this->success(null, 'Milestone deleted.');
+    }
+
     public function index(int $projectId, Request $request): JsonResponse
     {
         $milestones = Milestone::where('project_id', $projectId)
