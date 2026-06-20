@@ -159,7 +159,7 @@ export default function Attendance() {
 
             {showUpload && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowUpload(false)}>
-                    <div className="mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
                         <h3 className="mb-1 text-lg font-semibold text-gray-900">Upload Attendance</h3>
                         <p className="mb-4 text-xs text-gray-500">Excel file with columns: employee_id (or email), date, clock_in, clock_out.</p>
                         <form onSubmit={handleUpload} className="space-y-4">

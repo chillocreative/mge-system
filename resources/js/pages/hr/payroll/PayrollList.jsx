@@ -173,7 +173,7 @@ export default function PayrollList() {
 
             {showGen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowGen(false)}>
-                    <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="mx-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
                         <h3 className="mb-1 text-lg font-semibold text-gray-900">Generate Payroll</h3>
                         <p className="mb-4 text-xs text-gray-500">Aggregates attendance for the period and computes EPF/SOCSO/EIS automatically.</p>
                         <form onSubmit={handleGenerate} className="space-y-4">

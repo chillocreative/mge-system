@@ -479,7 +479,7 @@ export default function Email() {
             {showCompose && (
                 <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" onClick={() => setShowCompose(false)}>
                     <div className="fixed inset-0 bg-black/50" />
-                    <div className="relative mx-4 w-full max-w-2xl rounded-t-xl sm:rounded-xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="relative mx-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-t-xl sm:rounded-xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between border-b px-5 py-3">
                             <h3 className="text-base font-semibold text-gray-900">New Email</h3>
                             <button onClick={() => setShowCompose(false)} className="text-gray-400 hover:text-gray-600">

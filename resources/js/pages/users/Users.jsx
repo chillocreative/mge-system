@@ -362,7 +362,7 @@ export default function Users() {
             {/* Approve modal */}
             {approveModal.open && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setApproveModal({ open: false, user: null, role: '' })}>
-                    <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
                         <h3 className="mb-1 text-lg font-semibold text-gray-900">Approve User</h3>
                         <p className="mb-4 text-sm text-gray-500">Approve <span className="font-medium text-gray-700">{approveModal.user?.full_name}</span> and assign a role.</p>
                         <label className="mb-1.5 block text-sm font-medium text-gray-700">Role</label>

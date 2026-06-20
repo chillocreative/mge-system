@@ -327,8 +327,8 @@ export default function Correspondence() {
 
             {/* Create / Edit Modal */}
             {showForm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 py-8" onClick={() => setShowForm(false)}>
-                    <div className="mx-4 w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowForm(false)}>
+                    <div className="mx-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
                         <h3 className="mb-4 text-lg font-semibold text-gray-900">{editingId ? 'Edit Correspondence' : 'New Correspondence'}</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -407,8 +407,8 @@ export default function Correspondence() {
 
             {/* Manage Types Modal */}
             {showTypes && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 py-8" onClick={() => setShowTypes(false)}>
-                    <div className="mx-4 w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowTypes(false)}>
+                    <div className="mx-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-lg font-semibold text-gray-900">Manage Correspondence Types</h3>
                             <button onClick={() => setShowTypes(false)} className="rounded p-1 text-gray-400 hover:bg-gray-100"><HiOutlineX className="h-5 w-5" /></button>

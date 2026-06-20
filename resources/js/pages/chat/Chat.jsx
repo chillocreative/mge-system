@@ -435,7 +435,7 @@ export default function Chat() {
             {/* New Private Chat Modal */}
             {showNewChat && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowNewChat(false)}>
-                    <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="mx-4 max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-lg font-semibold text-gray-900">New Chat</h3>
                             <button onClick={() => setShowNewChat(false)} className="text-gray-400 hover:text-gray-600">
@@ -466,7 +466,7 @@ export default function Chat() {
             {/* Create Group Modal */}
             {showGroupForm && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowGroupForm(false)}>
-                    <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="mx-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-lg font-semibold text-gray-900">Create Group Chat</h3>
                             <button onClick={() => setShowGroupForm(false)} className="text-gray-400 hover:text-gray-600">

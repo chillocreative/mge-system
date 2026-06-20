@@ -306,7 +306,7 @@ export default function InvoiceDetail() {
             {/* Record Payment Modal */}
             {showPaymentForm && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowPaymentForm(false)}>
-                    <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="mx-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
                         <h3 className="mb-4 text-lg font-semibold text-gray-900">Record Payment</h3>
                         <p className="mb-4 text-sm text-gray-500">
                             Balance due: <span className="font-medium text-red-600">{formatCurrency(invoice.balance_due, invoice.currency)}</span>
