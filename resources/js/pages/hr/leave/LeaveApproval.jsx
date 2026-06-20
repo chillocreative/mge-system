@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
 import leaveService from '@/services/leaveService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -9,8 +8,9 @@ import {
     HiOutlineClipboardCheck,
 } from 'react-icons/hi';
 
+const stageLabel = (req) => (req.current_approval_level === 'director' ? 'Awaiting Director' : 'Awaiting Manager');
+
 export default function LeaveApproval() {
-    const { can } = useAuth();
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [pagination, setPagination] = useState({});
@@ -21,7 +21,7 @@ export default function LeaveApproval() {
     const fetchPending = async (page = 1) => {
         setLoading(true);
         try {
-            const res = await leaveService.list({ status: 'pending', page });
+            const res = await leaveService.pendingApprovals({ page });
             setRequests(res.data?.data || []);
             setPagination(res.data?.meta || res.data || {});
         } catch {
@@ -83,6 +83,7 @@ export default function LeaveApproval() {
                                 <tr>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Employee</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Type</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Stage</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Dates</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Days</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Reason</th>
@@ -101,30 +102,33 @@ export default function LeaveApproval() {
                                                 {req.leave_type?.name || '-'}
                                             </span>
                                         </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${req.current_approval_level === 'director' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                {stageLabel(req)}
+                                            </span>
+                                        </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
                                             {req.start_date} &rarr; {req.end_date}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-gray-900">{req.days_count}</td>
                                         <td className="px-4 py-3 text-sm text-gray-500">{req.reason || '-'}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right">
-                                            {can('leave.approve') && (
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <button
-                                                        onClick={() => handleApprove(req.id)}
-                                                        className="rounded p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600"
-                                                        title="Approve"
-                                                    >
-                                                        <HiOutlineCheck className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => { setRejectTarget(req); setRejectReason(''); }}
-                                                        className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                                                        title="Reject"
-                                                    >
-                                                        <HiOutlineX className="h-4 w-4" />
-                                                    </button>
-                                                </div>
-                                            )}
+                                            <div className="flex items-center justify-end gap-1">
+                                                <button
+                                                    onClick={() => handleApprove(req.id)}
+                                                    className="rounded p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600"
+                                                    title="Approve"
+                                                >
+                                                    <HiOutlineCheck className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => { setRejectTarget(req); setRejectReason(''); }}
+                                                    className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                                                    title="Reject"
+                                                >
+                                                    <HiOutlineX className="h-4 w-4" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}

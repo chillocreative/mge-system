@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import apiClient from '@/services/apiClient';
 import leaveService from '@/services/leaveService';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -8,7 +9,10 @@ import { HiOutlineArrowLeft } from 'react-icons/hi';
 
 export default function LeaveRequestForm() {
     const navigate = useNavigate();
+    const { can } = useAuth();
+    const canManage = can('leave.manage'); // HR/Admin may file on behalf of any employee
     const [employees, setEmployees] = useState([]);
+    const [myEmployee, setMyEmployee] = useState(null);
     const [types, setTypes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -23,19 +27,25 @@ export default function LeaveRequestForm() {
     });
 
     useEffect(() => {
-        Promise.all([
-            apiClient.get('/employees', { params: { per_page: 100 } }),
-            leaveService.listTypes(),
-        ])
-            .then(([empRes, typeRes]) => {
-                setEmployees(empRes.data?.data?.data || empRes.data?.data || []);
-                setTypes(typeRes.data || []);
+        const tasks = [leaveService.listTypes(), leaveService.myEmployee()];
+        if (canManage) tasks.push(apiClient.get('/employees', { params: { per_page: 100 } }));
+
+        Promise.all(tasks)
+            .then((res) => {
+                setTypes(res[0].data || []);
+                const me = res[1].data || null;
+                setMyEmployee(me);
+                if (canManage && res[2]) {
+                    setEmployees(res[2].data?.data?.data || res[2].data?.data || []);
+                }
+                if (me) setForm((p) => ({ ...p, employee_id: String(me.id) }));
             })
             .catch(() => {})
             .finally(() => setLoading(false));
-    }, []);
+    }, [canManage]);
 
     const selectedType = types.find((t) => String(t.id) === String(form.leave_type_id));
+    const noProfile = !canManage && !myEmployee;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -77,20 +87,34 @@ export default function LeaveRequestForm() {
 
             <div className="max-w-2xl rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {noProfile && (
+                        <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-700 ring-1 ring-amber-200">
+                            No employee profile is linked to your account. Please ask HR to link your staff record before applying for leave.
+                        </div>
+                    )}
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
                             <label className="mb-1 block text-sm font-medium text-gray-700">Employee *</label>
-                            <select
-                                value={form.employee_id}
-                                onChange={(e) => setForm((p) => ({ ...p, employee_id: e.target.value }))}
-                                required
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                            >
-                                <option value="">Select employee</option>
-                                {employees.map((emp) => (
-                                    <option key={emp.id} value={emp.id}>{emp.full_name || `${emp.first_name} ${emp.last_name}`}</option>
-                                ))}
-                            </select>
+                            {canManage ? (
+                                <select
+                                    value={form.employee_id}
+                                    onChange={(e) => setForm((p) => ({ ...p, employee_id: e.target.value }))}
+                                    required
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                >
+                                    <option value="">Select employee</option>
+                                    {employees.map((emp) => (
+                                        <option key={emp.id} value={emp.id}>{emp.full_name || `${emp.first_name} ${emp.last_name}`}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <input
+                                    type="text"
+                                    value={myEmployee?.full_name || ''}
+                                    readOnly
+                                    className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-600"
+                                />
+                            )}
                         </div>
                         <div>
                             <label className="mb-1 block text-sm font-medium text-gray-700">Leave Type *</label>
@@ -105,6 +129,11 @@ export default function LeaveRequestForm() {
                                     <option key={t.id} value={t.id}>{t.name} ({t.code})</option>
                                 ))}
                             </select>
+                            {selectedType && (
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Approval required: {selectedType.requires_director_approval ? 'Manager → Director' : 'Manager'}
+                                </p>
+                            )}
                         </div>
                     </div>
 
@@ -178,7 +207,7 @@ export default function LeaveRequestForm() {
                         </button>
                         <button
                             type="submit"
-                            disabled={saving}
+                            disabled={saving || noProfile}
                             className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
                         >
                             {saving ? 'Submitting...' : 'Submit Request'}

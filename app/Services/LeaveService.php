@@ -5,10 +5,13 @@ namespace App\Services;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
+use App\Models\User;
+use App\Notifications\LeaveStatusNotification;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class LeaveService
@@ -57,60 +60,187 @@ class LeaveService
 
             $data['days_count'] = $days;
             $data['status'] = 'pending';
+            $data['current_approval_level'] = 'manager';
             $data['created_by'] = $userId;
 
             $request = LeaveRequest::create($data);
 
-            return $request->load([
-                'employee:id,employee_no,first_name,last_name',
-                'leaveType:id,name,code,is_paid',
+            $request->load([
+                'employee:id,employee_no,first_name,last_name,user_id',
+                'leaveType:id,name,code,is_paid,requires_director_approval,manager_approver_id,director_approver_id',
             ]);
+
+            $this->notifyManager($request);
+
+            return $request;
         });
     }
 
-    public function approve(int $id, int $approverId): LeaveRequest
+    public function approve(int $id, User $actor): LeaveRequest
     {
-        return DB::transaction(function () use ($id, $approverId) {
-            $request = LeaveRequest::findOrFail($id);
+        return DB::transaction(function () use ($id, $actor) {
+            $request = LeaveRequest::with([
+                'leaveType',
+                'employee:id,employee_no,first_name,last_name,user_id',
+            ])->findOrFail($id);
 
-            $request->update([
-                'status' => 'approved',
-                'approved_by' => $approverId,
-                'approved_at' => now(),
-                'rejection_reason' => null,
-            ]);
+            abort_if($request->status !== 'pending', 422, 'This request is no longer pending approval.');
 
-            $year = Carbon::parse($request->start_date)->year;
-            $balance = $this->ensureBalance($request->employee_id, $request->leave_type_id, $year);
+            $level = $request->current_approval_level ?: 'manager';
+            $this->authorizeStage($request, $actor, $level);
 
-            $balance->used_days = (float) $balance->used_days + (float) $request->days_count;
-            $balance->remaining_days = (float) $balance->entitled_days - (float) $balance->used_days;
-            $balance->save();
+            if ($level === 'manager') {
+                $request->manager_approved_by = $actor->id;
+                $request->manager_approved_at = now();
 
-            return $request->load([
-                'employee:id,employee_no,first_name,last_name',
-                'leaveType:id,name,code,is_paid',
-                'approver:id,first_name,last_name',
-            ]);
+                if ($request->leaveType->requires_director_approval && $request->leaveType->director_approver_id) {
+                    $request->current_approval_level = 'director';
+                    $request->save();
+                    $this->notifyDirector($request);
+
+                    return $this->loadFull($request);
+                }
+
+                $this->finalizeApproval($request, $actor);
+
+                return $this->loadFull($request);
+            }
+
+            // Director stage
+            $request->director_approved_by = $actor->id;
+            $request->director_approved_at = now();
+            $this->finalizeApproval($request, $actor);
+
+            return $this->loadFull($request);
         });
     }
 
-    public function reject(int $id, int $approverId, ?string $reason = null): LeaveRequest
+    public function reject(int $id, User $actor, ?string $reason = null): LeaveRequest
     {
-        $request = LeaveRequest::findOrFail($id);
+        $request = LeaveRequest::with([
+            'leaveType',
+            'employee:id,employee_no,first_name,last_name,user_id',
+        ])->findOrFail($id);
+
+        abort_if($request->status !== 'pending', 422, 'This request is no longer pending approval.');
+
+        $level = $request->current_approval_level ?: 'manager';
+        $this->authorizeStage($request, $actor, $level);
 
         $request->update([
             'status' => 'rejected',
-            'approved_by' => $approverId,
+            'approved_by' => $actor->id,
             'approved_at' => now(),
             'rejection_reason' => $reason,
         ]);
 
+        $this->notifyEmployee($request, 'rejected');
+
+        return $this->loadFull($request);
+    }
+
+    /**
+     * Finalize a request as fully approved and deduct the leave balance.
+     */
+    private function finalizeApproval(LeaveRequest $request, User $actor): void
+    {
+        $request->status = 'approved';
+        $request->approved_by = $actor->id;
+        $request->approved_at = now();
+        $request->rejection_reason = null;
+        $request->save();
+
+        $year = Carbon::parse($request->start_date)->year;
+        $balance = $this->ensureBalance($request->employee_id, $request->leave_type_id, $year);
+
+        $balance->used_days = (float) $balance->used_days + (float) $request->days_count;
+        $balance->remaining_days = (float) $balance->entitled_days - (float) $balance->used_days;
+        $balance->save();
+
+        $this->notifyEmployee($request, 'approved');
+    }
+
+    /**
+     * Ensure the acting user is allowed to act on the current approval stage:
+     * the designated approver for that stage, or an admin (leave.manage). When
+     * no approver is configured for the stage, any leave.approve user may act.
+     */
+    private function authorizeStage(LeaveRequest $request, User $actor, string $level): void
+    {
+        $designated = $level === 'manager'
+            ? $request->leaveType->manager_approver_id
+            : $request->leaveType->director_approver_id;
+
+        if ($designated) {
+            abort_unless(
+                $actor->id === $designated || $actor->can('leave.manage'),
+                403,
+                'You are not the designated approver for this stage.'
+            );
+        } else {
+            abort_unless($actor->can('leave.approve'), 403, 'You are not allowed to approve this request.');
+        }
+    }
+
+    private function loadFull(LeaveRequest $request): LeaveRequest
+    {
         return $request->load([
             'employee:id,employee_no,first_name,last_name',
-            'leaveType:id,name,code,is_paid',
+            'leaveType:id,name,code,is_paid,requires_director_approval',
             'approver:id,first_name,last_name',
+            'managerApprover:id,first_name,last_name',
+            'directorApprover:id,first_name,last_name',
         ]);
+    }
+
+    // ── Notifications ──
+
+    private function notifyManager(LeaveRequest $request): void
+    {
+        $this->sendLeaveNotification(
+            $request->leaveType?->manager_approver_id,
+            'New leave request',
+            "{$request->employee?->full_name} submitted a {$request->leaveType?->name} request awaiting your approval.",
+            'leave_submitted',
+            $request->id,
+        );
+    }
+
+    private function notifyDirector(LeaveRequest $request): void
+    {
+        $this->sendLeaveNotification(
+            $request->leaveType?->director_approver_id,
+            'Leave awaiting director approval',
+            "{$request->employee?->full_name}'s {$request->leaveType?->name} request was approved by the manager and awaits your approval.",
+            'leave_awaiting_director',
+            $request->id,
+        );
+    }
+
+    private function notifyEmployee(LeaveRequest $request, string $decision): void
+    {
+        $this->sendLeaveNotification(
+            $request->employee?->user_id,
+            "Leave request {$decision}",
+            "Your {$request->leaveType?->name} request has been {$decision}.",
+            "leave_{$decision}",
+            $request->id,
+        );
+    }
+
+    private function sendLeaveNotification(?int $userId, string $title, string $message, string $action, int $leaveId): void
+    {
+        if (!$userId) {
+            return;
+        }
+
+        try {
+            $user = User::find($userId);
+            $user?->notify(new LeaveStatusNotification($title, $message, $action, $leaveId));
+        } catch (\Throwable $e) {
+            // Never let a notification/mail failure (e.g. SMTP not configured) break the workflow.
+            Log::warning('Leave notification failed: ' . $e->getMessage());
+        }
     }
 
     public function cancel(int $id): LeaveRequest
@@ -179,7 +309,9 @@ class LeaveService
 
     public function leaveTypes(): Collection
     {
-        return LeaveType::active()->orderBy('name')->get();
+        return LeaveType::active()
+            ->with(['managerApprover:id,first_name,last_name', 'directorApprover:id,first_name,last_name'])
+            ->orderBy('name')->get();
     }
 
     public function createType(array $data): LeaveType

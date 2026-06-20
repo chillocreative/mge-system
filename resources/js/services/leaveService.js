@@ -32,6 +32,14 @@ const leaveService = {
         const response = await apiClient.get('/leaves/balance', { params });
         return response.data;
     },
+    async pendingApprovals(params = {}) {
+        const response = await apiClient.get('/leaves/pending-approvals', { params });
+        return response.data;
+    },
+    async myEmployee() {
+        const response = await apiClient.get('/leaves/my-employee');
+        return response.data;
+    },
 
     // ── Leave Types ──
     async listTypes() {

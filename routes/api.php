@@ -643,11 +643,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('leaves')->group(function () {
         Route::get('/', [LeaveController::class, 'index'])->middleware('permission:leave.view');
         Route::get('/balance', [LeaveController::class, 'balance'])->middleware('permission:leave.view');
+        Route::get('/pending-approvals', [LeaveController::class, 'pendingApprovals'])->middleware('permission:leave.view');
+        Route::get('/my-employee', [LeaveController::class, 'myEmployee'])->middleware('permission:leave.request');
         Route::post('/', [LeaveController::class, 'store'])->middleware('permission:leave.request');
         Route::get('/{id}', [LeaveController::class, 'show'])->middleware('permission:leave.view');
         Route::get('/{id}/attachment', [LeaveController::class, 'downloadAttachment'])->middleware('permission:leave.view');
-        Route::post('/{id}/approve', [LeaveController::class, 'approve'])->middleware('permission:leave.approve');
-        Route::post('/{id}/reject', [LeaveController::class, 'reject'])->middleware('permission:leave.approve');
+        // Gate is leave.view so designated per-type approvers (who may only hold the Employee
+        // role) can reach the endpoint; LeaveService enforces stage-level authorization.
+        Route::post('/{id}/approve', [LeaveController::class, 'approve'])->middleware('permission:leave.view');
+        Route::post('/{id}/reject', [LeaveController::class, 'reject'])->middleware('permission:leave.view');
         Route::post('/{id}/cancel', [LeaveController::class, 'cancel'])->middleware('permission:leave.request');
     });
     Route::prefix('leave-types')->group(function () {

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Employee;
+use App\Models\LeaveRequest;
 use App\Services\LeaveService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -46,7 +48,7 @@ class LeaveController extends Controller
 
     public function approve(Request $request, int $id): JsonResponse
     {
-        return $this->success($this->leaveService->approve($id, $request->user()->id), 'Leave request approved.');
+        return $this->success($this->leaveService->approve($id, $request->user()), 'Leave request approved.');
     }
 
     public function reject(Request $request, int $id): JsonResponse
@@ -56,9 +58,42 @@ class LeaveController extends Controller
         ]);
 
         return $this->success(
-            $this->leaveService->reject($id, $request->user()->id, $validated['rejection_reason'] ?? null),
+            $this->leaveService->reject($id, $request->user(), $validated['rejection_reason'] ?? null),
             'Leave request rejected.'
         );
+    }
+
+    /**
+     * Requests awaiting the current user's approval. Admins (leave.manage) see all pending.
+     */
+    public function pendingApprovals(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $perPage = min($request->integer('per_page', 15), 100);
+
+        $query = LeaveRequest::with([
+            'employee:id,employee_no,first_name,last_name',
+            'leaveType:id,name,code,requires_director_approval,manager_approver_id,director_approver_id',
+            'managerApprover:id,first_name,last_name',
+        ])->where('status', 'pending')->orderByDesc('created_at');
+
+        if (!$user->can('leave.manage')) {
+            $query->awaitingApprovalBy($user->id);
+        }
+
+        return $this->success($query->paginate($perPage));
+    }
+
+    /**
+     * The employee record linked to the current user (for self-service submission).
+     */
+    public function myEmployee(Request $request): JsonResponse
+    {
+        $employee = Employee::with('designation:id,name')
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        return $this->success($employee);
     }
 
     public function cancel(int $id): JsonResponse
@@ -98,7 +133,14 @@ class LeaveController extends Controller
             'is_paid' => ['nullable', 'boolean'],
             'requires_attachment' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
+            'requires_director_approval' => ['nullable', 'boolean'],
+            'manager_approver_id' => ['nullable', 'exists:users,id'],
+            'director_approver_id' => ['nullable', 'exists:users,id'],
         ]);
+
+        if ($request->boolean('requires_director_approval') && !$request->filled('director_approver_id')) {
+            return $this->error('A director approver is required when director approval is enabled.', 422);
+        }
 
         return $this->created($this->leaveService->createType($validated), 'Leave type created successfully.');
     }
@@ -112,7 +154,14 @@ class LeaveController extends Controller
             'is_paid' => ['sometimes', 'boolean'],
             'requires_attachment' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],
+            'requires_director_approval' => ['sometimes', 'boolean'],
+            'manager_approver_id' => ['sometimes', 'nullable', 'exists:users,id'],
+            'director_approver_id' => ['sometimes', 'nullable', 'exists:users,id'],
         ]);
+
+        if ($request->boolean('requires_director_approval') && !$request->filled('director_approver_id')) {
+            return $this->error('A director approver is required when director approval is enabled.', 422);
+        }
 
         return $this->success($this->leaveService->updateType($id, $validated), 'Leave type updated successfully.');
     }

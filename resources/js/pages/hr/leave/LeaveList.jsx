@@ -22,7 +22,17 @@ const statusColors = {
     cancelled: 'bg-gray-100 text-gray-600',
 };
 
-const emptyTypeForm = { name: '', code: '', default_days_per_year: 0, is_paid: true, requires_attachment: false, is_active: true };
+const statusLabel = (req) => {
+    if (req.status === 'pending') {
+        return req.current_approval_level === 'director' ? 'Awaiting Director' : 'Awaiting Manager';
+    }
+    return req.status;
+};
+
+const emptyTypeForm = {
+    name: '', code: '', default_days_per_year: 0, is_paid: true, requires_attachment: false, is_active: true,
+    requires_director_approval: false, manager_approver_id: '', director_approver_id: '',
+};
 
 export default function LeaveList() {
     const { can } = useAuth();
@@ -34,6 +44,7 @@ export default function LeaveList() {
     const [pagination, setPagination] = useState({});
     const [employees, setEmployees] = useState([]);
     const [types, setTypes] = useState([]);
+    const [users, setUsers] = useState([]);
     const [showTypes, setShowTypes] = useState(false);
     const [typeForm, setTypeForm] = useState(emptyTypeForm);
     const [typeEditId, setTypeEditId] = useState(null);
@@ -72,7 +83,17 @@ export default function LeaveList() {
             .then((r) => setEmployees(r.data?.data?.data || r.data?.data || []))
             .catch(() => {});
         fetchTypes();
+        if (can('leave.manage')) {
+            apiClient.get('/users', { params: { per_page: 200 } })
+                .then((r) => setUsers(r.data?.data?.data || r.data?.data || []))
+                .catch(() => {});
+        }
     }, []);
+
+    const userName = (id) => {
+        const u = users.find((x) => String(x.id) === String(id));
+        return u ? (u.full_name || `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim()) : null;
+    };
 
     const handleCancel = async (id) => {
         if (!confirm('Cancel this leave request?')) return;
@@ -92,6 +113,9 @@ export default function LeaveList() {
         setTypeForm({
             name: t.name, code: t.code, default_days_per_year: t.default_days_per_year,
             is_paid: t.is_paid, requires_attachment: t.requires_attachment, is_active: t.is_active,
+            requires_director_approval: t.requires_director_approval ?? false,
+            manager_approver_id: t.manager_approver_id ?? '',
+            director_approver_id: t.director_approver_id ?? '',
         });
     };
 
@@ -105,6 +129,9 @@ export default function LeaveList() {
             is_paid: typeForm.is_paid,
             requires_attachment: typeForm.requires_attachment,
             is_active: typeForm.is_active,
+            requires_director_approval: typeForm.requires_director_approval,
+            manager_approver_id: typeForm.manager_approver_id || null,
+            director_approver_id: typeForm.requires_director_approval ? (typeForm.director_approver_id || null) : null,
         };
         try {
             if (typeEditId) {
@@ -246,7 +273,7 @@ export default function LeaveList() {
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-gray-900">{req.days_count}</td>
                                         <td className="px-4 py-3">
                                             <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[req.status]}`}>
-                                                {req.status}
+                                                {statusLabel(req)}
                                             </span>
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right">
@@ -330,6 +357,33 @@ export default function LeaveList() {
                                     Active (selectable)
                                 </label>
                             </div>
+
+                            {/* Approval flow */}
+                            <div className="mt-4 border-t border-gray-200 pt-3">
+                                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                    <input type="checkbox" checked={typeForm.requires_director_approval} onChange={(e) => setTypeForm((p) => ({ ...p, requires_director_approval: e.target.checked }))} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                                    Requires Director approval (two-step: Manager → Director)
+                                </label>
+                                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                    <div>
+                                        <label className="mb-1 block text-xs font-medium text-gray-700">Manager approver</label>
+                                        <select value={typeForm.manager_approver_id} onChange={(e) => setTypeForm((p) => ({ ...p, manager_approver_id: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                                            <option value="">— Any approver —</option>
+                                            {users.map((u) => <option key={u.id} value={u.id}>{u.full_name || `${u.first_name} ${u.last_name}`}</option>)}
+                                        </select>
+                                    </div>
+                                    {typeForm.requires_director_approval && (
+                                        <div>
+                                            <label className="mb-1 block text-xs font-medium text-gray-700">Director approver *</label>
+                                            <select value={typeForm.director_approver_id} onChange={(e) => setTypeForm((p) => ({ ...p, director_approver_id: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                                                <option value="">Select director</option>
+                                                {users.map((u) => <option key={u.id} value={u.id}>{u.full_name || `${u.first_name} ${u.last_name}`}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
+                                <p className="mt-2 text-xs text-gray-400">Leave "Manager approver" empty to allow any user with approval permission to approve the first step.</p>
+                            </div>
                             <div className="mt-3 flex justify-end gap-2">
                                 {typeEditId && <button type="button" onClick={openTypeCreate} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">New</button>}
                                 <button type="submit" disabled={typeSaving} className="rounded-lg bg-primary-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50">{typeSaving ? 'Saving...' : typeEditId ? 'Update Type' : 'Add Type'}</button>
@@ -348,6 +402,11 @@ export default function LeaveList() {
                                         </p>
                                         <p className="truncate text-xs text-gray-400">
                                             {t.default_days_per_year} days/year · {t.is_paid ? 'Paid' : 'Unpaid'}{t.requires_attachment ? ' · Attachment required' : ''}
+                                        </p>
+                                        <p className="truncate text-xs text-gray-400">
+                                            {t.requires_director_approval ? 'Manager → Director' : 'Manager'}
+                                            {userName(t.manager_approver_id) ? ` · Mgr: ${userName(t.manager_approver_id)}` : ''}
+                                            {t.requires_director_approval && userName(t.director_approver_id) ? ` · Dir: ${userName(t.director_approver_id)}` : ''}
                                         </p>
                                     </div>
                                     <button onClick={() => toggleTypeActive(t)} className="rounded px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100" title={t.is_active ? 'Deactivate' : 'Activate'}>{t.is_active ? 'Hide' : 'Show'}</button>
