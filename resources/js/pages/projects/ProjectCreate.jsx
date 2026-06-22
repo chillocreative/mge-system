@@ -63,7 +63,10 @@ export default function ProjectCreate() {
     const [memberSelect, setMemberSelect] = useState('');
 
     const addFiles = (e) => {
-        setAttachFiles((prev) => [...prev, ...Array.from(e.target.files)]);
+        // Capture the files first: clearing e.target.value below empties
+        // e.target.files synchronously, before React runs the state updater.
+        const picked = Array.from(e.target.files);
+        setAttachFiles((prev) => [...prev, ...picked]);
         e.target.value = '';
     };
     const removeFile = (idx) => setAttachFiles((prev) => prev.filter((_, i) => i !== idx));
