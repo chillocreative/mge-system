@@ -134,6 +134,25 @@ export default function StaffDetail() {
                     <Row label="SOCSO No" value={emp.socso_no} />
                     <Row label="Tax No" value={emp.tax_no} />
                 </Card>
+
+                <Card title="Login Account">
+                    {emp.user ? (
+                        <>
+                            <Row label="Linked User" value={`${emp.user.first_name ?? ''} ${emp.user.last_name ?? ''}`.trim() || emp.user.email} />
+                            <Row label="Email" value={emp.user.email} />
+                            <p className="mt-2 text-xs text-green-600">This staff can use Leave &amp; Training self-service.</p>
+                        </>
+                    ) : (
+                        <div className="py-2">
+                            <p className="text-sm text-gray-500">No login account linked.</p>
+                            <p className="mt-1 text-xs text-gray-400">
+                                {can('staff.edit')
+                                    ? 'Use Edit → Login Account to link or create one (needed for Leave & Training self-service).'
+                                    : 'Ask HR to link a login (needed for Leave & Training self-service).'}
+                            </p>
+                        </div>
+                    )}
+                </Card>
             </div>
         </div>
     );

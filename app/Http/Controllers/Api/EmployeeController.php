@@ -7,6 +7,7 @@ use App\Services\EmployeeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class EmployeeController extends Controller
 {
@@ -24,7 +25,7 @@ class EmployeeController extends Controller
     {
         $validated = $request->validate([
             'employee_no' => ['required', 'string', 'max:50', 'unique:employees,employee_no'],
-            'user_id' => ['nullable', 'exists:users,id'],
+            'user_id' => ['nullable', 'exists:users,id', Rule::unique('employees', 'user_id')],
             'full_name' => ['required', 'string', 'max:200'],
             'ic_passport_no' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
@@ -66,7 +67,7 @@ class EmployeeController extends Controller
     {
         $validated = $request->validate([
             'employee_no' => ['sometimes', 'string', 'max:50', 'unique:employees,employee_no,' . $id],
-            'user_id' => ['nullable', 'exists:users,id'],
+            'user_id' => ['nullable', 'exists:users,id', Rule::unique('employees', 'user_id')->ignore($id)],
             'full_name' => ['sometimes', 'required', 'string', 'max:200'],
             'ic_passport_no' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],

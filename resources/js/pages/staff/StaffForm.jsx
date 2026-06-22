@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import staffService from '@/services/staffService';
 import apiClient from '@/services/apiClient';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { HiOutlineLink, HiOutlineX, HiOutlinePlus, HiOutlineUserAdd } from 'react-icons/hi';
+
+const SUPER_ADMIN_ROLE = 'Admin & HR';
+const emptyLogin = { full_name: '', email: '', password: '', role: '' };
 
 const emptyForm = {
     employee_no: '',
@@ -47,7 +52,9 @@ function Field({ label, name, errors, children }) {
 export default function StaffForm() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { can, user: authUser } = useAuth();
     const isEdit = !!id;
+    const canCreateLogin = can('users.create');
 
     const [loading, setLoading] = useState(isEdit);
     const [saving, setSaving] = useState(false);
@@ -59,7 +66,15 @@ export default function StaffForm() {
     const [designations, setDesignations] = useState([]);
     const [managers, setManagers] = useState([]);
     const [users, setUsers] = useState([]);
+    const [roles, setRoles] = useState([]);
     const [showSuggest, setShowSuggest] = useState(false);
+
+    // Login account linking
+    const [linkSearch, setLinkSearch] = useState('');
+    const [createLoginOpen, setCreateLoginOpen] = useState(false);
+    const [loginForm, setLoginForm] = useState(emptyLogin);
+    const [loginErrors, setLoginErrors] = useState({});
+    const [creatingLogin, setCreatingLogin] = useState(false);
 
     const set = (field, value) => {
         setForm((p) => ({ ...p, [field]: value }));
@@ -81,7 +96,50 @@ export default function StaffForm() {
                 setUsers(unwrap(uRes));
             })
             .catch(() => {});
-    }, []);
+        if (canCreateLogin) {
+            apiClient.get('/roles').then((r) => setRoles(r.data?.data || [])).catch(() => {});
+        }
+    }, [canCreateLogin]);
+
+    const linkedUser = users.find((u) => String(u.id) === String(form.user_id));
+    const linkQuery = linkSearch.trim().toLowerCase();
+    const linkMatches = linkQuery.length >= 2
+        ? users.filter((u) => `${u.full_name} ${u.email}`.toLowerCase().includes(linkQuery)).slice(0, 8)
+        : [];
+
+    const linkExisting = (u) => {
+        setUsers((prev) => (prev.some((x) => x.id === u.id) ? prev : [...prev, u]));
+        set('user_id', u.id);
+        setLinkSearch('');
+    };
+
+    const createLogin = async (e) => {
+        e.preventDefault();
+        setCreatingLogin(true);
+        setLoginErrors({});
+        try {
+            const res = await apiClient.post('/users', {
+                full_name: loginForm.full_name,
+                email: loginForm.email,
+                password: loginForm.password,
+                role: loginForm.role,
+                phone: form.phone || null,
+                department_id: form.department_id || null,
+                designation_id: form.designation_id || null,
+            });
+            const created = res.data?.data || res.data;
+            setUsers((prev) => [...prev, created]);
+            set('user_id', created.id);
+            toast.success('Login account created and linked');
+            setCreateLoginOpen(false);
+            setLoginForm(emptyLogin);
+        } catch (err) {
+            if (err.response?.status === 422) setLoginErrors(err.response.data?.errors || {});
+            else toast.error(err.response?.data?.message || 'Failed to create login');
+        } finally {
+            setCreatingLogin(false);
+        }
+    };
 
     // Prefill the staff form from an existing user account.
     const pickUser = (u) => {
@@ -253,6 +311,110 @@ export default function StaffForm() {
                             </Field>
                         </div>
                     </div>
+                </div>
+
+                {/* Login Account */}
+                <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
+                    <h2 className="mb-1 text-sm font-semibold uppercase text-gray-500">Login Account</h2>
+                    <p className="mb-4 text-xs text-gray-500">Link a login so this staff can use Leave &amp; Training self-service.</p>
+                    {errors.user_id && <p className="mb-3 text-xs text-red-500">{errors.user_id[0]}</p>}
+
+                    {linkedUser ? (
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary-200 bg-primary-50 px-4 py-3">
+                            <div className="flex items-center gap-3">
+                                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700">
+                                    {(linkedUser.full_name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase()}
+                                </span>
+                                <div>
+                                    <p className="text-sm font-semibold text-gray-900">{linkedUser.full_name}</p>
+                                    <p className="text-xs text-gray-500">{linkedUser.email}{linkedUser.roles?.[0] ? ` · ${linkedUser.roles[0]}` : ''}</p>
+                                </div>
+                            </div>
+                            <button type="button" onClick={() => set('user_id', '')}
+                                className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+                                <HiOutlineX className="h-4 w-4" /> Unlink
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {/* Link existing */}
+                            <div className="relative">
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Link an existing user</label>
+                                <div className="flex items-center gap-2">
+                                    <HiOutlineLink className="h-4 w-4 shrink-0 text-gray-400" />
+                                    <input value={linkSearch} onChange={(e) => setLinkSearch(e.target.value)} autoComplete="off"
+                                        placeholder="Search by name or email…" className={inputClass} />
+                                </div>
+                                {linkMatches.length > 0 && (
+                                    <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                                        {linkMatches.map((u) => (
+                                            <li key={u.id}>
+                                                <button type="button" onClick={() => linkExisting(u)}
+                                                    className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-gray-50">
+                                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-medium text-primary-700">
+                                                        {(u.full_name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase()}
+                                                    </span>
+                                                    <span className="min-w-0">
+                                                        <span className="block truncate text-sm font-medium text-gray-900">{u.full_name}</span>
+                                                        <span className="block truncate text-xs text-gray-400">{u.email}</span>
+                                                    </span>
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+
+                            {/* Create new login */}
+                            {canCreateLogin && !createLoginOpen && (
+                                <button type="button"
+                                    onClick={() => { setCreateLoginOpen(true); setLoginErrors({}); setLoginForm({ ...emptyLogin, full_name: form.full_name, email: form.email }); }}
+                                    className="inline-flex items-center gap-2 rounded-lg border border-dashed border-primary-300 px-4 py-2.5 text-sm font-semibold text-primary-600 hover:bg-primary-50">
+                                    <HiOutlineUserAdd className="h-4 w-4" /> Create a new login
+                                </button>
+                            )}
+
+                            {canCreateLogin && createLoginOpen && (
+                                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                                    <div className="mb-3 flex items-center justify-between">
+                                        <p className="text-sm font-semibold text-gray-800">New login account</p>
+                                        <button type="button" onClick={() => setCreateLoginOpen(false)} className="rounded p-1 text-gray-400 hover:bg-gray-100"><HiOutlineX className="h-4 w-4" /></button>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        <div>
+                                            <label className="mb-1 block text-xs font-medium text-gray-700">Full Name *</label>
+                                            <input value={loginForm.full_name} onChange={(e) => setLoginForm((p) => ({ ...p, full_name: e.target.value }))} className={inputClass} />
+                                            {loginErrors.full_name && <p className="mt-1 text-xs text-red-500">{loginErrors.full_name[0]}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="mb-1 block text-xs font-medium text-gray-700">Email *</label>
+                                            <input type="email" value={loginForm.email} onChange={(e) => setLoginForm((p) => ({ ...p, email: e.target.value }))} className={inputClass} />
+                                            {loginErrors.email && <p className="mt-1 text-xs text-red-500">{loginErrors.email[0]}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="mb-1 block text-xs font-medium text-gray-700">Password *</label>
+                                            <input type="password" minLength={8} value={loginForm.password} onChange={(e) => setLoginForm((p) => ({ ...p, password: e.target.value }))} placeholder="Min. 8 characters" className={inputClass} />
+                                            {loginErrors.password && <p className="mt-1 text-xs text-red-500">{loginErrors.password[0]}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="mb-1 block text-xs font-medium text-gray-700">Role *</label>
+                                            <select value={loginForm.role} onChange={(e) => setLoginForm((p) => ({ ...p, role: e.target.value }))} className={inputClass}>
+                                                <option value="">Select role…</option>
+                                                {roles.filter((r) => r.name !== SUPER_ADMIN_ROLE || authUser?.is_protected).map((r) => <option key={r.id} value={r.name}>{r.name}</option>)}
+                                            </select>
+                                            {loginErrors.role && <p className="mt-1 text-xs text-red-500">{loginErrors.role[0]}</p>}
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 flex justify-end">
+                                        <button type="button" onClick={createLogin} disabled={creatingLogin}
+                                            className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50">
+                                            <HiOutlinePlus className="h-4 w-4" /> {creatingLogin ? 'Creating…' : 'Create & Link'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Employment */}

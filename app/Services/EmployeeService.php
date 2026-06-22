@@ -16,6 +16,7 @@ class EmployeeService
             'department:id,name',
             'designation:id,name',
             'manager:id,first_name,last_name',
+            'user:id,first_name,last_name,email',
         ])->orderByDesc('created_at');
 
         if (!empty($filters['search'])) $query->search($filters['search']);
@@ -33,6 +34,7 @@ class EmployeeService
             'designation:id,name',
             'manager:id,first_name,last_name,employee_no',
             'creator:id,first_name,last_name',
+            'user:id,first_name,last_name,email',
         ])->findOrFail($id);
     }
 
