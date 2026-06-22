@@ -70,11 +70,12 @@ const projectService = {
         });
         return response.data;
     },
-    async uploadDocumentsBulk(projectId, files) {
+    async uploadDocumentsBulk(projectId, files, config = {}) {
         const fd = new FormData();
         files.forEach((f) => fd.append('files[]', f));
         const response = await apiClient.post(`/projects/${projectId}/documents/bulk`, fd, {
             headers: { 'Content-Type': 'multipart/form-data' },
+            ...config,
         });
         return response.data;
     },

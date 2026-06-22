@@ -43,6 +43,9 @@ export default function ProjectCreate() {
     const [users, setUsers] = useState([]);
     const [roles, setRoles] = useState([]);
     const [attachFiles, setAttachFiles] = useState([]);
+    const [fileProgress, setFileProgress] = useState({}); // index -> percent (0-100)
+    const [fileErrors, setFileErrors] = useState({}); // index -> true when upload failed
+    const [uploadingFiles, setUploadingFiles] = useState(false);
 
     // Quick-add Client modal
     const [clientModalOpen, setClientModalOpen] = useState(false);
@@ -203,9 +206,27 @@ export default function ProjectCreate() {
             }
 
             if (attachFiles.length && targetId) {
-                try {
-                    await projectService.uploadDocumentsBulk(targetId, attachFiles);
-                } catch {
+                setUploadingFiles(true);
+                setFileProgress({});
+                setFileErrors({});
+                let anyFailed = false;
+                // Upload one file per request so each shows its own live progress.
+                for (let i = 0; i < attachFiles.length; i++) {
+                    try {
+                        await projectService.uploadDocumentsBulk(targetId, [attachFiles[i]], {
+                            onUploadProgress: (e) => {
+                                const pct = e.total ? Math.round((e.loaded * 100) / e.total) : 0;
+                                setFileProgress((prev) => ({ ...prev, [i]: pct }));
+                            },
+                        });
+                        setFileProgress((prev) => ({ ...prev, [i]: 100 }));
+                    } catch {
+                        anyFailed = true;
+                        setFileErrors((prev) => ({ ...prev, [i]: true }));
+                    }
+                }
+                setUploadingFiles(false);
+                if (anyFailed) {
                     toast.error('Project saved, but some attachments failed to upload');
                 }
             }
@@ -513,13 +534,42 @@ export default function ProjectCreate() {
                         <input type="file" multiple className="hidden" onChange={addFiles} />
                     </label>
                     {attachFiles.length > 0 && (
-                        <ul className="mt-3 space-y-1">
-                            {attachFiles.map((f, i) => (
-                                <li key={i} className="flex items-center justify-between gap-2 rounded bg-gray-50 px-3 py-1.5 text-sm text-gray-600">
-                                    <span className="flex min-w-0 items-center gap-2"><HiOutlinePaperClip className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{f.name}</span></span>
-                                    <button type="button" onClick={() => removeFile(i)} className="shrink-0 text-gray-400 hover:text-red-600"><HiOutlineX className="h-4 w-4" /></button>
-                                </li>
-                            ))}
+                        <ul className="mt-3 space-y-2">
+                            {attachFiles.map((f, i) => {
+                                const pct = fileProgress[i];
+                                const failed = fileErrors[i];
+                                const showBar = failed || pct != null;
+                                return (
+                                    <li key={i} className="rounded bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="flex min-w-0 items-center gap-2">
+                                                <HiOutlinePaperClip className="h-3.5 w-3.5 shrink-0" />
+                                                <span className="truncate">{f.name}</span>
+                                            </span>
+                                            <span className="flex shrink-0 items-center gap-2">
+                                                {failed ? (
+                                                    <span className="text-xs font-medium text-red-600">Failed</span>
+                                                ) : pct != null ? (
+                                                    <span className="text-xs font-medium text-gray-500">{pct}%</span>
+                                                ) : null}
+                                                {!uploadingFiles && (
+                                                    <button type="button" onClick={() => removeFile(i)} className="text-gray-400 hover:text-red-600">
+                                                        <HiOutlineX className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                            </span>
+                                        </div>
+                                        {showBar && (
+                                            <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                                                <div
+                                                    className={`h-full rounded-full transition-all duration-200 ${failed ? 'bg-red-500' : 'bg-primary-600'}`}
+                                                    style={{ width: `${failed ? 100 : (pct || 0)}%` }}
+                                                />
+                                            </div>
+                                        )}
+                                    </li>
+                                );
+                            })}
                         </ul>
                     )}
                 </div>
