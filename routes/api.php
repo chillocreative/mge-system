@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SafetyController;
 use App\Http\Controllers\Api\SiteLogController;
 use App\Http\Controllers\Api\TaskController;
+use App\Http\Controllers\Api\TrainingController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -619,6 +620,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
         Route::patch('/{notification}/read', [NotificationController::class, 'markAsRead']);
         Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+        Route::delete('/delete-all', [NotificationController::class, 'destroyAll']);
+        Route::delete('/{notification}', [NotificationController::class, 'destroy']);
     });
 
     /*
@@ -659,6 +662,29 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [LeaveController::class, 'storeType'])->middleware('permission:leave.manage');
         Route::put('/{id}', [LeaveController::class, 'updateType'])->middleware('permission:leave.manage');
         Route::delete('/{id}', [LeaveController::class, 'destroyType'])->middleware('permission:leave.manage');
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | Training (HR)
+    |----------------------------------------------------------------------
+    */
+    Route::prefix('training')->group(function () {
+        // Self-service (any requester)
+        Route::get('/my', [TrainingController::class, 'my'])->middleware('permission:training.request');
+        Route::post('/requests', [TrainingController::class, 'storeRequest'])->middleware('permission:training.request');
+
+        // HR views
+        Route::get('/overview', [TrainingController::class, 'overview'])->middleware('permission:training.view');
+        Route::get('/records', [TrainingController::class, 'records'])->middleware('permission:training.view');
+        Route::get('/requests', [TrainingController::class, 'requests'])->middleware('permission:training.view');
+
+        // HR management
+        Route::post('/records', [TrainingController::class, 'storeRecord'])->middleware('permission:training.manage');
+        Route::put('/records/{id}', [TrainingController::class, 'updateRecord'])->middleware('permission:training.manage');
+        Route::delete('/records/{id}', [TrainingController::class, 'destroyRecord'])->middleware('permission:training.manage');
+        Route::post('/requests/{id}/approve', [TrainingController::class, 'approveRequest'])->middleware('permission:training.approve');
+        Route::post('/requests/{id}/reject', [TrainingController::class, 'rejectRequest'])->middleware('permission:training.approve');
     });
 
     /*

@@ -84,6 +84,16 @@ class Employee extends Model
         return $this->hasMany(LeaveRequest::class);
     }
 
+    public function trainingRecords(): HasMany
+    {
+        return $this->hasMany(TrainingRecord::class);
+    }
+
+    public function trainingRequests(): HasMany
+    {
+        return $this->hasMany(TrainingRequest::class);
+    }
+
     public function leaveBalances(): HasMany
     {
         return $this->hasMany(LeaveBalance::class);

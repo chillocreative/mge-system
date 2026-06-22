@@ -43,6 +43,9 @@ import LeaveRequestForm from '@/pages/hr/leave/LeaveRequestForm';
 import LeaveApproval from '@/pages/hr/leave/LeaveApproval';
 import LeaveBalance from '@/pages/hr/leave/LeaveBalance';
 import MyLeave from '@/pages/hr/leave/MyLeave';
+import Training from '@/pages/hr/training/Training';
+import MyTraining from '@/pages/hr/training/MyTraining';
+import Notifications from '@/pages/notifications/Notifications';
 import Calendar from '@/pages/hr/calendar/Calendar';
 import PayrollList from '@/pages/hr/payroll/PayrollList';
 import PayslipDetail from '@/pages/hr/payroll/PayslipDetail';
@@ -76,6 +79,9 @@ function AppRoutes() {
                     {/* Dashboard — all authenticated users */}
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/dashboard" element={<Dashboard />} />
+
+                    {/* Notifications — all authenticated users */}
+                    <Route path="/notifications" element={<Notifications />} />
 
                     {/* Projects — requires projects.view */}
                     <Route element={<PermissionGate permission="projects.view" />}>
@@ -160,6 +166,14 @@ function AppRoutes() {
                     <Route element={<PermissionGate permission="leave.manage" />}>
                         <Route path="/hr/leave" element={<LeaveList />} />
                         <Route path="/hr/leave/balances" element={<LeaveBalance />} />
+                    </Route>
+
+                    {/* HR — Training */}
+                    <Route element={<PermissionGate permission="training.request" />}>
+                        <Route path="/training/my" element={<MyTraining />} />
+                    </Route>
+                    <Route element={<PermissionGate permission="training.view" />}>
+                        <Route path="/hr/training" element={<Training />} />
                     </Route>
 
                     {/* HR — Calendar */}

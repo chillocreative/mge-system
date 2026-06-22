@@ -10,7 +10,8 @@ use Illuminate\Pagination\LengthAwarePaginator;
 class ProjectService
 {
     public function __construct(
-        private ProjectRepositoryInterface $projectRepository
+        private ProjectRepositoryInterface $projectRepository,
+        private NotificationService $notifications,
     ) {}
 
     public function listProjects(array $filters = [], int $perPage = 15): LengthAwarePaginator
@@ -45,6 +46,7 @@ class ProjectService
                 $userId => ['role' => 'member', 'joined_at' => now()],
             ]);
             $project->members()->attach($members);
+            $this->notifyMembersAdded($project, $data['member_ids']);
         }
 
         return $project->load(['client', 'manager']);
@@ -55,10 +57,13 @@ class ProjectService
         $project = $this->projectRepository->update($id, $data);
 
         if (isset($data['member_ids'])) {
+            $existing = $project->members()->pluck('users.id')->all();
             $members = collect($data['member_ids'])->mapWithKeys(fn ($userId) => [
                 $userId => ['role' => 'member', 'joined_at' => now()],
             ]);
             $project->members()->sync($members);
+            $newlyAdded = array_diff($data['member_ids'], $existing);
+            $this->notifyMembersAdded($project, $newlyAdded);
         }
 
         return $project->load(['client', 'manager']);
@@ -67,6 +72,21 @@ class ProjectService
     public function deleteProject(int $id): bool
     {
         return $this->projectRepository->delete($id);
+    }
+
+    /**
+     * Notify users who were just added to a project's team.
+     */
+    private function notifyMembersAdded(Project $project, array $userIds): void
+    {
+        $this->notifications->notifyUserIds(
+            array_values($userIds),
+            'Added to a project',
+            "You were added to the project \"{$project->name}\".",
+            'project',
+            "/projects/{$project->id}",
+            ['project_id' => $project->id],
+        );
     }
 
     public function getActiveProjects(): Collection

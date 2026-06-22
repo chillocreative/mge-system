@@ -33,10 +33,14 @@ import {
     HiOutlineDocumentDuplicate,
     HiOutlineChatAlt2,
     HiOutlineKey,
+    HiOutlineBell,
+    HiOutlineAcademicCap,
 } from 'react-icons/hi';
+import NotificationBell from '@/components/NotificationBell';
 import toast from 'react-hot-toast';
 
 const navigation = [
+    { name: 'Notifications', href: '/notifications', icon: HiOutlineBell, permission: null },
     { name: 'Dashboard', href: '/dashboard', icon: HiOutlineHome, permission: null },
     {
         name: 'Projects', icon: HiOutlineBriefcase,
@@ -60,6 +64,8 @@ const navigation = [
             { name: 'Attendance', href: '/hr/attendance', icon: HiOutlineClock, permission: 'attendance.view' },
             { name: 'My Leave', href: '/leave/my', icon: HiOutlineCalendar, permission: 'leave.request' },
             { name: 'Leave (All)', href: '/hr/leave', icon: HiOutlineClipboardCheck, permission: 'leave.manage' },
+            { name: 'My Training', href: '/training/my', icon: HiOutlineAcademicCap, permission: 'training.request' },
+            { name: 'Training', href: '/hr/training', icon: HiOutlineAcademicCap, permission: 'training.view' },
             { name: 'Payroll', href: '/hr/payroll', icon: HiOutlineCash, permission: 'payroll.view' },
             { name: 'EA Form', href: '/hr/payroll/ea-form', icon: HiOutlineDocumentText, permission: 'payroll.ea-form' },
             { name: 'Calendar', href: '/hr/calendar', icon: HiOutlineCalendar, permission: 'calendar.view' },
@@ -248,6 +254,9 @@ export default function DashboardLayout() {
                     </button>
 
                     <div className="flex-1" />
+
+                    {/* Notification bell */}
+                    <NotificationBell />
 
                     {/* Profile dropdown */}
                     <div className="relative">

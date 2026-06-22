@@ -17,6 +17,14 @@ const notificationService = {
         const response = await apiClient.post('/notifications/mark-all-read');
         return response.data;
     },
+    async remove(id) {
+        const response = await apiClient.delete(`/notifications/${id}`);
+        return response.data;
+    },
+    async clearAll() {
+        const response = await apiClient.delete('/notifications/delete-all');
+        return response.data;
+    },
 };
 
 export default notificationService;

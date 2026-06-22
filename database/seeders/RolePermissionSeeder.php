@@ -106,6 +106,12 @@ class RolePermissionSeeder extends Seeder
             'leave.approve',
             'leave.manage',
 
+            // Training
+            'training.view',
+            'training.request',
+            'training.approve',
+            'training.manage',
+
             // Calendar
             'calendar.view',
             'calendar.manage',
@@ -259,6 +265,12 @@ class RolePermissionSeeder extends Seeder
             'leave.approve',
             'leave.manage',
 
+            // Training (full access — HR)
+            'training.view',
+            'training.request',
+            'training.approve',
+            'training.manage',
+
             // Calendar
             'calendar.view',
             'calendar.manage',
@@ -294,6 +306,8 @@ class RolePermissionSeeder extends Seeder
             // Dashboard
             'dashboard.view',
             'dashboard.view-project-stats',
+            // Training (self-service requests)
+            'training.request',
 
             // Users (read-only — see team members)
             'users.view',
@@ -376,6 +390,7 @@ class RolePermissionSeeder extends Seeder
             'dashboard.view',
             'leave.view',
             'leave.request',
+            'training.request',
             'calendar.view',
         ]);
     }

@@ -11,7 +11,8 @@ use Illuminate\Validation\ValidationException;
 class AuthService
 {
     public function __construct(
-        private UserRepositoryInterface $userRepository
+        private UserRepositoryInterface $userRepository,
+        private NotificationService $notifications,
     ) {}
 
     public function register(array $data): User
@@ -27,6 +28,15 @@ class AuthService
             'ic_number' => $data['ic_number'] ?? null,
             'status' => 'pending',
         ]);
+
+        $this->notifications->notifyByPermission(
+            'users.approve',
+            'New user pending approval',
+            trim("{$user->first_name} {$user->last_name}") . " registered and is awaiting approval.",
+            'user',
+            '/users',
+            ['user_id' => $user->id],
+        );
 
         return $user;
     }

@@ -40,4 +40,18 @@ class NotificationController extends Controller
 
         return $this->success(null, 'All notifications marked as read.');
     }
+
+    public function destroy(Request $request, string $id): JsonResponse
+    {
+        $request->user()->notifications()->findOrFail($id)->delete();
+
+        return $this->success(null, 'Notification deleted.');
+    }
+
+    public function destroyAll(Request $request): JsonResponse
+    {
+        $request->user()->notifications()->delete();
+
+        return $this->success(null, 'All notifications cleared.');
+    }
 }

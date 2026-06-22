@@ -10,7 +10,8 @@ use Illuminate\Validation\ValidationException;
 class UserService
 {
     public function __construct(
-        private UserRepositoryInterface $userRepository
+        private UserRepositoryInterface $userRepository,
+        private NotificationService $notifications,
     ) {}
 
     public function listUsers(int $perPage = 15, ?string $status = null): LengthAwarePaginator
@@ -68,6 +69,14 @@ class UserService
 
         $user->update(['status' => 'active']);
         $user->syncRoles([$role]);
+
+        $this->notifications->notify(
+            $user,
+            'Account approved',
+            'Your account has been approved. Welcome to MGE-PMS!',
+            'user',
+            '/dashboard',
+        );
 
         return $user->load(['department', 'designation', 'roles']);
     }
