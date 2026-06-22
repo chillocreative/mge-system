@@ -41,10 +41,15 @@ export default function EaForm() {
                     </div>
                     <div>
                         <label className="mb-1 block text-sm font-medium text-gray-700">Year</label>
-                        <select value={year} onChange={(e) => setYear(e.target.value)}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
-                            {years.map((y) => <option key={y} value={y}>{y}</option>)}
-                        </select>
+                        <input
+                            type="number" list="ea-year-options" min="2000" max="2100" value={year}
+                            onChange={(e) => setYear(e.target.value)}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        />
+                        <datalist id="ea-year-options">
+                            {years.map((y) => <option key={y} value={y} />)}
+                        </datalist>
+                        <p className="mt-1 text-xs text-gray-400">Type any year or pick a recent one.</p>
                     </div>
                 </div>
                 <button onClick={open} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700">

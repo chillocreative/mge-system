@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 
 const emptyForm = {
     employee_no: '',
+    user_id: '',
     full_name: '',
     ic_passport_no: '',
     email: '',
@@ -57,6 +58,8 @@ export default function StaffForm() {
     const [departments, setDepartments] = useState([]);
     const [designations, setDesignations] = useState([]);
     const [managers, setManagers] = useState([]);
+    const [users, setUsers] = useState([]);
+    const [showSuggest, setShowSuggest] = useState(false);
 
     const set = (field, value) => {
         setForm((p) => ({ ...p, [field]: value }));
@@ -69,14 +72,37 @@ export default function StaffForm() {
             apiClient.get('/departments', { params: { per_page: 100 } }),
             apiClient.get('/designations', { params: { per_page: 100 } }),
             apiClient.get('/employees', { params: { per_page: 100, status: 'active' } }),
+            apiClient.get('/users', { params: { per_page: 200 } }),
         ])
-            .then(([dRes, gRes, eRes]) => {
+            .then(([dRes, gRes, eRes, uRes]) => {
                 setDepartments(unwrap(dRes));
                 setDesignations(unwrap(gRes));
                 setManagers(unwrap(eRes));
+                setUsers(unwrap(uRes));
             })
             .catch(() => {});
     }, []);
+
+    // Prefill the staff form from an existing user account.
+    const pickUser = (u) => {
+        setForm((p) => ({
+            ...p,
+            user_id: u.id,
+            full_name: u.full_name || '',
+            email: u.email || p.email,
+            phone: u.phone || p.phone,
+            ic_passport_no: u.ic_number || p.ic_passport_no,
+            department_id: u.department?.id ? String(u.department.id) : p.department_id,
+            designation_id: u.designation?.id ? String(u.designation.id) : p.designation_id,
+        }));
+        setShowSuggest(false);
+        setErrors({});
+    };
+
+    const nameQuery = form.full_name.trim().toLowerCase();
+    const suggestions = nameQuery.length >= 3
+        ? users.filter((u) => (u.full_name || '').toLowerCase().includes(nameQuery)).slice(0, 8)
+        : [];
 
     useEffect(() => {
         if (!isEdit) return;
@@ -173,10 +199,37 @@ export default function StaffForm() {
                         <Field label="IC / Passport No" name="ic_passport_no" errors={errors}>
                             <input value={form.ic_passport_no} onChange={(e) => set('ic_passport_no', e.target.value)} className={inputClass} />
                         </Field>
-                        <div className="sm:col-span-2">
+                        <div className="relative sm:col-span-2">
                             <Field label="Full Name *" name="full_name" errors={errors}>
-                                <input value={form.full_name} onChange={(e) => set('full_name', e.target.value)} className={inputClass} />
+                                <input
+                                    value={form.full_name}
+                                    onChange={(e) => { set('full_name', e.target.value); set('user_id', ''); setShowSuggest(true); }}
+                                    onFocus={() => setShowSuggest(true)}
+                                    onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
+                                    autoComplete="off"
+                                    placeholder="Type 3+ letters to search existing users…"
+                                    className={inputClass}
+                                />
                             </Field>
+                            {form.user_id && <p className="mt-1 text-xs text-primary-600">Linked to user account · fields prefilled</p>}
+                            {showSuggest && suggestions.length > 0 && (
+                                <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                                    {suggestions.map((u) => (
+                                        <li key={u.id}>
+                                            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => pickUser(u)}
+                                                className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-gray-50">
+                                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700">
+                                                    {(u.full_name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase()}
+                                                </span>
+                                                <span className="min-w-0">
+                                                    <span className="block truncate text-sm font-medium text-gray-900">{u.full_name}</span>
+                                                    <span className="block truncate text-xs text-gray-400">{u.email}</span>
+                                                </span>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </div>
                         <Field label="Email" name="email" errors={errors}>
                             <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} className={inputClass} />

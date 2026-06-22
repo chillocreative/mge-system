@@ -370,7 +370,7 @@ export default function Users() {
                             className="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400">
                             <option value="">Select a role...</option>
                             {roles
-                                .filter((role) => role.name !== SUPER_ADMIN_ROLE || canGrantSuper)
+                                .filter((role) => !role.is_system)
                                 .map((role) => <option key={role.id} value={role.name}>{role.name}</option>)}
                         </select>
                         <div className="flex justify-end gap-2">

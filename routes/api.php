@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\FinanceController;
 use App\Http\Controllers\Api\InternalEmailController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\MilestoneController;
+use App\Http\Controllers\Api\MemoController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectDocumentController;
@@ -622,6 +623,19 @@ Route::middleware('auth:sanctum')->group(function () {
     | Notifications — available to all authenticated users
     |----------------------------------------------------------------------
     */
+    /*
+    |----------------------------------------------------------------------
+    | Memos (internal)
+    |----------------------------------------------------------------------
+    */
+    Route::prefix('memos')->middleware('permission:memos.view')->group(function () {
+        Route::get('/', [MemoController::class, 'index']);
+        Route::get('/unread-count', [MemoController::class, 'unreadCount']);
+        Route::post('/send', [MemoController::class, 'send']);
+        Route::get('/{id}', [MemoController::class, 'show']);
+        Route::patch('/{id}/read', [MemoController::class, 'markAsRead']);
+    });
+
     Route::prefix('notifications')->group(function () {
         Route::get('/', [NotificationController::class, 'index']);
         Route::get('/unread-count', [NotificationController::class, 'unreadCount']);

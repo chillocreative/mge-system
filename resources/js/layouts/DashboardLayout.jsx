@@ -69,6 +69,7 @@ const navigation = [
             { name: 'Training', href: '/hr/training', icon: HiOutlineAcademicCap, permission: 'training.view' },
             { name: 'Payroll', href: '/hr/payroll', icon: HiOutlineCash, permission: 'payroll.view' },
             { name: 'EA Form', href: '/hr/payroll/ea-form', icon: HiOutlineDocumentText, permission: 'payroll.ea-form' },
+            { name: 'Memos', href: '/hr/memos', icon: HiOutlineDocumentDuplicate, permission: 'memos.view' },
             { name: 'Calendar', href: '/hr/calendar', icon: HiOutlineCalendar, permission: 'calendar.view' },
         ],
     },
@@ -93,6 +94,7 @@ const navigation = [
     { name: 'Email', href: '/email', icon: HiOutlineMail, permission: null },
     { name: 'Users', href: '/users', icon: HiOutlineUserGroup, permission: 'users.view' },
     { name: 'Roles & Permissions', href: '/roles', icon: HiOutlineKey, permission: 'roles.view' },
+    { name: 'Settings', href: '/settings', icon: HiOutlineCog, permission: 'departments.view' },
 ];
 
 export default function DashboardLayout() {

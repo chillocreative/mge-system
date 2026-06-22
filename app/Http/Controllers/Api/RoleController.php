@@ -19,6 +19,7 @@ class RoleController extends Controller
                 'name' => $role->name,
                 'users_count' => $role->users()->count(),
                 'permissions' => $role->permissions->pluck('name'),
+                'is_system' => in_array($role->name, config('app.system_roles', [])),
                 'created_at' => $role->created_at?->toISOString(),
             ]);
 

@@ -46,6 +46,8 @@ import MyLeave from '@/pages/hr/leave/MyLeave';
 import Training from '@/pages/hr/training/Training';
 import MyTraining from '@/pages/hr/training/MyTraining';
 import Notifications from '@/pages/notifications/Notifications';
+import Settings from '@/pages/settings/Settings';
+import Memo from '@/pages/hr/memos/Memo';
 import Calendar from '@/pages/hr/calendar/Calendar';
 import PayrollList from '@/pages/hr/payroll/PayrollList';
 import PayslipDetail from '@/pages/hr/payroll/PayslipDetail';
@@ -166,6 +168,16 @@ function AppRoutes() {
                     <Route element={<PermissionGate permission="leave.manage" />}>
                         <Route path="/hr/leave" element={<LeaveList />} />
                         <Route path="/hr/leave/balances" element={<LeaveBalance />} />
+                    </Route>
+
+                    {/* HR — Memos */}
+                    <Route element={<PermissionGate permission="memos.view" />}>
+                        <Route path="/hr/memos" element={<Memo />} />
+                    </Route>
+
+                    {/* Settings — departments & designations */}
+                    <Route element={<PermissionGate permission="departments.view" />}>
+                        <Route path="/settings" element={<Settings />} />
                     </Route>
 
                     {/* HR — Training */}

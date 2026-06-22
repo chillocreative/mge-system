@@ -42,8 +42,21 @@ class UserService
         ]);
 
         $user->assignRole($data['role']);
+        $this->applyOrgRoleFlags($user, $data['role']);
 
         return $user->load(['department', 'designation', 'roles']);
+    }
+
+    /**
+     * Keep the leave-approval flags in sync with the org role assigned:
+     * "Managers" approve the manager stage, "Directors" the director stage.
+     */
+    private function applyOrgRoleFlags(User $user, ?string $role): void
+    {
+        $user->update([
+            'is_manager' => $role === 'Managers',
+            'is_director' => $role === 'Directors',
+        ]);
     }
 
     public function updateUser(int $id, array $data): User
@@ -52,6 +65,7 @@ class UserService
 
         if (isset($data['role'])) {
             $user->syncRoles([$data['role']]);
+            $this->applyOrgRoleFlags($user, $data['role']);
         }
 
         return $user->load(['department', 'designation', 'roles']);
@@ -69,6 +83,7 @@ class UserService
 
         $user->update(['status' => 'active']);
         $user->syncRoles([$role]);
+        $this->applyOrgRoleFlags($user, $role);
 
         $this->notifications->notify(
             $user,

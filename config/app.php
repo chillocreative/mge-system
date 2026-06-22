@@ -29,6 +29,13 @@ return [
     'super_admin_role' => env('SUPER_ADMIN_ROLE', 'Admin & HR'),
 
     /*
+    | System (access-control) roles. These are hidden from the approve-user
+    | dropdown, which assigns organisation roles (General Workers, Executives,
+    | Managers, Directors, and any admin-added role) instead.
+    */
+    'system_roles' => ['Admin & HR', 'Finances & HR', 'Projects', 'Employee'],
+
+    /*
     |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------

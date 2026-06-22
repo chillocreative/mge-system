@@ -24,6 +24,7 @@ class EmployeeController extends Controller
     {
         $validated = $request->validate([
             'employee_no' => ['required', 'string', 'max:50', 'unique:employees,employee_no'],
+            'user_id' => ['nullable', 'exists:users,id'],
             'full_name' => ['required', 'string', 'max:200'],
             'ic_passport_no' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
@@ -65,6 +66,7 @@ class EmployeeController extends Controller
     {
         $validated = $request->validate([
             'employee_no' => ['sometimes', 'string', 'max:50', 'unique:employees,employee_no,' . $id],
+            'user_id' => ['nullable', 'exists:users,id'],
             'full_name' => ['sometimes', 'required', 'string', 'max:200'],
             'ic_passport_no' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],

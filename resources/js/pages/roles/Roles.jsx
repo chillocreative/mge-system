@@ -4,7 +4,7 @@ import apiClient from '@/services/apiClient';
 import roleService from '@/services/roleService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
-import { HiOutlineKey, HiOutlineUserGroup, HiOutlineCheck, HiOutlineInformationCircle, HiOutlineUser } from 'react-icons/hi';
+import { HiOutlineKey, HiOutlineUserGroup, HiOutlineCheck, HiOutlineInformationCircle, HiOutlineUser, HiOutlinePlus } from 'react-icons/hi';
 
 // Friendly module display names (key = permission prefix before the dot)
 const MODULE_LABELS = {
@@ -40,6 +40,12 @@ export default function Roles() {
     const [userRole, setUserRole] = useState(null);
     const [userLoading, setUserLoading] = useState(false);
     const [userSaving, setUserSaving] = useState(false);
+
+    // Create role modal
+    const [createOpen, setCreateOpen] = useState(false);
+    const [newName, setNewName] = useState('');
+    const [newModules, setNewModules] = useState(new Set());
+    const [creating, setCreating] = useState(false);
 
     const activeRole = useMemo(() => roles.find((r) => r.id === activeId), [roles, activeId]);
     const activeUser = useMemo(() => users.find((u) => u.id === activeUserId), [users, activeUserId]);
@@ -145,6 +151,27 @@ export default function Roles() {
         }
     };
 
+    const createRole = async () => {
+        const name = newName.trim();
+        if (!name) { toast.error('Enter a role name'); return; }
+        if (newModules.size === 0) { toast.error('Select at least one module'); return; }
+        const permissions = [...newModules].flatMap((key) => groups[key] || []);
+        setCreating(true);
+        try {
+            const res = await roleService.create({ name, permissions });
+            const created = res.data || {};
+            setRoles((prev) => [...prev, { ...created, users_count: 0, is_system: false, permissions }]);
+            toast.success('Role created');
+            setCreateOpen(false);
+            setNewName('');
+            setNewModules(new Set());
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to create role');
+        } finally {
+            setCreating(false);
+        }
+    };
+
     if (loading) return <LoadingSpinner />;
 
     const isSuperAdmin = activeRole?.name === 'Admin & HR';
@@ -178,6 +205,12 @@ export default function Roles() {
                 <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
                     {/* Role list */}
                     <div className="space-y-2">
+                        {canEdit && (
+                            <button onClick={() => { setNewName(''); setNewModules(new Set()); setCreateOpen(true); }}
+                                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-primary-300 px-4 py-2.5 text-sm font-semibold text-primary-600 hover:bg-primary-50">
+                                <HiOutlinePlus className="h-4 w-4" /> New Role
+                            </button>
+                        )}
                         {roles.map((role) => (
                             <button key={role.id} onClick={() => selectRole(role)}
                                 className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-all ${
@@ -335,6 +368,40 @@ export default function Roles() {
                                 </div>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Create role modal */}
+            {createOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setCreateOpen(false)}>
+                    <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="mb-4 text-lg font-semibold text-gray-900">New Role</h3>
+                        <div className="mb-4">
+                            <label className="mb-1 block text-sm font-medium text-gray-700">Role name *</label>
+                            <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Site Supervisors"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                        </div>
+                        <p className="mb-2 text-sm font-medium text-gray-700">Module access</p>
+                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                            {moduleKeys.map((key) => (
+                                <label key={key}
+                                    className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm transition-colors ${
+                                        newModules.has(key) ? 'border-primary-500 bg-primary-50 text-primary-800' : 'border-gray-200 hover:bg-gray-50 text-gray-700'
+                                    }`}>
+                                    <input type="checkbox" checked={newModules.has(key)}
+                                        onChange={() => setNewModules((prev) => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; })}
+                                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                                    <span className="font-medium">{moduleName(key)}</span>
+                                </label>
+                            ))}
+                        </div>
+                        <div className="mt-5 flex justify-end gap-2">
+                            <button onClick={() => setCreateOpen(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                            <button onClick={createRole} disabled={creating} className="rounded-lg bg-primary-600 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50">
+                                {creating ? 'Creating...' : 'Create Role'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -167,6 +167,11 @@ class RolePermissionSeeder extends Seeder
             'environmental.create',
             'environmental.manage',
 
+            // Memos (internal memos)
+            'memos.view',
+            'memos.send-hr',
+            'memos.send-project',
+
             // Activity Logs
             'activity-logs.view',
         ];
@@ -289,6 +294,10 @@ class RolePermissionSeeder extends Seeder
 
             // Environmental (view-only)
             'environmental.view',
+
+            // Memos (HR can broadcast to all/selected staff)
+            'memos.view',
+            'memos.send-hr',
         ]);
 
         /*
@@ -376,6 +385,10 @@ class RolePermissionSeeder extends Seeder
             'assets.view',
             'inventory.view',
             'maintenance.view',
+
+            // Memos (project managers can memo their project members)
+            'memos.view',
+            'memos.send-project',
         ]);
 
         /*
@@ -392,6 +405,51 @@ class RolePermissionSeeder extends Seeder
             'leave.request',
             'training.request',
             'calendar.view',
+            'memos.view',
         ]);
+
+        /*
+        |------------------------------------------------------------------
+        | ORGANISATION ROLES — assigned when approving users.
+        | Stacked presets from basic worker up to director.
+        |------------------------------------------------------------------
+        */
+        $base = [
+            'dashboard.view',
+            'leave.view',
+            'leave.request',
+            'training.request',
+            'calendar.view',
+            'memos.view',
+        ];
+
+        $generalWorkers = Role::firstOrCreate(['name' => 'General Workers', 'guard_name' => 'web']);
+        $generalWorkers->syncPermissions($base);
+
+        $executivePerms = array_merge($base, [
+            'projects.view',
+            'clients.view',
+            'documents.view',
+            'meetings.view',
+            'reports.view',
+        ]);
+        $executives = Role::firstOrCreate(['name' => 'Executives', 'guard_name' => 'web']);
+        $executives->syncPermissions($executivePerms);
+
+        $managerPerms = array_merge($executivePerms, [
+            'leave.approve',
+            'staff.view',
+            'training.view',
+            'tasks.view',
+        ]);
+        $managers = Role::firstOrCreate(['name' => 'Managers', 'guard_name' => 'web']);
+        $managers->syncPermissions($managerPerms);
+
+        $directorPerms = array_merge($managerPerms, [
+            'finance.view',
+            'payroll.view',
+        ]);
+        $directors = Role::firstOrCreate(['name' => 'Directors', 'guard_name' => 'web']);
+        $directors->syncPermissions($directorPerms);
     }
 }
