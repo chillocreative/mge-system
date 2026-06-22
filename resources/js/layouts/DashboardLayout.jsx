@@ -93,7 +93,7 @@ const navigation = [
     { name: 'Chat', href: '/chat', icon: HiOutlineChat, permission: null },
     { name: 'Email', href: '/email', icon: HiOutlineMail, permission: null },
     { name: 'Users', href: '/users', icon: HiOutlineUserGroup, permission: 'users.view' },
-    { name: 'Roles & Permissions', href: '/roles', icon: HiOutlineKey, permission: 'roles.view' },
+    { name: 'User Access', href: '/roles', icon: HiOutlineKey, permission: 'roles.view' },
     { name: 'Settings', href: '/settings', icon: HiOutlineCog, permission: 'departments.view' },
 ];
 
