@@ -42,6 +42,7 @@ import LeaveList from '@/pages/hr/leave/LeaveList';
 import LeaveRequestForm from '@/pages/hr/leave/LeaveRequestForm';
 import LeaveApproval from '@/pages/hr/leave/LeaveApproval';
 import LeaveBalance from '@/pages/hr/leave/LeaveBalance';
+import MyLeave from '@/pages/hr/leave/MyLeave';
 import Calendar from '@/pages/hr/calendar/Calendar';
 import PayrollList from '@/pages/hr/payroll/PayrollList';
 import PayslipDetail from '@/pages/hr/payroll/PayslipDetail';
@@ -144,11 +145,20 @@ function AppRoutes() {
                         <Route path="/hr/attendance" element={<Attendance />} />
                     </Route>
 
-                    {/* HR — Leave */}
-                    <Route element={<PermissionGate permission="leave.view" />}>
-                        <Route path="/hr/leave" element={<LeaveList />} />
+                    {/* HR — Leave: self-service (any requester) */}
+                    <Route element={<PermissionGate permission="leave.request" />}>
+                        <Route path="/leave/my" element={<MyLeave />} />
                         <Route path="/hr/leave/apply" element={<LeaveRequestForm />} />
+                    </Route>
+
+                    {/* HR — Leave: approvals (designated approvers) */}
+                    <Route element={<PermissionGate permission="leave.view" />}>
                         <Route path="/hr/leave/approvals" element={<LeaveApproval />} />
+                    </Route>
+
+                    {/* HR — Leave: org-wide management (managers/HR only) */}
+                    <Route element={<PermissionGate permission="leave.manage" />}>
+                        <Route path="/hr/leave" element={<LeaveList />} />
                         <Route path="/hr/leave/balances" element={<LeaveBalance />} />
                     </Route>
 

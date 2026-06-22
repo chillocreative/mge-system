@@ -58,7 +58,8 @@ const navigation = [
         children: [
             { name: 'Staff', href: '/staff', icon: HiOutlineIdentification, permission: 'staff.view' },
             { name: 'Attendance', href: '/hr/attendance', icon: HiOutlineClock, permission: 'attendance.view' },
-            { name: 'Leave', href: '/hr/leave', icon: HiOutlineClipboardCheck, permission: 'leave.view' },
+            { name: 'My Leave', href: '/leave/my', icon: HiOutlineCalendar, permission: 'leave.request' },
+            { name: 'Leave (All)', href: '/hr/leave', icon: HiOutlineClipboardCheck, permission: 'leave.manage' },
             { name: 'Payroll', href: '/hr/payroll', icon: HiOutlineCash, permission: 'payroll.view' },
             { name: 'EA Form', href: '/hr/payroll/ea-form', icon: HiOutlineDocumentText, permission: 'payroll.ea-form' },
             { name: 'Calendar', href: '/hr/calendar', icon: HiOutlineCalendar, permission: 'calendar.view' },

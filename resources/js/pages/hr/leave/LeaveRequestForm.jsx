@@ -11,6 +11,7 @@ export default function LeaveRequestForm() {
     const navigate = useNavigate();
     const { can } = useAuth();
     const canManage = can('leave.manage'); // HR/Admin may file on behalf of any employee
+    const backTo = canManage ? '/hr/leave' : '/leave/my'; // employees can't open the org-wide list
     const [employees, setEmployees] = useState([]);
     const [myEmployee, setMyEmployee] = useState(null);
     const [types, setTypes] = useState([]);
@@ -62,7 +63,7 @@ export default function LeaveRequestForm() {
 
             await leaveService.apply(formData);
             toast.success('Leave request submitted');
-            navigate('/hr/leave');
+            navigate(backTo);
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to submit leave request');
         } finally {
@@ -76,7 +77,7 @@ export default function LeaveRequestForm() {
         <div>
             <div className="mb-6">
                 <button
-                    onClick={() => navigate('/hr/leave')}
+                    onClick={() => navigate(backTo)}
                     className="mb-3 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
                 >
                     <HiOutlineArrowLeft className="h-4 w-4" /> Back to Leave Requests
@@ -200,7 +201,7 @@ export default function LeaveRequestForm() {
                     <div className="flex justify-end gap-2 pt-2">
                         <button
                             type="button"
-                            onClick={() => navigate('/hr/leave')}
+                            onClick={() => navigate(backTo)}
                             className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                         >
                             Cancel
