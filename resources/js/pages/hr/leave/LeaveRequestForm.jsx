@@ -48,6 +48,21 @@ export default function LeaveRequestForm() {
     const selectedType = types.find((t) => String(t.id) === String(form.leave_type_id));
     const noProfile = !canManage && !myEmployee;
 
+    // Maternity leave is only available to female staff.
+    const applyingEmployee = canManage
+        ? employees.find((e) => String(e.id) === String(form.employee_id))
+        : myEmployee;
+    const isFemale = applyingEmployee?.gender === 'female';
+    const visibleTypes = types.filter((t) => isFemale || !/maternity/i.test(t.name || ''));
+
+    // Clear a chosen type that is no longer offered (e.g. after switching employee).
+    useEffect(() => {
+        if (form.leave_type_id && !visibleTypes.some((t) => String(t.id) === String(form.leave_type_id))) {
+            setForm((p) => ({ ...p, leave_type_id: '' }));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isFemale, types, form.leave_type_id]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
@@ -126,7 +141,7 @@ export default function LeaveRequestForm() {
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                             >
                                 <option value="">Select type</option>
-                                {types.map((t) => (
+                                {visibleTypes.map((t) => (
                                     <option key={t.id} value={t.id}>{t.name} ({t.code})</option>
                                 ))}
                             </select>

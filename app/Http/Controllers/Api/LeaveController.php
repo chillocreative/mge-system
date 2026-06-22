@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\LeaveRequest;
+use App\Models\LeaveType;
 use App\Services\LeaveService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,6 +34,15 @@ class LeaveController extends Controller
             'reason' => ['nullable', 'string'],
             'attachment' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         ]);
+
+        // Maternity leave is only available to female staff.
+        $type = LeaveType::find($validated['leave_type_id']);
+        if ($type && preg_match('/maternity/i', $type->name)) {
+            $employee = Employee::find($validated['employee_id']);
+            if (!$employee || $employee->gender !== 'female') {
+                return $this->error('Maternity leave is only available to female staff.', 422);
+            }
+        }
 
         $attachment = $request->file('attachment');
         unset($validated['attachment']);
