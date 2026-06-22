@@ -27,6 +27,8 @@ class User extends Authenticatable
         'department_id',
         'designation_id',
         'status',
+        'is_manager',
+        'is_director',
     ];
 
     /**
@@ -54,6 +56,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_manager' => 'boolean',
+            'is_director' => 'boolean',
         ];
     }
 

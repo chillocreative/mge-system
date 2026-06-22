@@ -63,6 +63,7 @@ const navigation = [
             { name: 'Staff', href: '/staff', icon: HiOutlineIdentification, permission: 'staff.view' },
             { name: 'Attendance', href: '/hr/attendance', icon: HiOutlineClock, permission: 'attendance.view' },
             { name: 'My Leave', href: '/leave/my', icon: HiOutlineCalendar, permission: 'leave.request' },
+            { name: 'Leave Approvals', href: '/hr/leave/approvals', icon: HiOutlineClipboardCheck, permission: 'leave.approve' },
             { name: 'Leave (All)', href: '/hr/leave', icon: HiOutlineClipboardCheck, permission: 'leave.manage' },
             { name: 'My Training', href: '/training/my', icon: HiOutlineAcademicCap, permission: 'training.request' },
             { name: 'Training', href: '/hr/training', icon: HiOutlineAcademicCap, permission: 'training.view' },

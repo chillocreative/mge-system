@@ -25,6 +25,16 @@ const roleService = {
         const res = await apiClient.get('/permissions');
         return res.data;
     },
+
+    // ── Per-user access ──
+    async getUserAccess(userId) {
+        const res = await apiClient.get(`/users/${userId}/access`);
+        return res.data;
+    },
+    async updateUserAccess(userId, data) {
+        const res = await apiClient.put(`/users/${userId}/access`, data);
+        return res.data;
+    },
 };
 
 export default roleService;

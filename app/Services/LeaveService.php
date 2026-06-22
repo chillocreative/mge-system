@@ -167,19 +167,23 @@ class LeaveService
      */
     private function authorizeStage(LeaveRequest $request, User $actor, string $level): void
     {
+        // HR managers can always act.
+        if ($actor->can('leave.manage')) {
+            return;
+        }
+
         $designated = $level === 'manager'
             ? $request->leaveType->manager_approver_id
             : $request->leaveType->director_approver_id;
 
-        if ($designated) {
-            abort_unless(
-                $actor->id === $designated || $actor->can('leave.manage'),
-                403,
-                'You are not the designated approver for this stage.'
-            );
-        } else {
-            abort_unless($actor->can('leave.approve'), 403, 'You are not allowed to approve this request.');
-        }
+        // System-wide Manager / Director approvers can act on the matching stage.
+        $hasFlag = $level === 'manager' ? (bool) $actor->is_manager : (bool) $actor->is_director;
+
+        $allowed = $hasFlag
+            || ($designated && $actor->id === $designated)
+            || (!$designated && $actor->can('leave.approve'));
+
+        abort_unless($allowed, 403, 'You are not allowed to approve this request at this stage.');
     }
 
     private function loadFull(LeaveRequest $request): LeaveRequest
@@ -197,10 +201,13 @@ class LeaveService
 
     private function notifyManager(LeaveRequest $request): void
     {
-        $this->sendLeaveNotification(
-            $request->leaveType?->manager_approver_id,
+        $ids = User::where('is_manager', true)->pluck('id')->all();
+        $ids[] = $request->leaveType?->manager_approver_id;
+
+        $this->sendLeaveNotificationToMany(
+            $ids,
             'New leave request',
-            "{$request->employee?->full_name} submitted a {$request->leaveType?->name} request awaiting your approval.",
+            "{$request->employee?->full_name} submitted a {$request->leaveType?->name} request awaiting approval.",
             'leave_submitted',
             $request->id,
         );
@@ -208,13 +215,23 @@ class LeaveService
 
     private function notifyDirector(LeaveRequest $request): void
     {
-        $this->sendLeaveNotification(
-            $request->leaveType?->director_approver_id,
+        $ids = User::where('is_director', true)->pluck('id')->all();
+        $ids[] = $request->leaveType?->director_approver_id;
+
+        $this->sendLeaveNotificationToMany(
+            $ids,
             'Leave awaiting director approval',
-            "{$request->employee?->full_name}'s {$request->leaveType?->name} request was approved by the manager and awaits your approval.",
+            "{$request->employee?->full_name}'s {$request->leaveType?->name} request was approved by the manager and awaits director approval.",
             'leave_awaiting_director',
             $request->id,
         );
+    }
+
+    private function sendLeaveNotificationToMany(array $userIds, string $title, string $message, string $action, int $leaveId): void
+    {
+        foreach (array_unique(array_filter($userIds)) as $userId) {
+            $this->sendLeaveNotification($userId, $title, $message, $action, $leaveId);
+        }
     }
 
     private function notifyEmployee(LeaveRequest $request, string $decision): void

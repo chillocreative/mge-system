@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\SafetyController;
 use App\Http\Controllers\Api\SiteLogController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TrainingController;
+use App\Http\Controllers\Api\UserAccessController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -348,6 +349,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/permissions', [RoleController::class, 'permissions'])
         ->middleware('permission:roles.view');
+
+    // Per-user access (direct module grants + manager/director flags)
+    Route::get('/users/{user}/access', [UserAccessController::class, 'show'])
+        ->middleware('permission:roles.view');
+    Route::put('/users/{user}/access', [UserAccessController::class, 'update'])
+        ->middleware('permission:roles.edit');
 
     /*
     |----------------------------------------------------------------------

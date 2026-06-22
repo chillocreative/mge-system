@@ -19,6 +19,8 @@ class UserResource extends JsonResource
             'ic_number' => $this->ic_number,
             'avatar' => $this->avatar,
             'status' => $this->status,
+            'is_manager' => (bool) $this->is_manager,
+            'is_director' => (bool) $this->is_director,
             'is_protected' => $this->email === config('app.super_admin_email', 'admin@mge-pms.test'),
             'department' => $this->whenLoaded('department', fn () => [
                 'id' => $this->department->id,

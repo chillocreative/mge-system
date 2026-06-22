@@ -78,7 +78,17 @@ class LeaveController extends Controller
         ])->where('status', 'pending')->orderByDesc('created_at');
 
         if (!$user->can('leave.manage')) {
-            $query->awaitingApprovalBy($user->id);
+            // Designated per-type approvers see their own; system-wide Manager/Director
+            // approvers see every request awaiting their stage.
+            $query->where(function ($q) use ($user) {
+                $q->awaitingApprovalBy($user->id);
+                if ($user->is_manager) {
+                    $q->orWhere('current_approval_level', 'manager');
+                }
+                if ($user->is_director) {
+                    $q->orWhere('current_approval_level', 'director');
+                }
+            });
         }
 
         return $this->success($query->paginate($perPage));
