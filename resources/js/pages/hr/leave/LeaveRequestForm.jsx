@@ -10,7 +10,9 @@ import { HiOutlineArrowLeft } from 'react-icons/hi';
 export default function LeaveRequestForm() {
     const navigate = useNavigate();
     const { can } = useAuth();
-    const canManage = can('leave.manage'); // HR/Admin may file on behalf of any employee
+    // Filing on behalf needs both leave.manage AND the ability to list staff;
+    // otherwise fall back to self-service (apply for your own leave).
+    const canManage = can('leave.manage') && can('staff.view');
     const backTo = canManage ? '/hr/leave' : '/leave/my'; // employees can't open the org-wide list
     const [employees, setEmployees] = useState([]);
     const [myEmployee, setMyEmployee] = useState(null);

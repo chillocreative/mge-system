@@ -680,7 +680,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/cancel', [LeaveController::class, 'cancel'])->middleware('permission:leave.request');
     });
     Route::prefix('leave-types')->group(function () {
-        Route::get('/', [LeaveController::class, 'types'])->middleware('permission:leave.view');
+        // Anyone who can request leave must be able to read the available types.
+        Route::get('/', [LeaveController::class, 'types'])->middleware('permission:leave.view,leave.request');
         Route::post('/', [LeaveController::class, 'storeType'])->middleware('permission:leave.manage');
         Route::put('/{id}', [LeaveController::class, 'updateType'])->middleware('permission:leave.manage');
         Route::delete('/{id}', [LeaveController::class, 'destroyType'])->middleware('permission:leave.manage');
