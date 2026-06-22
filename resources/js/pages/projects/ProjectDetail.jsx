@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import projectService from '@/services/projectService';
 import taskService from '@/services/taskService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import ProjectDiscussions from '@/components/ProjectDiscussions';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 import {
@@ -20,6 +21,7 @@ import {
     HiOutlineDocumentText,
     HiOutlineClock,
     HiOutlineUpload,
+    HiOutlineChatAlt2,
 } from 'react-icons/hi';
 
 const statusColors = {
@@ -45,6 +47,7 @@ const tabs = [
     { id: 'site-logs', label: 'Site Logs', icon: HiOutlineDocumentText },
     { id: 'documents', label: 'Documents', icon: HiOutlineDocumentDownload },
     { id: 'calendar', label: 'Calendar', icon: HiOutlineCalendar },
+    { id: 'discussions', label: 'Discussions', icon: HiOutlineChatAlt2 },
 ];
 
 export default function ProjectDetail() {
@@ -137,6 +140,7 @@ export default function ProjectDetail() {
             {activeTab === 'site-logs' && <SiteLogsTab project={project} canEdit={canEdit} onRefresh={fetchProject} />}
             {activeTab === 'documents' && <DocumentsTab project={project} canEdit={canEdit} onRefresh={fetchProject} />}
             {activeTab === 'calendar' && <CalendarTab project={project} canEdit={canEdit} onRefresh={fetchProject} />}
+            {activeTab === 'discussions' && <ProjectDiscussions projectId={project.id} />}
         </div>
     );
 }
