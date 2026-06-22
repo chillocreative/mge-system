@@ -18,8 +18,7 @@ class UserAccessController extends Controller
         $user = User::with('roles')->findOrFail($id);
 
         return $this->success([
-            'direct' => $user->getDirectPermissions()->pluck('name')->values(),
-            'role_permissions' => $user->getPermissionsViaRoles()->pluck('name')->unique()->values(),
+            'permissions' => $user->getDirectPermissions()->pluck('name')->values(),
             'is_manager' => (bool) $user->is_manager,
             'is_director' => (bool) $user->is_director,
             'role' => $user->roles->pluck('name')->first(),

@@ -26,8 +26,7 @@ export default function Roles() {
     const [loading, setLoading] = useState(true);
 
     const [activeUserId, setActiveUserId] = useState('');
-    const [rolePerms, setRolePerms] = useState(new Set()); // locked (from role)
-    const [directPerms, setDirectPerms] = useState(new Set()); // editable
+    const [selected, setSelected] = useState(new Set()); // the user's permissions (fully editable)
     const [isManager, setIsManager] = useState(false);
     const [isDirector, setIsDirector] = useState(false);
     const [userRole, setUserRole] = useState(null);
@@ -60,8 +59,7 @@ export default function Roles() {
         setUserLoading(true);
         try {
             const res = await roleService.getUserAccess(id);
-            setRolePerms(new Set(res.data?.role_permissions || []));
-            setDirectPerms(new Set(res.data?.direct || []));
+            setSelected(new Set(res.data?.permissions || []));
             setIsManager(!!res.data?.is_manager);
             setIsDirector(!!res.data?.is_director);
             setUserRole(res.data?.role || null);
@@ -73,8 +71,8 @@ export default function Roles() {
     };
 
     const togglePerm = (perm) => {
-        if (!canEdit || rolePerms.has(perm)) return; // role perms are locked
-        setDirectPerms((prev) => {
+        if (!canEdit) return;
+        setSelected((prev) => {
             const next = new Set(prev);
             next.has(perm) ? next.delete(perm) : next.add(perm);
             return next;
@@ -83,12 +81,10 @@ export default function Roles() {
 
     const toggleModule = (perms) => {
         if (!canEdit) return;
-        const editable = perms.filter((p) => !rolePerms.has(p));
-        if (editable.length === 0) return;
-        setDirectPerms((prev) => {
+        setSelected((prev) => {
             const next = new Set(prev);
-            const allOn = editable.every((p) => next.has(p));
-            editable.forEach((p) => (allOn ? next.delete(p) : next.add(p)));
+            const allOn = perms.every((p) => next.has(p));
+            perms.forEach((p) => (allOn ? next.delete(p) : next.add(p)));
             return next;
         });
     };
@@ -98,7 +94,7 @@ export default function Roles() {
         setSaving(true);
         try {
             await roleService.updateUserAccess(activeUser.id, {
-                permissions: [...directPerms],
+                permissions: [...selected],
                 is_manager: isManager,
                 is_director: isDirector,
             });
@@ -113,16 +109,13 @@ export default function Roles() {
 
     if (loading) return <LoadingSpinner />;
 
-    const isOn = (perm) => rolePerms.has(perm) || directPerms.has(perm);
-    const extraCount = directPerms.size;
-
     return (
         <div>
             <div className="mb-5">
                 <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
                     <HiOutlineKey className="h-6 w-6 text-primary-600" /> User Access
                 </h1>
-                <p className="text-sm text-gray-500">Pick a user, then grant extra permissions on top of their role.</p>
+                <p className="text-sm text-gray-500">Pick a user, then tick exactly the permissions they should have. Their role sets the starting ticks; changes here only affect this user.</p>
             </div>
 
             {/* User picker */}
@@ -151,7 +144,7 @@ export default function Roles() {
                     <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h2 className="text-lg font-bold text-gray-900">{activeUser?.full_name}</h2>
-                            <p className="text-xs text-gray-500">Role: {userRole || '—'} · {extraCount} extra permission{extraCount === 1 ? '' : 's'} granted</p>
+                            <p className="text-xs text-gray-500">Role: {userRole || '—'} · {selected.size} permission{selected.size === 1 ? '' : 's'}</p>
                         </div>
                         {canEdit && (
                             <button onClick={save} disabled={saving}
@@ -187,17 +180,12 @@ export default function Roles() {
                     </div>
 
                     {/* Permission grid */}
-                    <div className="mb-3 flex items-center justify-between">
-                        <p className="text-sm font-semibold text-gray-800">Permissions</p>
-                        <span className="flex items-center gap-1.5 text-xs text-gray-400">
-                            <span className="inline-block h-3 w-3 rounded border border-gray-300 bg-gray-100" /> locked = from role
-                        </span>
-                    </div>
+                    <p className="mb-3 text-sm font-semibold text-gray-800">Permissions</p>
                     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                         {moduleKeys.map((key) => {
                             const perms = groups[key] || [];
-                            const allOn = perms.every((p) => isOn(p));
-                            const someOn = perms.some((p) => isOn(p));
+                            const allOn = perms.every((p) => selected.has(p));
+                            const someOn = perms.some((p) => selected.has(p));
                             return (
                                 <div key={key} className="rounded-lg border border-gray-200 p-3">
                                     <label className="mb-2 flex cursor-pointer items-center justify-between gap-2 border-b border-gray-100 pb-2">
@@ -207,16 +195,13 @@ export default function Roles() {
                                             className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
                                     </label>
                                     <div className="space-y-1.5">
-                                        {perms.map((perm) => {
-                                            const locked = rolePerms.has(perm);
-                                            return (
-                                                <label key={perm} className={`flex items-center gap-2 text-xs ${locked ? 'text-gray-400' : 'cursor-pointer text-gray-600'}`}>
-                                                    <input type="checkbox" checked={isOn(perm)} onChange={() => togglePerm(perm)} disabled={!canEdit || locked}
-                                                        className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
-                                                    <span className="capitalize">{actionLabel(perm)}</span>
-                                                </label>
-                                            );
-                                        })}
+                                        {perms.map((perm) => (
+                                            <label key={perm} className="flex cursor-pointer items-center gap-2 text-xs text-gray-600">
+                                                <input type="checkbox" checked={selected.has(perm)} onChange={() => togglePerm(perm)} disabled={!canEdit}
+                                                    className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                                                <span className="capitalize">{actionLabel(perm)}</span>
+                                            </label>
+                                        ))}
                                     </div>
                                 </div>
                             );

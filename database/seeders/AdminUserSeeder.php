@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Support\RolePresets;
 use Illuminate\Database\Seeder;
 
 class AdminUserSeeder extends Seeder
@@ -32,6 +33,7 @@ class AdminUserSeeder extends Seeder
             ]
         );
         $finance->syncRoles(['Finances & HR']);
+        $finance->syncPermissions(RolePresets::for('Finances & HR'));
 
         // Role 3: Projects
         $pm = User::firstOrCreate(
@@ -44,5 +46,6 @@ class AdminUserSeeder extends Seeder
             ]
         );
         $pm->syncRoles(['Projects']);
+        $pm->syncPermissions(RolePresets::for('Projects'));
     }
 }

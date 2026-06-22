@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Support\RolePresets;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
 
@@ -43,6 +44,7 @@ class UserService
 
         $user->assignRole($data['role']);
         $this->applyOrgRoleFlags($user, $data['role']);
+        $this->applyRolePreset($user, $data['role']);
 
         return $user->load(['department', 'designation', 'roles']);
     }
@@ -59,13 +61,30 @@ class UserService
         ]);
     }
 
+    /**
+     * Seed the user's DIRECT permissions from the role's template. Roles no
+     * longer grant permissions; per-user access is edited on the User Access page.
+     */
+    private function applyRolePreset(User $user, ?string $role): void
+    {
+        $user->syncPermissions(RolePresets::for($role));
+    }
+
     public function updateUser(int $id, array $data): User
     {
+        $user = $this->userRepository->findOrFail($id);
+        $oldRole = $user->roles()->pluck('name')->first();
+
         $user = $this->userRepository->update($id, $data);
 
         if (isset($data['role'])) {
             $user->syncRoles([$data['role']]);
             $this->applyOrgRoleFlags($user, $data['role']);
+            // Only re-template direct permissions when the role actually changes,
+            // so editing a user (same role) preserves their custom access.
+            if ($data['role'] !== $oldRole) {
+                $this->applyRolePreset($user, $data['role']);
+            }
         }
 
         return $user->load(['department', 'designation', 'roles']);
@@ -84,6 +103,7 @@ class UserService
         $user->update(['status' => 'active']);
         $user->syncRoles([$role]);
         $this->applyOrgRoleFlags($user, $role);
+        $this->applyRolePreset($user, $role);
 
         $this->notifications->notify(
             $user,
