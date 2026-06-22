@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\MemoAttachment;
 use App\Models\Project;
 use App\Services\MemoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class MemoController extends Controller
 {
@@ -50,6 +52,8 @@ class MemoController extends Controller
             'user_ids' => ['required_if:audience,selected_users', 'array'],
             'user_ids.*' => ['exists:users,id'],
             'project_id' => ['required_if:audience,project_members', 'exists:projects,id'],
+            'attachments' => ['nullable', 'array', 'max:10'],
+            'attachments.*' => ['file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg,gif,zip,txt,csv'],
         ]);
 
         $user = $request->user();
@@ -67,8 +71,20 @@ class MemoController extends Controller
             abort_unless($user->can('memos.send-hr'), 403, 'You are not allowed to broadcast memos.');
         }
 
-        $memo = $this->memoService->send($validated, $user);
+        $memo = $this->memoService->send($validated, $user, $request->file('attachments', []));
 
         return $this->created($memo, 'Memo sent.');
+    }
+
+    public function downloadAttachment(Request $request, int $id, int $attachmentId)
+    {
+        $attachment = MemoAttachment::with('memo')->where('memo_id', $id)->findOrFail($attachmentId);
+        $memo = $attachment->memo;
+
+        $allowed = $memo->from_user_id === $request->user()->id
+            || $memo->recipients()->where('user_id', $request->user()->id)->exists();
+        abort_unless($allowed, 403, 'You do not have access to this attachment.');
+
+        return Storage::disk('local')->download($attachment->file_path, $attachment->file_name);
     }
 }

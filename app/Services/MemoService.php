@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Memo;
+use App\Models\MemoAttachment;
 use App\Models\MemoRecipient;
 use App\Models\Project;
 use App\Models\User;
@@ -13,9 +14,12 @@ class MemoService
 {
     public function __construct(private NotificationService $notifications) {}
 
-    public function send(array $data, User $sender): Memo
+    /**
+     * @param  array<\Illuminate\Http\UploadedFile>  $files
+     */
+    public function send(array $data, User $sender, array $files = []): Memo
     {
-        return DB::transaction(function () use ($data, $sender) {
+        return DB::transaction(function () use ($data, $sender, $files) {
             $recipientIds = $this->resolveRecipients($data, $sender);
 
             $memo = Memo::create([
@@ -26,6 +30,17 @@ class MemoService
                 'project_id' => $data['audience'] === 'project_members' ? ($data['project_id'] ?? null) : null,
                 'sent_at' => now(),
             ]);
+
+            foreach ($files as $file) {
+                $path = $file->store('memos/attachments', 'local');
+                MemoAttachment::create([
+                    'memo_id' => $memo->id,
+                    'file_name' => $file->getClientOriginalName(),
+                    'file_path' => $path,
+                    'file_size' => $file->getSize(),
+                    'mime_type' => $file->getClientMimeType(),
+                ]);
+            }
 
             $rows = collect($recipientIds)->map(fn ($uid) => [
                 'memo_id' => $memo->id,
@@ -47,7 +62,7 @@ class MemoService
                 ['memo_id' => $memo->id],
             );
 
-            return $memo->load('sender:id,first_name,last_name', 'project:id,name');
+            return $memo->load('sender:id,first_name,last_name', 'project:id,name', 'attachments');
         });
     }
 
@@ -105,7 +120,7 @@ class MemoService
 
     public function get(int $memoId, int $userId): Memo
     {
-        $memo = Memo::with(['sender:id,first_name,last_name', 'project:id,name'])
+        $memo = Memo::with(['sender:id,first_name,last_name', 'project:id,name', 'attachments'])
             ->withCount('recipients')
             ->findOrFail($memoId);
 

@@ -9,9 +9,14 @@ const memoService = {
         const res = await apiClient.get(`/memos/${id}`);
         return res.data;
     },
-    async send(data) {
-        const res = await apiClient.post('/memos/send', data);
+    async send(formData) {
+        const res = await apiClient.post('/memos/send', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
         return res.data;
+    },
+    attachmentUrl(memoId, attachmentId) {
+        return `/api/memos/${memoId}/attachments/${attachmentId}/download`;
     },
     async markAsRead(id) {
         const res = await apiClient.patch(`/memos/${id}/read`);

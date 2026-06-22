@@ -4,7 +4,7 @@ import apiClient from '@/services/apiClient';
 import memoService from '@/services/memoService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
-import { HiOutlineDocumentDuplicate, HiOutlinePlus, HiOutlineX } from 'react-icons/hi';
+import { HiOutlineDocumentDuplicate, HiOutlinePlus, HiOutlineX, HiOutlinePaperClip, HiOutlineDownload } from 'react-icons/hi';
 
 const audienceLabel = {
     all_users: 'All staff',
@@ -39,6 +39,7 @@ export default function Memo() {
         ...(canProj ? [{ value: 'project_members', label: 'Project members' }] : []),
     ];
     const [form, setForm] = useState({ title: '', body: '', audience: '', project_id: '', userIds: new Set() });
+    const [files, setFiles] = useState([]);
     const [userSearch, setUserSearch] = useState('');
 
     const load = useCallback(() => {
@@ -72,9 +73,17 @@ export default function Memo() {
 
     const openCompose = () => {
         setForm({ title: '', body: '', audience: audiences[0]?.value || '', project_id: '', userIds: new Set() });
+        setFiles([]);
         setUserSearch('');
         setComposeOpen(true);
     };
+
+    const addFiles = (e) => {
+        const picked = Array.from(e.target.files);
+        setFiles((prev) => [...prev, ...picked]);
+        e.target.value = '';
+    };
+    const removeFile = (idx) => setFiles((prev) => prev.filter((_, i) => i !== idx));
 
     const toggleUser = (id) => setForm((p) => {
         const n = new Set(p.userIds); n.has(id) ? n.delete(id) : n.add(id); return { ...p, userIds: n };
@@ -84,10 +93,14 @@ export default function Memo() {
         e.preventDefault();
         setSending(true);
         try {
-            const payload = { title: form.title, body: form.body, audience: form.audience };
-            if (form.audience === 'selected_users') payload.user_ids = [...form.userIds];
-            if (form.audience === 'project_members') payload.project_id = form.project_id;
-            await memoService.send(payload);
+            const fd = new FormData();
+            fd.append('title', form.title);
+            fd.append('body', form.body);
+            fd.append('audience', form.audience);
+            if (form.audience === 'selected_users') [...form.userIds].forEach((id) => fd.append('user_ids[]', id));
+            if (form.audience === 'project_members') fd.append('project_id', form.project_id);
+            files.forEach((f) => fd.append('attachments[]', f));
+            await memoService.send(fd);
             toast.success('Memo sent');
             setComposeOpen(false);
             setTab('sent');
@@ -173,6 +186,22 @@ export default function Memo() {
                             {reading.project?.name ? ` · ${reading.project.name}` : ''}
                         </p>
                         <div className="whitespace-pre-wrap break-words text-sm text-gray-700">{reading.body}</div>
+                        {reading.attachments?.length > 0 && (
+                            <div className="mt-5 border-t border-gray-100 pt-4">
+                                <p className="mb-2 text-xs font-semibold uppercase text-gray-500">Attachments</p>
+                                <ul className="space-y-1.5">
+                                    {reading.attachments.map((a) => (
+                                        <li key={a.id}>
+                                            <a href={memoService.attachmentUrl(reading.id, a.id)} target="_blank" rel="noreferrer"
+                                                className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                                <span className="flex min-w-0 items-center gap-2"><HiOutlinePaperClip className="h-4 w-4 shrink-0 text-gray-400" /><span className="truncate">{a.file_name}</span></span>
+                                                <span className="flex shrink-0 items-center gap-2 text-xs text-gray-400">{a.human_size}<HiOutlineDownload className="h-4 w-4 text-primary-600" /></span>
+                                            </a>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -230,6 +259,26 @@ export default function Memo() {
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Message *</label>
                                 <textarea required rows={6} value={form.body} onChange={(e) => setForm((p) => ({ ...p, body: e.target.value }))}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Attachments</label>
+                                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-600 hover:border-primary-400 hover:text-primary-700">
+                                    <HiOutlinePaperClip className="h-4 w-4" />
+                                    Add files
+                                    <input type="file" multiple className="hidden" onChange={addFiles}
+                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.zip,.txt,.csv" />
+                                </label>
+                                {files.length > 0 && (
+                                    <ul className="mt-2 space-y-1">
+                                        {files.map((f, i) => (
+                                            <li key={i} className="flex items-center justify-between gap-2 rounded bg-gray-50 px-3 py-1.5 text-sm text-gray-600">
+                                                <span className="flex min-w-0 items-center gap-2"><HiOutlinePaperClip className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{f.name}</span></span>
+                                                <button type="button" onClick={() => removeFile(i)} className="shrink-0 text-gray-400 hover:text-red-600"><HiOutlineX className="h-4 w-4" /></button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                                <p className="mt-1 text-xs text-gray-400">Up to 10 files, max 10MB each.</p>
                             </div>
                             <div className="flex justify-end gap-2 pt-2">
                                 <button type="button" onClick={() => setComposeOpen(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>

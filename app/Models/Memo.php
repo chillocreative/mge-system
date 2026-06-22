@@ -31,4 +31,9 @@ class Memo extends Model
     {
         return $this->hasMany(MemoRecipient::class);
     }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(MemoAttachment::class);
+    }
 }

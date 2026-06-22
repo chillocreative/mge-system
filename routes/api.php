@@ -632,6 +632,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [MemoController::class, 'index']);
         Route::get('/unread-count', [MemoController::class, 'unreadCount']);
         Route::post('/send', [MemoController::class, 'send']);
+        Route::get('/{id}/attachments/{attachment}/download', [MemoController::class, 'downloadAttachment']);
         Route::get('/{id}', [MemoController::class, 'show']);
         Route::patch('/{id}/read', [MemoController::class, 'markAsRead']);
     });
