@@ -13,7 +13,8 @@ class DashboardController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $data = $this->dashboardService->getData($request->user());
+        $departmentId = $request->integer('department_id') ?: null;
+        $data = $this->dashboardService->getData($request->user(), $departmentId);
 
         return $this->success($data);
     }

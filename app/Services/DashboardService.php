@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ActivityLog;
 use App\Models\CalendarEvent;
 use App\Models\Client;
+use App\Models\Department;
 use App\Models\Employee;
 use App\Models\Expense;
 use App\Models\HazardReport;
@@ -23,23 +24,47 @@ class DashboardService
 {
     /**
      * All dashboard data, scoped by what the user is allowed to see.
+     * People stats (staff, leave, training, dept tasks) accumulate by the
+     * selected department; finance & project totals stay company-wide.
      */
-    public function getData(User $user): array
+    public function getData(User $user, ?int $departmentId = null): array
     {
         $isAdmin = $user->hasRole('Admin & HR');
         $can = fn (string $perm) => $isAdmin || $user->can($perm);
 
         return [
-            'stats' => $this->getStats($user, $can),
+            'stats' => $this->getStats($user, $can, $departmentId),
             'charts' => $this->getCharts($user, $isAdmin, $can),
             'lists' => $this->getLists($user, $isAdmin, $can),
             'my' => $this->getMyData($user),
+            'departments' => $this->getDepartments($user, $can),
+            'department_id' => $departmentId,
         ];
+    }
+
+    /**
+     * Departments for the dropdown — only when the user sees people stats.
+     */
+    private function getDepartments(User $user, callable $can): array
+    {
+        $showsPeopleStats = $can('staff.view') || $can('dashboard.view-hr-stats')
+            || $can('training.view') || $this->canApproveLeave($user, $can);
+
+        if (!$showsPeopleStats) {
+            return [];
+        }
+
+        return Department::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($d) => ['id' => $d->id, 'name' => $d->name])
+            ->all();
     }
 
     // ── Stats ───────────────────────────────────────────────────────────────
 
-    private function getStats(User $user, callable $can): array
+    private function getStats(User $user, callable $can, ?int $departmentId = null): array
     {
         $stats = [];
         $today = Carbon::today()->toDateString();
@@ -77,16 +102,32 @@ class DashboardService
             $stats['pending_expenses'] = round((float) Expense::where('status', 'pending')->sum('amount'), 2);
         }
 
+        // People stats accumulate by the selected department.
+        $inDept = fn ($q) => $q->whereHas('employee', fn ($e) => $e->where('department_id', $departmentId));
+
         if ($can('staff.view') || $can('dashboard.view-hr-stats')) {
-            $stats['total_staff'] = Employee::where('status', 'active')->count();
+            $stats['total_staff'] = Employee::where('status', 'active')
+                ->when($departmentId, fn ($q) => $q->where('department_id', $departmentId))
+                ->count();
         }
 
         if ($this->canApproveLeave($user, $can)) {
-            $stats['pending_approvals'] = $this->pendingLeaveQuery($user, $can)->count();
+            $stats['pending_approvals'] = $this->pendingLeaveQuery($user, $can)
+                ->when($departmentId, $inDept)
+                ->count();
         }
 
         if ($can('training.view')) {
-            $stats['training_pending'] = TrainingRequest::where('status', 'pending')->count();
+            $stats['training_pending'] = TrainingRequest::where('status', 'pending')
+                ->when($departmentId, $inDept)
+                ->count();
+        }
+
+        // Department-wide open tasks (assignee's department).
+        if ($can('tasks.view') && ($can('staff.view') || $can('dashboard.view-hr-stats'))) {
+            $stats['dept_open_tasks'] = Task::whereNotIn('status', ['completed', 'cancelled'])
+                ->when($departmentId, fn ($q) => $q->whereHas('assignee', fn ($u) => $u->where('department_id', $departmentId)))
+                ->count();
         }
 
         if ($can('safety.view')) {
