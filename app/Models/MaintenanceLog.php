@@ -17,8 +17,8 @@ class MaintenanceLog extends Model
     protected function casts(): array
     {
         return [
-            'performed_date' => 'date',
-            'next_due_date' => 'date',
+            'performed_date' => 'date:Y-m-d',
+            'next_due_date' => 'date:Y-m-d',
             'cost' => 'decimal:2',
         ];
     }

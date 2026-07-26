@@ -15,8 +15,8 @@ class VehicleDocument extends Model
     protected function casts(): array
     {
         return [
-            'start_date' => 'date',
-            'expiry_date' => 'date',
+            'start_date' => 'date:Y-m-d',
+            'expiry_date' => 'date:Y-m-d',
             'amount' => 'decimal:2',
         ];
     }

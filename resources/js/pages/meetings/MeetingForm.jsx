@@ -132,15 +132,20 @@ export default function MeetingForm() {
                 if (a.user_id) fd.append(`attendees[${i}][user_id]`, a.user_id);
                 if (a.name) fd.append(`attendees[${i}][name]`, a.name);
             });
+            // A multipart request simply omits an "attendees[...]" key when the list is
+            // empty, which is indistinguishable on the backend from "field not touched".
+            // Send an explicit marker on edit so removing every attendee actually clears
+            // the saved list instead of silently leaving the old one in place.
+            if (isEdit && form.attendees.length === 0) fd.append('attendees_cleared', '1');
 
-            form.action_items
-                .filter((a) => a.item.trim())
-                .forEach((a, i) => {
-                    fd.append(`action_items[${i}][item]`, a.item);
-                    if (a.assigned_to) fd.append(`action_items[${i}][assigned_to]`, a.assigned_to);
-                    if (a.due_date) fd.append(`action_items[${i}][due_date]`, a.due_date);
-                    fd.append(`action_items[${i}][status]`, a.status || 'open');
-                });
+            const actionItemsToSend = form.action_items.filter((a) => a.item.trim());
+            actionItemsToSend.forEach((a, i) => {
+                fd.append(`action_items[${i}][item]`, a.item);
+                if (a.assigned_to) fd.append(`action_items[${i}][assigned_to]`, a.assigned_to);
+                if (a.due_date) fd.append(`action_items[${i}][due_date]`, a.due_date);
+                fd.append(`action_items[${i}][status]`, a.status || 'open');
+            });
+            if (isEdit && actionItemsToSend.length === 0) fd.append('action_items_cleared', '1');
 
             files.forEach((f) => fd.append('files[]', f));
 

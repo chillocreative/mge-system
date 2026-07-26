@@ -189,9 +189,15 @@ export default function StaffForm() {
         try {
             const fd = new FormData();
             Object.entries(form).forEach(([k, v]) => {
-                // Skip self as manager and skip empty optional values
+                // Skip self as manager
                 if (k === 'reporting_manager_id' && String(v) === String(id)) return;
-                if (v !== '' && v !== null && v !== undefined) fd.append(k, v);
+                if (v === null || v === undefined) return;
+                // Send empty strings too (not just truthy values) — the backend's
+                // nullable validation rules + ConvertEmptyStringsToNull middleware
+                // turn '' into null, which is what actually clears a field on update.
+                // Previously empty values were skipped entirely, so a field (including
+                // unlinking the login account via user_id) could be set but never cleared.
+                fd.append(k, v);
             });
             if (photo) fd.append('photo', photo);
 
@@ -261,7 +267,7 @@ export default function StaffForm() {
                             <Field label="Full Name *" name="full_name" errors={errors}>
                                 <input
                                     value={form.full_name}
-                                    onChange={(e) => { set('full_name', e.target.value); set('user_id', ''); setShowSuggest(true); }}
+                                    onChange={(e) => { set('full_name', e.target.value); setShowSuggest(true); }}
                                     onFocus={() => setShowSuggest(true)}
                                     onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
                                     autoComplete="off"

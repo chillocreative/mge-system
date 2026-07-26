@@ -120,7 +120,6 @@ export default function Invoices() {
                     <option value="partially_paid">Partially Paid</option>
                     <option value="paid">Paid</option>
                     <option value="overdue">Overdue</option>
-                    <option value="cancelled">Cancelled</option>
                 </select>
             </div>
 

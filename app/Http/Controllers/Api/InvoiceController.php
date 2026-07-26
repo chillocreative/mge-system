@@ -59,6 +59,7 @@ class InvoiceController extends Controller
             'due_date' => ['sometimes', 'date'],
             'tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'discount' => ['nullable', 'numeric', 'min:0'],
+            'currency' => ['nullable', 'string', 'max:10'],
             'notes' => ['nullable', 'string'],
             'terms' => ['nullable', 'string'],
             'items' => ['sometimes', 'array', 'min:1'],

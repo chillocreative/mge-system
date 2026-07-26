@@ -207,6 +207,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('correspondence')->group(function () {
         Route::get('/files/{fileId}/download', [CorrespondenceController::class, 'downloadFile'])->middleware('permission:projects.view');
+        Route::delete('/files/{fileId}', [CorrespondenceController::class, 'destroyFile'])->middleware('permission:projects.edit');
         Route::get('/', [CorrespondenceController::class, 'index'])->middleware('permission:projects.view');
         Route::post('/', [CorrespondenceController::class, 'store'])->middleware('permission:projects.edit');
         Route::get('/{id}', [CorrespondenceController::class, 'show'])->middleware('permission:projects.view');
@@ -223,6 +224,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('project-contracts')->group(function () {
         Route::get('/files/{fileId}/download', [ContractController::class, 'downloadFile'])->middleware('permission:projects.view');
+        Route::delete('/files/{fileId}', [ContractController::class, 'destroyFile'])->middleware('permission:projects.edit');
         Route::get('/', [ContractController::class, 'index'])->middleware('permission:projects.view');
         Route::post('/', [ContractController::class, 'store'])->middleware('permission:projects.edit');
         Route::get('/{id}', [ContractController::class, 'show'])->middleware('permission:projects.view');

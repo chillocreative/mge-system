@@ -33,9 +33,9 @@ class Project extends Model
     protected function casts(): array
     {
         return [
-            'start_date' => 'date',
-            'end_date' => 'date',
-            'actual_end_date' => 'date',
+            'start_date' => 'date:Y-m-d',
+            'end_date' => 'date:Y-m-d',
+            'actual_end_date' => 'date:Y-m-d',
             'budget' => 'decimal:2',
             'spent' => 'decimal:2',
             'progress' => 'integer',

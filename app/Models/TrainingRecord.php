@@ -18,8 +18,8 @@ class TrainingRecord extends Model
     protected function casts(): array
     {
         return [
-            'training_date' => 'date',
-            'end_date' => 'date',
+            'training_date' => 'date:Y-m-d',
+            'end_date' => 'date:Y-m-d',
             'duration_days' => 'decimal:1',
             'cost' => 'decimal:2',
             'hrdf_claimable' => 'boolean',

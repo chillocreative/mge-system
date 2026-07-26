@@ -20,7 +20,7 @@ class MeetingMinute extends Model
     protected function casts(): array
     {
         return [
-            'meeting_date' => 'date',
+            'meeting_date' => 'date:Y-m-d',
             'attendees' => 'array',
         ];
     }

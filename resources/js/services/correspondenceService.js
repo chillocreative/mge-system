@@ -36,6 +36,10 @@ const correspondenceService = {
     getFileDownloadUrl(fileId) {
         return `/api/correspondence/files/${fileId}/download`;
     },
+    async deleteFile(fileId) {
+        const response = await apiClient.delete(`/correspondence/files/${fileId}`);
+        return response.data;
+    },
     // ── Correspondence types (dynamic tabs) ──
     async types() {
         const response = await apiClient.get('/correspondence-types');

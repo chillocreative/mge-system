@@ -46,7 +46,7 @@ class InternalEmailService
     {
         return InternalEmail::where('from_user_id', $userId)
             ->drafts()
-            ->with(['recipients.user:id,first_name,last_name', 'attachments'])
+            ->with(['sender:id,first_name,last_name', 'recipients.user:id,first_name,last_name', 'attachments'])
             ->orderByDesc('updated_at')
             ->paginate($perPage);
     }

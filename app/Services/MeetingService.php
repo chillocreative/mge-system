@@ -47,7 +47,7 @@ class MeetingService
     {
         return DB::transaction(function () use ($data, $userId, $files) {
             $actionItems = $data['action_items'] ?? [];
-            unset($data['action_items']);
+            unset($data['action_items'], $data['action_items_cleared'], $data['attendees_cleared']);
 
             $data['created_by'] = $userId;
             $meeting = MeetingMinute::create($data);
@@ -64,9 +64,16 @@ class MeetingService
         return DB::transaction(function () use ($id, $data, $files) {
             $meeting = MeetingMinute::findOrFail($id);
 
-            $hasActionItems = array_key_exists('action_items', $data);
+            $actionItemsCleared = !empty($data['action_items_cleared']);
+            $hasActionItems = array_key_exists('action_items', $data) || $actionItemsCleared;
             $actionItems = $data['action_items'] ?? [];
-            unset($data['action_items']);
+            unset($data['action_items'], $data['action_items_cleared']);
+
+            $attendeesCleared = !empty($data['attendees_cleared']);
+            unset($data['attendees_cleared']);
+            if ($attendeesCleared && !array_key_exists('attendees', $data)) {
+                $data['attendees'] = [];
+            }
 
             $meeting->update($data);
 

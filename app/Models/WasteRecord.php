@@ -16,7 +16,7 @@ class WasteRecord extends Model
 
     protected function casts(): array
     {
-        return ['disposal_date' => 'date', 'quantity' => 'decimal:2'];
+        return ['disposal_date' => 'date:Y-m-d', 'quantity' => 'decimal:2'];
     }
 
     public function project(): BelongsTo { return $this->belongsTo(Project::class); }

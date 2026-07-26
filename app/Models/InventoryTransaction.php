@@ -15,7 +15,7 @@ class InventoryTransaction extends Model
     protected function casts(): array
     {
         return [
-            'transaction_date' => 'date',
+            'transaction_date' => 'date:Y-m-d',
             'quantity' => 'decimal:2',
         ];
     }

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import emailService from '@/services/emailService';
+import apiClient from '@/services/apiClient';
+import echo from '@/echo';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 import {
@@ -41,6 +43,58 @@ const folders = [
     { key: 'trash', label: 'Trash', icon: HiOutlineTrash },
 ];
 
+// Declared at module scope (not inside Email()) so it doesn't remount — and lose
+// in-progress typing/focus — every time the parent re-renders (e.g. on each poll tick).
+function UserSelector({ allUsers, selected, onChange, label }) {
+    const [userSearch, setUserSearch] = useState('');
+    const filtered = allUsers.filter((u) =>
+        !selected.includes(u.id) &&
+        (`${u.first_name} ${u.last_name}`).toLowerCase().includes(userSearch.toLowerCase())
+    );
+    return (
+        <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
+            <div className="rounded-lg border border-gray-300 p-2">
+                <div className="mb-2 flex flex-wrap gap-1">
+                    {selected.map((id) => {
+                        const u = allUsers.find((u) => u.id === id);
+                        return u ? (
+                            <span key={id} className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700">
+                                {u.first_name} {u.last_name}
+                                <button type="button" onClick={() => onChange(selected.filter((i) => i !== id))} className="hover:text-primary-900">
+                                    <HiOutlineX className="h-3 w-3" />
+                                </button>
+                            </span>
+                        ) : null;
+                    })}
+                </div>
+                <input
+                    type="text"
+                    placeholder="Search users..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="w-full border-0 p-0 text-sm focus:outline-none focus:ring-0"
+                />
+                {userSearch && filtered.length > 0 && (
+                    <div className="mt-1 max-h-32 overflow-y-auto border-t pt-1">
+                        {filtered.slice(0, 8).map((u) => (
+                            <button
+                                key={u.id}
+                                type="button"
+                                onClick={() => { onChange([...selected, u.id]); setUserSearch(''); }}
+                                className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm hover:bg-gray-50"
+                            >
+                                <span className="font-medium">{u.first_name} {u.last_name}</span>
+                                <span className="text-xs text-gray-400">{u.email}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export default function Email() {
     const { user } = useAuth();
     const [activeFolder, setActiveFolder] = useState('inbox');
@@ -64,6 +118,8 @@ export default function Email() {
         attachments: [],
     });
     const [composeSending, setComposeSending] = useState(false);
+    const [draftSaving, setDraftSaving] = useState(false);
+    const [editingDraftId, setEditingDraftId] = useState(null);
 
     // Reply form
     const [replyForm, setReplyForm] = useState({ body: '', to: [], attachments: [] });
@@ -83,12 +139,12 @@ export default function Email() {
         setLoading(false);
     }, [activeFolder, search]);
 
-    const fetchUnread = async () => {
+    const fetchUnread = useCallback(async () => {
         try {
             const res = await emailService.getUnreadCount();
             setUnreadCount(res.data?.count || 0);
         } catch { /* ignore */ }
-    };
+    }, []);
 
     useEffect(() => {
         fetchEmails();
@@ -104,23 +160,56 @@ export default function Email() {
     useEffect(() => {
         (async () => {
             try {
-                const res = await fetch('/api/users?per_page=200', { credentials: 'include', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
-                const data = await res.json();
-                setAllUsers((data.data?.data || []).filter((u) => u.id !== user?.id));
+                const res = await apiClient.get('/users', { params: { per_page: 200 } });
+                setAllUsers((res.data?.data || []).filter((u) => u.id !== user?.id));
             } catch { /* ignore */ }
         })();
     }, []);
 
-    // Polling for new emails
+    // Polling for new emails (fallback if broadcasting not configured). Depending on
+    // fetchEmails/fetchUnread (not just activeFolder) ensures the interval always calls
+    // the version of fetchEmails bound to the current `search` term, so an in-progress
+    // search doesn't get silently clobbered by a stale-closure poll.
     useEffect(() => {
         const interval = setInterval(() => {
             fetchUnread();
             if (activeFolder === 'inbox') fetchEmails();
         }, 15000);
         return () => clearInterval(interval);
-    }, [activeFolder]);
+    }, [activeFolder, fetchEmails, fetchUnread]);
+
+    // Real-time: new email notifications via Echo (falls back to the poll above if
+    // broadcasting isn't configured for this deployment).
+    useEffect(() => {
+        if (!user?.id) return;
+        let channel;
+        try {
+            channel = echo.private(`user.${user.id}`);
+            channel.listen('.email.received', () => {
+                fetchUnread();
+                if (activeFolder === 'inbox') fetchEmails();
+            });
+        } catch { /* Echo not configured, polling used instead */ }
+        return () => {
+            try {
+                channel?.stopListening('.email.received');
+            } catch {}
+        };
+    }, [user?.id, activeFolder, fetchEmails, fetchUnread]);
 
     const handleOpenEmail = async (email) => {
+        if (email.is_draft) {
+            setEditingDraftId(email.id);
+            setComposeForm({
+                subject: email.subject === '(No Subject)' ? '' : (email.subject || ''),
+                body: email.body || '',
+                to: (email.recipients || []).filter((r) => r.type === 'to').map((r) => r.user_id),
+                cc: (email.recipients || []).filter((r) => r.type === 'cc').map((r) => r.user_id),
+                attachments: [],
+            });
+            setShowCompose(true);
+            return;
+        }
         try {
             const res = await emailService.getEmail(email.id);
             setSelectedEmail(res.data?.email || res.data);
@@ -136,7 +225,41 @@ export default function Email() {
         try {
             await emailService.toggleStar(emailId);
             fetchEmails();
-        } catch { /* ignore */ }
+        } catch {
+            toast.error('Unable to star this message');
+        }
+    };
+
+    const handleDeleteDraft = async (draftId, e) => {
+        e?.stopPropagation();
+        try {
+            await emailService.deleteDraft(draftId);
+            toast.success('Draft deleted');
+            fetchEmails();
+        } catch {
+            toast.error('Failed to delete draft');
+        }
+    };
+
+    const handleSaveDraft = async () => {
+        setDraftSaving(true);
+        try {
+            await emailService.saveDraft({
+                draft_id: editingDraftId ?? undefined,
+                subject: composeForm.subject,
+                body: composeForm.body,
+                to: composeForm.to,
+                cc: composeForm.cc,
+            });
+            toast.success('Draft saved');
+            setShowCompose(false);
+            setEditingDraftId(null);
+            setComposeForm({ subject: '', body: '', to: [], cc: [], attachments: [] });
+            if (activeFolder === 'drafts') fetchEmails();
+        } catch {
+            toast.error('Failed to save draft');
+        }
+        setDraftSaving(false);
     };
 
     const handleTrash = async (emailId) => {
@@ -172,10 +295,14 @@ export default function Email() {
             composeForm.cc.forEach((id) => formData.append('cc[]', id));
             composeForm.attachments.forEach((f) => formData.append('attachments[]', f));
             await emailService.sendEmail(formData);
+            if (editingDraftId) {
+                try { await emailService.deleteDraft(editingDraftId); } catch { /* draft cleanup is best-effort */ }
+            }
             toast.success('Email sent');
             setShowCompose(false);
+            setEditingDraftId(null);
             setComposeForm({ subject: '', body: '', to: [], cc: [], attachments: [] });
-            if (activeFolder === 'sent') fetchEmails();
+            if (activeFolder === 'sent' || activeFolder === 'drafts') fetchEmails();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to send');
         }
@@ -211,64 +338,13 @@ export default function Email() {
         setShowReply(true);
     };
 
-    // ── User Selector Component ──
-    const UserSelector = ({ selected, onChange, label }) => {
-        const [userSearch, setUserSearch] = useState('');
-        const filtered = allUsers.filter((u) =>
-            !selected.includes(u.id) &&
-            (`${u.first_name} ${u.last_name}`).toLowerCase().includes(userSearch.toLowerCase())
-        );
-        return (
-            <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
-                <div className="rounded-lg border border-gray-300 p-2">
-                    <div className="mb-2 flex flex-wrap gap-1">
-                        {selected.map((id) => {
-                            const u = allUsers.find((u) => u.id === id);
-                            return u ? (
-                                <span key={id} className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700">
-                                    {u.first_name} {u.last_name}
-                                    <button type="button" onClick={() => onChange(selected.filter((i) => i !== id))} className="hover:text-primary-900">
-                                        <HiOutlineX className="h-3 w-3" />
-                                    </button>
-                                </span>
-                            ) : null;
-                        })}
-                    </div>
-                    <input
-                        type="text"
-                        placeholder="Search users..."
-                        value={userSearch}
-                        onChange={(e) => setUserSearch(e.target.value)}
-                        className="w-full border-0 p-0 text-sm focus:outline-none focus:ring-0"
-                    />
-                    {userSearch && filtered.length > 0 && (
-                        <div className="mt-1 max-h-32 overflow-y-auto border-t pt-1">
-                            {filtered.slice(0, 8).map((u) => (
-                                <button
-                                    key={u.id}
-                                    type="button"
-                                    onClick={() => { onChange([...selected, u.id]); setUserSearch(''); }}
-                                    className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm hover:bg-gray-50"
-                                >
-                                    <span className="font-medium">{u.first_name} {u.last_name}</span>
-                                    <span className="text-xs text-gray-400">{u.email}</span>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
-    };
-
     return (
         <div className="flex h-[calc(100vh-7rem)] overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
             {/* Sidebar */}
             <div className="w-56 flex-shrink-0 border-r bg-gray-50">
                 <div className="p-3">
                     <button
-                        onClick={() => { setShowCompose(true); setComposeForm({ subject: '', body: '', to: [], cc: [], attachments: [] }); }}
+                        onClick={() => { setShowCompose(true); setEditingDraftId(null); setComposeForm({ subject: '', body: '', to: [], cc: [], attachments: [] }); }}
                         className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700"
                     >
                         <HiOutlinePlus className="h-4 w-4" />
@@ -312,11 +388,11 @@ export default function Email() {
                                 <button onClick={() => handleRestore(selectedEmail.id)} className="rounded-lg p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600" title="Restore">
                                     <HiOutlineInbox className="h-5 w-5" />
                                 </button>
-                            ) : (
+                            ) : activeFolder !== 'sent' ? (
                                 <button onClick={() => handleTrash(selectedEmail.id)} className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600" title="Trash">
                                     <HiOutlineTrash className="h-5 w-5" />
                                 </button>
-                            )}
+                            ) : null}
                         </div>
 
                         {/* Thread */}
@@ -424,21 +500,34 @@ export default function Email() {
                                             onClick={() => handleOpenEmail(email)}
                                             className={`flex w-full items-center gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-gray-50 ${isUnread ? 'bg-blue-50/50' : ''}`}
                                         >
-                                            <button
-                                                type="button"
-                                                onClick={(e) => handleToggleStar(email.id, e)}
-                                                className={`shrink-0 ${isStarred ? 'text-yellow-400' : 'text-gray-300'} hover:text-yellow-400`}
-                                            >
-                                                <HiOutlineStar className="h-4 w-4" fill={isStarred ? 'currentColor' : 'none'} />
-                                            </button>
+                                            {activeFolder === 'drafts' ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => handleDeleteDraft(email.id, e)}
+                                                    className="shrink-0 text-gray-300 hover:text-red-500"
+                                                    title="Delete draft"
+                                                >
+                                                    <HiOutlineTrash className="h-4 w-4" />
+                                                </button>
+                                            ) : activeFolder === 'sent' ? (
+                                                <span className="h-4 w-4 shrink-0" />
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => handleToggleStar(email.id, e)}
+                                                    className={`shrink-0 ${isStarred ? 'text-yellow-400' : 'text-gray-300'} hover:text-yellow-400`}
+                                                >
+                                                    <HiOutlineStar className="h-4 w-4" fill={isStarred ? 'currentColor' : 'none'} />
+                                                </button>
+                                            )}
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-center justify-between">
                                                     <p className={`truncate text-sm ${isUnread ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
-                                                        {activeFolder === 'sent'
-                                                            ? `To: ${email.recipients?.filter((r) => r.type === 'to').map((r) => r.user?.first_name).join(', ')}`
+                                                        {activeFolder === 'sent' || activeFolder === 'drafts'
+                                                            ? `To: ${email.recipients?.filter((r) => r.type === 'to').map((r) => r.user?.first_name).join(', ') || '(no recipients yet)'}`
                                                             : `${email.sender?.first_name} ${email.sender?.last_name}`}
                                                     </p>
-                                                    <span className="ml-2 shrink-0 text-xs text-gray-400">{timeAgo(email.sent_at || email.created_at)}</span>
+                                                    <span className="ml-2 shrink-0 text-xs text-gray-400">{timeAgo(email.sent_at || email.updated_at || email.created_at)}</span>
                                                 </div>
                                                 <p className={`truncate text-sm ${isUnread ? 'font-semibold text-gray-800' : 'text-gray-600'}`}>{email.subject}</p>
                                                 <p className="truncate text-xs text-gray-400">{email.body?.substring(0, 100)}</p>
@@ -477,18 +566,18 @@ export default function Email() {
 
             {/* Compose Modal */}
             {showCompose && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" onClick={() => setShowCompose(false)}>
+                <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" onClick={() => { setShowCompose(false); setEditingDraftId(null); }}>
                     <div className="fixed inset-0 bg-black/50" />
                     <div className="relative mx-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-t-xl sm:rounded-xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between border-b px-5 py-3">
-                            <h3 className="text-base font-semibold text-gray-900">New Email</h3>
-                            <button onClick={() => setShowCompose(false)} className="text-gray-400 hover:text-gray-600">
+                            <h3 className="text-base font-semibold text-gray-900">{editingDraftId ? 'Edit Draft' : 'New Email'}</h3>
+                            <button onClick={() => { setShowCompose(false); setEditingDraftId(null); }} className="text-gray-400 hover:text-gray-600">
                                 <HiOutlineX className="h-5 w-5" />
                             </button>
                         </div>
                         <form onSubmit={handleSendEmail} className="p-5 space-y-4">
-                            <UserSelector selected={composeForm.to} onChange={(to) => setComposeForm((p) => ({ ...p, to }))} label="To *" />
-                            <UserSelector selected={composeForm.cc} onChange={(cc) => setComposeForm((p) => ({ ...p, cc }))} label="CC" />
+                            <UserSelector allUsers={allUsers} selected={composeForm.to} onChange={(to) => setComposeForm((p) => ({ ...p, to }))} label="To *" />
+                            <UserSelector allUsers={allUsers} selected={composeForm.cc} onChange={(cc) => setComposeForm((p) => ({ ...p, cc }))} label="CC" />
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Subject *</label>
                                 <input
@@ -530,7 +619,15 @@ export default function Email() {
                                 )}
                             </div>
                             <div className="flex justify-end gap-2 border-t pt-4">
-                                <button type="button" onClick={() => setShowCompose(false)} className="rounded-lg border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Discard</button>
+                                <button type="button" onClick={() => { setShowCompose(false); setEditingDraftId(null); }} className="rounded-lg border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Discard</button>
+                                <button
+                                    type="button"
+                                    onClick={handleSaveDraft}
+                                    disabled={draftSaving || composeSending}
+                                    className="rounded-lg border border-primary-300 px-4 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50 disabled:opacity-50"
+                                >
+                                    {draftSaving ? 'Saving...' : 'Save Draft'}
+                                </button>
                                 <button type="submit" disabled={composeSending} className="rounded-lg bg-primary-600 px-6 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50">
                                     {composeSending ? 'Sending...' : 'Send'}
                                 </button>

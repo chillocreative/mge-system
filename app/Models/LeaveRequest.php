@@ -17,8 +17,8 @@ class LeaveRequest extends Model
     protected function casts(): array
     {
         return [
-            'start_date' => 'date',
-            'end_date' => 'date',
+            'start_date' => 'date:Y-m-d',
+            'end_date' => 'date:Y-m-d',
             'days_count' => 'decimal:1',
             'approved_at' => 'datetime',
             'manager_approved_at' => 'datetime',

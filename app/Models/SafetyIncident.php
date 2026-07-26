@@ -19,7 +19,7 @@ class SafetyIncident extends Model
     protected function casts(): array
     {
         return [
-            'incident_date' => 'date',
+            'incident_date' => 'date:Y-m-d',
             'closed_at' => 'datetime',
         ];
     }

@@ -33,9 +33,9 @@ class Task extends Model
     protected function casts(): array
     {
         return [
-            'start_date' => 'date',
-            'due_date' => 'date',
-            'completed_at' => 'date',
+            'start_date' => 'date:Y-m-d',
+            'due_date' => 'date:Y-m-d',
+            'completed_at' => 'date:Y-m-d',
             'estimated_hours' => 'integer',
             'actual_hours' => 'integer',
             'sort_order' => 'integer',

@@ -68,16 +68,20 @@ class InvoiceService
         return DB::transaction(function () use ($id, $data) {
             $invoice = Invoice::findOrFail($id);
 
-            $invoice->update(array_filter([
-                'project_id' => $data['project_id'] ?? $invoice->project_id,
-                'client_id' => $data['client_id'] ?? $invoice->client_id,
-                'issue_date' => $data['issue_date'] ?? $invoice->issue_date,
-                'due_date' => $data['due_date'] ?? $invoice->due_date,
-                'tax_rate' => $data['tax_rate'] ?? $invoice->tax_rate,
-                'discount' => $data['discount'] ?? $invoice->discount,
+            // Use array_key_exists (not ??) so an explicit null in the payload — e.g.
+            // clearing the linked project — actually takes effect instead of silently
+            // falling back to the existing value.
+            $invoice->update([
+                'project_id' => array_key_exists('project_id', $data) ? $data['project_id'] : $invoice->project_id,
+                'client_id' => array_key_exists('client_id', $data) && $data['client_id'] !== null ? $data['client_id'] : $invoice->client_id,
+                'issue_date' => array_key_exists('issue_date', $data) && $data['issue_date'] !== null ? $data['issue_date'] : $invoice->issue_date,
+                'due_date' => array_key_exists('due_date', $data) && $data['due_date'] !== null ? $data['due_date'] : $invoice->due_date,
+                'tax_rate' => array_key_exists('tax_rate', $data) && $data['tax_rate'] !== null ? $data['tax_rate'] : $invoice->tax_rate,
+                'discount' => array_key_exists('discount', $data) && $data['discount'] !== null ? $data['discount'] : $invoice->discount,
+                'currency' => array_key_exists('currency', $data) && $data['currency'] !== null ? $data['currency'] : $invoice->currency,
                 'notes' => array_key_exists('notes', $data) ? $data['notes'] : $invoice->notes,
                 'terms' => array_key_exists('terms', $data) ? $data['terms'] : $invoice->terms,
-            ], fn ($v) => $v !== null));
+            ]);
 
             if (isset($data['items'])) {
                 $invoice->items()->delete();
@@ -104,7 +108,15 @@ class InvoiceService
             ->withCount('payments');
 
         if (!empty($filters['status'])) {
-            $query->byStatus($filters['status']);
+            // 'overdue' isn't a stored status value (it's computed from due_date vs.
+            // today), so filtering the raw status column for it always returned zero
+            // rows even though invoices were in fact overdue. Use the date-based scope
+            // instead so the filter actually matches what the UI/dashboard call "overdue".
+            if ($filters['status'] === 'overdue') {
+                $query->overdue();
+            } else {
+                $query->byStatus($filters['status']);
+            }
         }
         if (!empty($filters['client_id'])) {
             $query->forClient((int) $filters['client_id']);

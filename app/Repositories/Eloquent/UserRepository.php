@@ -37,7 +37,7 @@ class UserRepository extends BaseRepository implements UserRepositoryInterface
 
     public function getAllUsers(int $perPage = 15, ?string $status = null): LengthAwarePaginator
     {
-        $query = $this->model->with(['department', 'designation'])->latest();
+        $query = $this->model->with(['department', 'designation', 'roles', 'permissions'])->latest();
 
         if ($status) {
             $query->where('status', $status);

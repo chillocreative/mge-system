@@ -36,6 +36,10 @@ const contractService = {
     getFileDownloadUrl(fileId) {
         return `/api/project-contracts/files/${fileId}/download`;
     },
+    async deleteFile(fileId) {
+        const response = await apiClient.delete(`/project-contracts/files/${fileId}`);
+        return response.data;
+    },
 };
 
 export default contractService;

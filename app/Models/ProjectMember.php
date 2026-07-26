@@ -18,8 +18,8 @@ class ProjectMember extends Model
     protected function casts(): array
     {
         return [
-            'joined_at' => 'date',
-            'left_at' => 'date',
+            'joined_at' => 'date:Y-m-d',
+            'left_at' => 'date:Y-m-d',
         ];
     }
 

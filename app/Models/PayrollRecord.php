@@ -45,8 +45,8 @@ class PayrollRecord extends Model
     protected function casts(): array
     {
         return [
-            'period_start' => 'date',
-            'period_end' => 'date',
+            'period_start' => 'date:Y-m-d',
+            'period_end' => 'date:Y-m-d',
             'total_working_hours' => 'decimal:2',
             'total_overtime_hours' => 'decimal:2',
             'base_salary' => 'decimal:2',

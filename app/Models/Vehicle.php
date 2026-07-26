@@ -21,7 +21,7 @@ class Vehicle extends Model
     protected function casts(): array
     {
         return [
-            'purchase_date' => 'date',
+            'purchase_date' => 'date:Y-m-d',
             'current_value' => 'decimal:2',
             'year' => 'integer',
         ];

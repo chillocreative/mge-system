@@ -27,8 +27,8 @@ class ProjectInvoice extends Model
     protected function casts(): array
     {
         return [
-            'invoice_date' => 'date',
-            'client_approved_date' => 'date',
+            'invoice_date' => 'date:Y-m-d',
+            'client_approved_date' => 'date:Y-m-d',
             'amount' => 'decimal:2',
         ];
     }

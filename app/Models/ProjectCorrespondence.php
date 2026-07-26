@@ -19,8 +19,8 @@ class ProjectCorrespondence extends Model
     protected function casts(): array
     {
         return [
-            'raised_date' => 'date',
-            'due_date' => 'date',
+            'raised_date' => 'date:Y-m-d',
+            'due_date' => 'date:Y-m-d',
         ];
     }
 

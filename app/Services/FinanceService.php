@@ -15,7 +15,10 @@ class FinanceService
      */
     public function getMonthlySummary(string $year, string $month): array
     {
-        $from = "{$year}-{$month}-01";
+        // Zero-pad so single-digit months always produce a well-formed "YYYY-MM-01"
+        // date string (e.g. "2026-07-01", not "2026-7-01") regardless of how lenient
+        // the underlying DB engine's date parser happens to be.
+        $from = sprintf('%04d-%02d-01', (int) $year, (int) $month);
         $to = date('Y-m-t', strtotime($from));
 
         // Revenue (invoices)

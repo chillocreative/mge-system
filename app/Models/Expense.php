@@ -28,7 +28,7 @@ class Expense extends Model
     protected function casts(): array
     {
         return [
-            'expense_date' => 'date',
+            'expense_date' => 'date:Y-m-d',
             'amount' => 'decimal:2',
             'approved_at' => 'datetime',
         ];

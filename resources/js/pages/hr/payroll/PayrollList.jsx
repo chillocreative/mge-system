@@ -12,8 +12,14 @@ const statusColors = {
     paid: 'bg-green-100 text-green-700',
 };
 const fmt = (v) => 'RM ' + Number(v || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 });
-const monthStart = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]; };
-const monthEnd = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0]; };
+// Format the LOCAL date's own year/month/day directly rather than going through
+// toISOString(), which converts to UTC first — in any positive UTC-offset timezone
+// (e.g. Malaysia, UTC+8) that shift lands on the previous day for early-morning-safe
+// midnight dates, silently excluding day 1 of the month from the payroll period.
+const pad2 = (n) => String(n).padStart(2, '0');
+const toDateStr = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const monthStart = () => { const d = new Date(); return toDateStr(new Date(d.getFullYear(), d.getMonth(), 1)); };
+const monthEnd = () => { const d = new Date(); return toDateStr(new Date(d.getFullYear(), d.getMonth() + 1, 0)); };
 
 export default function PayrollList() {
     const { can } = useAuth();

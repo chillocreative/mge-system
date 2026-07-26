@@ -22,7 +22,7 @@ const statusColors = {
 };
 
 function formatCurrency(val, currency = 'RM') {
-    return `${currency} ${Number(val || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 })}`;
+    return `${currency} ${Number(val || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export default function InvoiceDetail() {

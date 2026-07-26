@@ -18,7 +18,7 @@ class TrainingRequest extends Model
     protected function casts(): array
     {
         return [
-            'preferred_date' => 'date',
+            'preferred_date' => 'date:Y-m-d',
             'estimated_cost' => 'decimal:2',
             'reviewed_at' => 'datetime',
         ];

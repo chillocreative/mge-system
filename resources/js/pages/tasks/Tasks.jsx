@@ -33,6 +33,7 @@ export default function Tasks() {
     const [statusFilter, setStatusFilter] = useState('');
     const [projects, setProjects] = useState([]);
     const [users, setUsers] = useState([]);
+    const [pagination, setPagination] = useState({});
 
     // create form
     const [showForm, setShowForm] = useState(false);
@@ -48,21 +49,26 @@ export default function Tasks() {
     const [detail, setDetail] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
 
-    const fetchTasks = async () => {
+    // Tasks beyond the first page's per-page limit were previously unreachable — this
+    // view never sent a `page` param or rendered any pagination controls, so anyone
+    // with more than 15 assigned tasks could never see the rest.
+    const fetchTasks = async (page = 1) => {
         setLoading(true);
         try {
-            const params = {};
+            const params = { page, per_page: 20 };
             if (statusFilter) params.status = statusFilter;
             const response = await taskService.list(params);
             setTasks(response.data?.data || []);
+            setPagination(response.data?.meta || {});
         } catch {
             setTasks([]);
+            setPagination({});
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => { fetchTasks(); }, [statusFilter]);
+    useEffect(() => { fetchTasks(1); }, [statusFilter]);
 
     useEffect(() => {
         projectService.list({ per_page: 100 }).then((r) => setProjects(r.data?.data || [])).catch(() => {});
@@ -212,6 +218,24 @@ export default function Tasks() {
                             </tbody>
                         </table>
                     </div>
+                    {pagination.last_page > 1 && (
+                        <div className="flex items-center justify-between border-t px-4 py-2">
+                            <p className="text-xs text-gray-500">Page {pagination.current_page} of {pagination.last_page}</p>
+                            <div className="flex gap-1">
+                                {Array.from({ length: Math.min(pagination.last_page, 5) }, (_, i) => i + 1).map((page) => (
+                                    <button
+                                        key={page}
+                                        onClick={() => fetchTasks(page)}
+                                        className={`rounded px-2 py-1 text-xs ${
+                                            page === pagination.current_page ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+                                        }`}
+                                    >
+                                        {page}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 

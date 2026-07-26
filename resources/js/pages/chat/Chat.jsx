@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import chatService from '@/services/chatService';
+import apiClient from '@/services/apiClient';
+import echo from '@/echo';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 import {
@@ -80,9 +82,8 @@ export default function Chat() {
             await fetchRooms();
             // Load all users for new chat
             try {
-                const res = await fetch('/api/users?per_page=200', { credentials: 'include', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
-                const data = await res.json();
-                setAllUsers(data.data?.data || []);
+                const res = await apiClient.get('/users', { params: { per_page: 200 } });
+                setAllUsers(res.data?.data || []);
             } catch { /* ignore */ }
             setLoading(false);
         })();
@@ -117,20 +118,22 @@ export default function Chat() {
         return () => clearInterval(pollRef.current);
     }, [activeRoom?.id]);
 
-    // Try to set up real-time Echo listener
+    // Real-time Echo listener (polling above remains as a fallback)
     useEffect(() => {
         if (!activeRoom) return;
         let channel;
         try {
-            const echo = require('@/echo').default;
             channel = echo.private(`chat.room.${activeRoom.id}`);
             channel.listen('.message.sent', (e) => {
-                setMessages((prev) => [...prev, e]);
+                setMessages((prev) => (prev.some((m) => m.id === e.id) ? prev : [...prev, e]));
                 fetchRooms();
             });
         } catch { /* Echo not configured, polling used instead */ }
         return () => {
-            try { channel?.stopListening('.message.sent'); } catch {}
+            try {
+                channel?.stopListening('.message.sent');
+                echo.leave(`chat.room.${activeRoom.id}`);
+            } catch {}
         };
     }, [activeRoom?.id]);
 

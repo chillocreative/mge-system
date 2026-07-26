@@ -17,8 +17,8 @@ class SiteInspection extends Model
     protected function casts(): array
     {
         return [
-            'inspection_date' => 'date',
-            'follow_up_date' => 'date',
+            'inspection_date' => 'date:Y-m-d',
+            'follow_up_date' => 'date:Y-m-d',
             'follow_up_required' => 'boolean',
         ];
     }

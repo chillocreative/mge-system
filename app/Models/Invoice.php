@@ -34,8 +34,8 @@ class Invoice extends Model
     protected function casts(): array
     {
         return [
-            'issue_date' => 'date',
-            'due_date' => 'date',
+            'issue_date' => 'date:Y-m-d',
+            'due_date' => 'date:Y-m-d',
             'subtotal' => 'decimal:2',
             'tax_rate' => 'decimal:2',
             'tax_amount' => 'decimal:2',
@@ -102,7 +102,10 @@ class Invoice extends Model
     {
         $subtotal = $this->items()->sum('amount');
         $taxAmount = round($subtotal * ($this->tax_rate / 100), 2);
-        $total = round($subtotal + $taxAmount - $this->discount, 2);
+        // A discount larger than subtotal + tax would otherwise make the invoice total
+        // (and therefore balance_due) negative, which hides the balance-due/payment UI
+        // and renders a nonsensical negative amount on the client-facing PDF.
+        $total = max(0, round($subtotal + $taxAmount - $this->discount, 2));
         $amountPaid = $this->payments()->sum('amount');
         $balanceDue = max(0, round($total - $amountPaid, 2));
 

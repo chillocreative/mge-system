@@ -93,4 +93,11 @@ class CorrespondenceController extends Controller
     {
         return $this->correspondenceService->downloadFile($fileId);
     }
+
+    public function destroyFile(int $fileId): JsonResponse
+    {
+        $this->correspondenceService->deleteFile($fileId);
+
+        return $this->success(null, 'File deleted.');
+    }
 }

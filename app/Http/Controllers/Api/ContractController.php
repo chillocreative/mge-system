@@ -74,6 +74,13 @@ class ContractController extends Controller
         return $this->contractService->downloadFile($fileId);
     }
 
+    public function destroyFile(int $fileId): JsonResponse
+    {
+        $this->contractService->deleteFile($fileId);
+
+        return $this->success(null, 'File deleted.');
+    }
+
     private function validatePayload(Request $request, bool $creating): array
     {
         $required = $creating ? 'required' : 'sometimes';

@@ -104,10 +104,14 @@ export default function InvoiceCreate() {
         setForm((prev) => ({ ...prev, items: prev.items.filter((_, i) => i !== index) }));
     };
 
-    // Calculated totals
-    const subtotal = form.items.reduce((sum, i) => sum + (Number(i.quantity) || 0) * (Number(i.unit_price) || 0), 0);
-    const taxAmount = subtotal * (Number(form.tax_rate) || 0) / 100;
-    const total = subtotal + taxAmount - (Number(form.discount) || 0);
+    // Calculated totals. Round each line's amount to 2dp before summing — the server
+    // rounds InvoiceItem.amount per line (see InvoiceItem::booted()), so summing
+    // unrounded quantity*price here could drift a cent or two from the saved total.
+    const round2 = (n) => Math.round(n * 100) / 100;
+    const subtotal = form.items.reduce((sum, i) => sum + round2((Number(i.quantity) || 0) * (Number(i.unit_price) || 0)), 0);
+    const taxAmount = round2(subtotal * (Number(form.tax_rate) || 0) / 100);
+    const total = Math.max(0, round2(subtotal + taxAmount - (Number(form.discount) || 0)));
+    const discountExceedsTotal = (Number(form.discount) || 0) > round2(subtotal + taxAmount);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -279,7 +283,7 @@ export default function InvoiceCreate() {
                                     className="col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                                 />
                                 <div className="col-span-1 flex items-center justify-end text-sm font-medium text-gray-700">
-                                    {((Number(item.quantity) || 0) * (Number(item.unit_price) || 0)).toLocaleString('en-MY', { minimumFractionDigits: 2 })}
+                                    {round2((Number(item.quantity) || 0) * (Number(item.unit_price) || 0)).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </div>
                                 <div className="col-span-1 flex items-center justify-center">
                                     <button
@@ -357,24 +361,29 @@ export default function InvoiceCreate() {
                             <div className="space-y-2 border-t pt-3">
                                 <div className="flex justify-between text-sm text-gray-600">
                                     <span>Subtotal</span>
-                                    <span>{form.currency} {subtotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                                    <span>{form.currency} {subtotal.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                                 {Number(form.tax_rate) > 0 && (
                                     <div className="flex justify-between text-sm text-gray-600">
                                         <span>Tax ({form.tax_rate}%)</span>
-                                        <span>{form.currency} {taxAmount.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                                        <span>{form.currency} {taxAmount.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                 )}
                                 {Number(form.discount) > 0 && (
                                     <div className="flex justify-between text-sm text-gray-600">
                                         <span>Discount</span>
-                                        <span>- {form.currency} {Number(form.discount).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                                        <span>- {form.currency} {Number(form.discount).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between border-t pt-2 text-lg font-bold text-primary-700">
                                     <span>Total</span>
-                                    <span>{form.currency} {total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                                    <span>{form.currency} {total.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
+                                {discountExceedsTotal && (
+                                    <p className="text-xs text-amber-600">
+                                        Discount exceeds subtotal + tax — the total has been floored at {form.currency} 0.00.
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>

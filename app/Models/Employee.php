@@ -22,9 +22,9 @@ class Employee extends Model
     protected function casts(): array
     {
         return [
-            'dob' => 'date',
-            'hire_date' => 'date',
-            'resign_date' => 'date',
+            'dob' => 'date:Y-m-d',
+            'hire_date' => 'date:Y-m-d',
+            'resign_date' => 'date:Y-m-d',
             'base_salary' => 'decimal:2',
         ];
     }

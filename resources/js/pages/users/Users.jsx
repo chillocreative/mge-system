@@ -370,9 +370,12 @@ export default function Users() {
                             className="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400">
                             <option value="">Select a role...</option>
                             {roles
-                                .filter((role) => !role.is_system)
+                                .filter((role) => role.name !== SUPER_ADMIN_ROLE || canGrantSuper)
                                 .map((role) => <option key={role.id} value={role.name}>{role.name}</option>)}
                         </select>
+                        {!canGrantSuper && (
+                            <p className="-mt-3 mb-4 text-[11px] text-gray-400">Only the System Administrator can assign the Super Admin role.</p>
+                        )}
                         <div className="flex justify-end gap-2">
                             <button onClick={() => setApproveModal({ open: false, user: null, role: '' })} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100">Cancel</button>
                             <button onClick={handleApprove} disabled={!approveModal.role || actionLoading} className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">

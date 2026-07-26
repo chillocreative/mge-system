@@ -16,7 +16,7 @@ class EnvironmentalAudit extends Model
 
     protected function casts(): array
     {
-        return ['audit_date' => 'date', 'next_audit_date' => 'date'];
+        return ['audit_date' => 'date:Y-m-d', 'next_audit_date' => 'date:Y-m-d'];
     }
 
     public function project(): BelongsTo { return $this->belongsTo(Project::class); }
