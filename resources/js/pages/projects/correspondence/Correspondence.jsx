@@ -267,7 +267,7 @@ export default function Correspondence() {
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Project</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Raised Date</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Due Date</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Close Date</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Created By</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Actions</th>
                                 </tr>
