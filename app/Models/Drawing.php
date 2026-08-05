@@ -18,6 +18,7 @@ class Drawing extends Model
         'tag',
         'discipline',
         'project_id',
+        'contract_id',
         'file_path',
         'file_name',
         'file_type',
@@ -43,9 +44,19 @@ class Drawing extends Model
         return $this->belongsTo(Project::class);
     }
 
+    public function contract(): BelongsTo
+    {
+        return $this->belongsTo(ProjectContract::class, 'contract_id');
+    }
+
     public function scopeByDiscipline($query, string $discipline)
     {
         return $query->where('discipline', $discipline);
+    }
+
+    public function scopeForContract($query, int $contractId)
+    {
+        return $query->where('contract_id', $contractId);
     }
 
     public function scopeSearch($query, string $term)

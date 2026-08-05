@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ContractBoqItem;
 use App\Models\ProjectContract;
 use App\Models\ProjectContractFile;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -125,6 +126,27 @@ class ContractService
         $file = ProjectContractFile::findOrFail($fileId);
 
         return Storage::disk('local')->download($file->file_path, $file->file_name);
+    }
+
+    public function listBoqItems(int $contractId)
+    {
+        return ProjectContract::findOrFail($contractId)->boqItems;
+    }
+
+    public function createBoqItem(int $contractId, array $data, int $userId): ContractBoqItem
+    {
+        $contract = ProjectContract::findOrFail($contractId);
+
+        $data['amount'] = round((float) $data['quantity'] * (float) $data['rate'], 2);
+        $data['created_by'] = $userId;
+        $data['sort_order'] = ((int) $contract->boqItems()->max('sort_order')) + 1;
+
+        return $contract->boqItems()->create($data);
+    }
+
+    public function deleteBoqItem(int $itemId): void
+    {
+        ContractBoqItem::findOrFail($itemId)->delete();
     }
 
     private function storeFiles(ProjectContract $contract, array $files): void

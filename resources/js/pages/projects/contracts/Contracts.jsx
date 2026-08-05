@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import contractService from '@/services/contractService';
 import projectService from '@/services/projectService';
@@ -12,11 +13,6 @@ import {
     HiOutlineTrash,
     HiOutlineEye,
     HiOutlineX,
-    HiOutlineDownload,
-    HiOutlineUser,
-    HiOutlineMail,
-    HiOutlinePhone,
-    HiOutlineCalendar,
 } from 'react-icons/hi';
 
 const statusColors = {
@@ -45,12 +41,12 @@ function emptyForm() {
         pics: [emptyPic()],
         status: 'active',
         notes: '',
-        files: [],
     };
 }
 
 export default function Contracts() {
     const { can } = useAuth();
+    const navigate = useNavigate();
     const canEdit = can('projects.edit');
 
     const [contracts, setContracts] = useState([]);
@@ -65,8 +61,6 @@ export default function Contracts() {
     const [editing, setEditing] = useState(null);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState(emptyForm());
-
-    const [detail, setDetail] = useState(null);
 
     const fetchContracts = async (page = 1) => {
         setLoading(true);
@@ -115,7 +109,6 @@ export default function Contracts() {
                 : [emptyPic()],
             status: c.status || 'active',
             notes: c.notes || '',
-            files: [],
         });
         setShowForm(true);
     };
@@ -146,7 +139,6 @@ export default function Contracts() {
                 if (pic.company) fd.append(`pics[${i}][company]`, pic.company);
                 if (pic.designation) fd.append(`pics[${i}][designation]`, pic.designation);
             });
-            form.files.forEach((f) => fd.append('files[]', f));
 
             if (editing) {
                 await contractService.update(editing.id, fd);
@@ -172,15 +164,6 @@ export default function Contracts() {
             fetchContracts();
         } catch {
             toast.error('Failed to delete contract');
-        }
-    };
-
-    const openDetail = async (c) => {
-        try {
-            const res = await contractService.get(c.id);
-            setDetail(res.data || c);
-        } catch {
-            setDetail(c);
         }
     };
 
@@ -285,7 +268,7 @@ export default function Contracts() {
                                         <td className="whitespace-nowrap px-4 py-3 text-right">
                                             <div className="flex items-center justify-end gap-1">
                                                 <button
-                                                    onClick={() => openDetail(c)}
+                                                    onClick={() => navigate(`/projects/contracts/${c.id}`)}
                                                     className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                                                     title="View"
                                                 >
@@ -488,17 +471,6 @@ export default function Contracts() {
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                                 />
                             </div>
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Attachments</label>
-                                <input
-                                    type="file"
-                                    multiple
-                                    onChange={(e) => setForm((p) => ({ ...p, files: Array.from(e.target.files || []) }))}
-                                    className="w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-primary-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-700 hover:file:bg-primary-100"
-                                />
-                                <p className="mt-1 text-xs text-gray-400">PDF, Word, Excel or images. Max 50MB each.</p>
-                            </div>
-
                             <div className="flex justify-end gap-2 pt-2">
                                 <button
                                     type="button"
@@ -520,104 +492,6 @@ export default function Contracts() {
                 </div>
             )}
 
-            {/* Detail Modal */}
-            {detail && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setDetail(null)}>
-                    <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                        <div className="mb-4 flex items-start justify-between">
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900">{detail.title}</h3>
-                                <p className="text-sm text-gray-500">{detail.project?.name || '-'}{detail.contract_no ? ` · ${detail.contract_no}` : ''}</p>
-                            </div>
-                            <button onClick={() => setDetail(null)} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-                                <HiOutlineX className="h-5 w-5" />
-                            </button>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div className="rounded-lg border border-gray-100 p-3">
-                                <p className="text-xs font-medium text-gray-400">Contract Value</p>
-                                <p className="mt-1 text-sm font-semibold text-gray-900">{formatCurrency(detail.contract_value)}</p>
-                            </div>
-                            <div className="rounded-lg border border-gray-100 p-3">
-                                <p className="text-xs font-medium text-gray-400">Status</p>
-                                <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[detail.status] || 'bg-gray-100 text-gray-600'}`}>
-                                    {detail.status}
-                                </span>
-                            </div>
-                            <div className="rounded-lg border border-gray-100 p-3">
-                                <p className="text-xs font-medium text-gray-400">Start Date</p>
-                                <p className="mt-1 flex items-center gap-1 text-sm text-gray-900">
-                                    <HiOutlineCalendar className="h-4 w-4 text-gray-400" />
-                                    {detail.start_date ? String(detail.start_date).split('T')[0] : '-'}
-                                </p>
-                            </div>
-                            <div className="rounded-lg border border-gray-100 p-3">
-                                <p className="text-xs font-medium text-gray-400">End Date</p>
-                                <p className="mt-1 flex items-center gap-1 text-sm text-gray-900">
-                                    <HiOutlineCalendar className="h-4 w-4 text-gray-400" />
-                                    {detail.end_date ? String(detail.end_date).split('T')[0] : '-'}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="mt-4 rounded-lg border border-gray-100 bg-gray-50 p-4">
-                            <p className="mb-3 text-xs font-semibold uppercase text-gray-500">Correspondence PICs</p>
-                            {detail.pics?.length ? (
-                                <div className="space-y-2">
-                                    {detail.pics.map((p) => (
-                                        <div key={p.id} className="rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-700">
-                                            <p className="flex items-center gap-2 font-semibold text-gray-900">
-                                                <HiOutlineUser className="h-4 w-4 text-gray-400" />
-                                                {p.name}{p.designation ? <span className="font-normal text-gray-500"> — {p.designation}</span> : ''}
-                                            </p>
-                                            {p.company && <p className="mt-0.5 pl-6 text-xs text-gray-500">{p.company}</p>}
-                                            <div className="mt-1 space-y-0.5 pl-6">
-                                                {p.email && <p className="flex items-center gap-2"><HiOutlineMail className="h-4 w-4 text-gray-400" />{p.email}</p>}
-                                                {p.phone && <p className="flex items-center gap-2"><HiOutlinePhone className="h-4 w-4 text-gray-400" />{p.phone}</p>}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-sm text-gray-400">No PIC recorded</p>
-                            )}
-                        </div>
-
-                        {detail.notes && (
-                            <div className="mt-4">
-                                <p className="mb-1 text-xs font-semibold uppercase text-gray-500">Notes</p>
-                                <p className="whitespace-pre-line text-sm text-gray-700">{detail.notes}</p>
-                            </div>
-                        )}
-
-                        <div className="mt-4">
-                            <p className="mb-2 text-xs font-semibold uppercase text-gray-500">Attachments</p>
-                            {detail.files?.length ? (
-                                <ul className="divide-y divide-gray-100 rounded-lg border border-gray-100">
-                                    {detail.files.map((f) => (
-                                        <li key={f.id} className="flex items-center justify-between px-3 py-2">
-                                            <span className="flex min-w-0 items-center gap-2 text-sm text-gray-700">
-                                                <HiOutlineDocumentText className="h-4 w-4 flex-shrink-0 text-gray-400" />
-                                                <span className="truncate">{f.file_name}</span>
-                                            </span>
-                                            <a
-                                                href={contractService.getFileDownloadUrl(f.id)}
-                                                className="ml-2 flex-shrink-0 rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600"
-                                                title="Download"
-                                            >
-                                                <HiOutlineDownload className="h-4 w-4" />
-                                            </a>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p className="text-sm text-gray-400">No attachments</p>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

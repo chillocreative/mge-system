@@ -81,6 +81,33 @@ class ContractController extends Controller
         return $this->success(null, 'File deleted.');
     }
 
+    public function indexBoqItems(int $id): JsonResponse
+    {
+        return $this->success($this->contractService->listBoqItems($id));
+    }
+
+    public function storeBoqItem(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'item_no' => ['nullable', 'string', 'max:255'],
+            'description' => ['required', 'string'],
+            'unit' => ['nullable', 'string', 'max:50'],
+            'quantity' => ['required', 'numeric', 'min:0'],
+            'rate' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $item = $this->contractService->createBoqItem($id, $data, $request->user()->id);
+
+        return $this->created($item, 'BOQ item added.');
+    }
+
+    public function destroyBoqItem(int $itemId): JsonResponse
+    {
+        $this->contractService->deleteBoqItem($itemId);
+
+        return $this->success(null, 'BOQ item removed.');
+    }
+
     private function validatePayload(Request $request, bool $creating): array
     {
         $required = $creating ? 'required' : 'sometimes';

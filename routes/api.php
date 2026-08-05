@@ -227,12 +227,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('project-contracts')->group(function () {
         Route::get('/files/{fileId}/download', [ContractController::class, 'downloadFile'])->middleware('permission:projects.view');
         Route::delete('/files/{fileId}', [ContractController::class, 'destroyFile'])->middleware('permission:projects.edit');
+        Route::delete('/boq-items/{itemId}', [ContractController::class, 'destroyBoqItem'])->middleware('permission:projects.edit');
         Route::get('/', [ContractController::class, 'index'])->middleware('permission:projects.view');
         Route::post('/', [ContractController::class, 'store'])->middleware('permission:projects.edit');
         Route::get('/{id}', [ContractController::class, 'show'])->middleware('permission:projects.view');
         Route::put('/{id}', [ContractController::class, 'update'])->middleware('permission:projects.edit');
         Route::delete('/{id}', [ContractController::class, 'destroy'])->middleware('permission:projects.edit');
         Route::post('/{id}/files', [ContractController::class, 'storeFiles'])->middleware('permission:projects.edit');
+        Route::get('/{id}/boq-items', [ContractController::class, 'indexBoqItems'])->middleware('permission:projects.view');
+        Route::post('/{id}/boq-items', [ContractController::class, 'storeBoqItem'])->middleware('permission:projects.edit');
     });
 
     /*

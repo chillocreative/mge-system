@@ -40,6 +40,18 @@ const contractService = {
         const response = await apiClient.delete(`/project-contracts/files/${fileId}`);
         return response.data;
     },
+    async listBoqItems(contractId) {
+        const response = await apiClient.get(`/project-contracts/${contractId}/boq-items`);
+        return response.data;
+    },
+    async addBoqItem(contractId, data) {
+        const response = await apiClient.post(`/project-contracts/${contractId}/boq-items`, data);
+        return response.data;
+    },
+    async removeBoqItem(itemId) {
+        const response = await apiClient.delete(`/project-contracts/boq-items/${itemId}`);
+        return response.data;
+    },
 };
 
 export default contractService;

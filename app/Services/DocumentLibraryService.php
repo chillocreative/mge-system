@@ -86,6 +86,8 @@ class DocumentLibraryService
         if (!empty($filters['discipline'])) $query->byDiscipline($filters['discipline']);
         if (!empty($filters['tag'])) $query->where('tag', $filters['tag']);
         if (!empty($filters['status'])) $query->where('status', $filters['status']);
+        if (!empty($filters['project_id'])) $query->where('project_id', $filters['project_id']);
+        if (!empty($filters['contract_id'])) $query->forContract($filters['contract_id']);
 
         return $query->paginate($perPage);
     }
@@ -102,6 +104,7 @@ class DocumentLibraryService
             'tag' => $data['tag'] ?? null,
             'discipline' => $data['discipline'] ?? 'civil',
             'project_id' => $data['project_id'] ?? null,
+            'contract_id' => $data['contract_id'] ?? null,
             'status' => $data['status'] ?? 'published',
             'file_path' => $path,
             'file_name' => $file->getClientOriginalName(),

@@ -51,7 +51,6 @@ const navigation = [
             { name: 'Correspondence', href: '/projects/correspondence', icon: HiOutlineDocumentDuplicate, permission: 'projects.view' },
             { name: 'Discussions', href: '/projects/discussions', icon: HiOutlineChatAlt2, permission: 'projects.view' },
             { name: 'Contracts', href: '/projects/contracts', icon: HiOutlineClipboardCheck, permission: 'projects.view' },
-            { name: 'Drawings', href: '/projects/drawings', icon: HiOutlineFolderOpen, permission: 'drawings.view' },
         ],
     },
     { name: 'Clients', href: '/clients', icon: HiOutlineOfficeBuilding, permission: 'clients.view' },

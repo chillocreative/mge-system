@@ -20,6 +20,7 @@ import ProjectInvoices from '@/pages/projects/invoices/ProjectInvoices';
 import Correspondence from '@/pages/projects/correspondence/Correspondence';
 import Discussions from '@/pages/projects/discussions/Discussions';
 import Contracts from '@/pages/projects/contracts/Contracts';
+import ContractDetail from '@/pages/projects/contracts/ContractDetail';
 import Clients from '@/pages/clients/Clients';
 import Users from '@/pages/users/Users';
 import Roles from '@/pages/roles/Roles';
@@ -61,7 +62,6 @@ import Meetings from '@/pages/meetings/Meetings';
 import MeetingForm from '@/pages/meetings/MeetingForm';
 import MeetingDetail from '@/pages/meetings/MeetingDetail';
 import CompanyDocuments from '@/pages/documents/CompanyDocuments';
-import Drawings from '@/pages/documents/Drawings';
 import Unauthorized from '@/pages/Unauthorized';
 import NotFound from '@/pages/NotFound';
 
@@ -94,6 +94,7 @@ function AppRoutes() {
                         <Route path="/projects/correspondence" element={<Correspondence />} />
                         <Route path="/projects/discussions" element={<Discussions />} />
                         <Route path="/projects/contracts" element={<Contracts />} />
+                        <Route path="/projects/contracts/:id" element={<ContractDetail />} />
                         <Route path="/projects/:id" element={<ProjectDetail />} />
                         <Route path="/projects/:id/edit" element={<ProjectCreate />} />
                     </Route>
@@ -224,9 +225,6 @@ function AppRoutes() {
                     {/* Documents library */}
                     <Route element={<PermissionGate permission="documents.view" />}>
                         <Route path="/documents/company" element={<CompanyDocuments />} />
-                    </Route>
-                    <Route element={<PermissionGate permission="drawings.view" />}>
-                        <Route path="/projects/drawings" element={<Drawings />} />
                     </Route>
 
                     {/* Chat & Email — all authenticated users */}
