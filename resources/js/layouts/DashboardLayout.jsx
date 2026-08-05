@@ -105,6 +105,8 @@ export default function DashboardLayout() {
         try { return localStorage.getItem('sidebarCollapsed') === '1'; } catch { return false; }
     });
 
+    const centerInSidebar = (e) => e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
     const toggleGroup = (name) => setOpenGroups((p) => ({ ...p, [name]: !p[name] }));
     const toggleCollapsed = () => setCollapsed((c) => {
         const next = !c;
@@ -186,7 +188,7 @@ export default function DashboardLayout() {
                                 <div key={item.name}>
                                     <button
                                         type="button"
-                                        onClick={() => { if (collapsed) setCollapsed(false); toggleGroup(item.name); }}
+                                        onClick={(e) => { if (collapsed) setCollapsed(false); toggleGroup(item.name); centerInSidebar(e); }}
                                         title={collapsed ? item.name : undefined}
                                         className={`group flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium text-primary-300 transition-colors hover:bg-white/5 hover:text-white ${collapsed ? 'lg:justify-center' : 'justify-between gap-3'}`}
                                     >
@@ -210,7 +212,7 @@ export default function DashboardLayout() {
                                                                 : 'text-primary-400 hover:bg-white/5 hover:text-white'
                                                         }`
                                                     }
-                                                    onClick={() => setSidebarOpen(false)}
+                                                    onClick={(e) => { setSidebarOpen(false); centerInSidebar(e); }}
                                                 >
                                                     <child.icon className="h-4 w-4 shrink-0" />
                                                     {child.name}
@@ -233,7 +235,7 @@ export default function DashboardLayout() {
                                             : 'text-primary-300 hover:bg-white/5 hover:text-white'
                                     }`
                                 }
-                                onClick={() => setSidebarOpen(false)}
+                                onClick={(e) => { setSidebarOpen(false); centerInSidebar(e); }}
                             >
                                 <item.icon className="h-5 w-5 shrink-0" />
                                 <span className={collapsed ? 'lg:hidden' : ''}>{item.name}</span>
