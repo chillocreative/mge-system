@@ -195,6 +195,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{id}', [ProjectInvoiceController::class, 'update'])->middleware('permission:projects.edit');
         Route::delete('/{id}', [ProjectInvoiceController::class, 'destroy'])->middleware('permission:projects.edit');
         Route::post('/{id}/files', [ProjectInvoiceController::class, 'storeFiles'])->middleware('permission:projects.edit');
+        Route::post('/{id}/payments', [ProjectInvoiceController::class, 'storePayment'])->middleware('permission:projects.edit');
+        Route::delete('/payments/{paymentId}', [ProjectInvoiceController::class, 'destroyPayment'])->middleware('permission:projects.edit');
     });
 
     // Admin-managed correspondence types (drives the dynamic tabs)

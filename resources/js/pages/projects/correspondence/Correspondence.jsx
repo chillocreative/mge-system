@@ -375,7 +375,7 @@ export default function Correspondence() {
                                     <input type="date" value={form.raised_date} onChange={(e) => setForm((p) => ({ ...p, raised_date: e.target.value }))} required className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                                 </div>
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">Due Date</label>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Close Date</label>
                                     <input type="date" value={form.due_date} onChange={(e) => setForm((p) => ({ ...p, due_date: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                                 </div>
                             </div>

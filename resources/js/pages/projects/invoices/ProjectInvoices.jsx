@@ -22,10 +22,18 @@ const typeBadge = {
     subcon: { label: 'Subcon → MGE', cls: 'bg-orange-100 text-orange-700' },
 };
 const today = () => new Date().toISOString().split('T')[0];
+const paymentMethods = [
+    { k: 'cash', l: 'Cash' },
+    { k: 'online_transfer', l: 'Online Transfer' },
+    { k: 'cheque', l: 'Cheque' },
+];
 const emptyForm = {
-    type: 'client', project_id: '', party_name: '', invoice_no: '', invoice_date: today(),
-    amount: '', status: 'submitted', client_approved_date: '', notes: '',
+    type: 'client', project_id: '', party_name: '', invoice_no: '', document_no: '', invoice_date: today(),
+    amount: '', status: 'submitted', client_approved_date: '', date_paid: '',
+    payment_method: '', payment_to_subcon_date: '', claim_number: '',
+    payment_cert_date: '', date_received_claim: '', notes: '',
 };
+const emptyPaymentForm = { amount: '', payment_date: today(), document_no: '', method: '' };
 
 export default function ProjectInvoices() {
     const { can } = useAuth();
@@ -49,6 +57,9 @@ export default function ProjectInvoices() {
     const [existingFiles, setExistingFiles] = useState([]);
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
+    const [payments, setPayments] = useState([]);
+    const [paymentForm, setPaymentForm] = useState(emptyPaymentForm);
+    const [paymentSaving, setPaymentSaving] = useState(false);
 
     const fetchInvoices = useCallback(async (page = 1) => {
         setLoading(true);
@@ -97,16 +108,21 @@ export default function ProjectInvoices() {
 
     const refresh = () => { fetchInvoices(); fetchSummary(); fetchByProject(); };
 
-    const openCreate = () => { setEditId(null); setForm({ ...emptyForm, project_id: projectFilter || '' }); setFiles([]); setExistingFiles([]); setErrors({}); setShowForm(true); };
+    const openCreate = () => { setEditId(null); setForm({ ...emptyForm, project_id: projectFilter || '' }); setFiles([]); setExistingFiles([]); setErrors({}); setPayments([]); setPaymentForm(emptyPaymentForm); setShowForm(true); };
     const openEdit = (inv) => {
         setEditId(inv.id);
         setForm({
             type: inv.type || 'client', project_id: inv.project_id, party_name: inv.party_name || '',
-            invoice_no: inv.invoice_no || '', invoice_date: inv.invoice_date || today(),
+            invoice_no: inv.invoice_no || '', document_no: inv.document_no || '', invoice_date: inv.invoice_date || today(),
             amount: inv.amount || '', status: inv.status || 'submitted',
-            client_approved_date: inv.client_approved_date || '', notes: inv.notes || '',
+            client_approved_date: inv.client_approved_date || '', date_paid: inv.date_paid || '',
+            payment_method: inv.payment_method || '', payment_to_subcon_date: inv.payment_to_subcon_date || '',
+            claim_number: inv.claim_number || '', payment_cert_date: inv.payment_cert_date || '',
+            date_received_claim: inv.date_received_claim || '', notes: inv.notes || '',
         });
-        setFiles([]); setExistingFiles(inv.files || []); setErrors({}); setShowForm(true);
+        setFiles([]); setExistingFiles(inv.files || []); setErrors({});
+        setPayments(inv.payments || []); setPaymentForm(emptyPaymentForm);
+        setShowForm(true);
     };
 
     const submit = async (e) => {
@@ -119,10 +135,17 @@ export default function ProjectInvoices() {
             fd.append('type', form.type);
             if (form.party_name) fd.append('party_name', form.party_name);
             if (form.invoice_no) fd.append('invoice_no', form.invoice_no);
+            if (form.document_no) fd.append('document_no', form.document_no);
             fd.append('invoice_date', form.invoice_date);
             fd.append('amount', form.amount);
             fd.append('status', form.status);
+            if (form.date_paid) fd.append('date_paid', form.date_paid);
             if (form.type === 'client' && form.client_approved_date) fd.append('client_approved_date', form.client_approved_date);
+            if (form.type === 'client' && form.payment_cert_date) fd.append('payment_cert_date', form.payment_cert_date);
+            if (form.type === 'client' && form.date_received_claim) fd.append('date_received_claim', form.date_received_claim);
+            if (form.type === 'subcon' && form.payment_method) fd.append('payment_method', form.payment_method);
+            if (form.type === 'subcon' && form.payment_to_subcon_date) fd.append('payment_to_subcon_date', form.payment_to_subcon_date);
+            if (form.type === 'subcon' && form.claim_number) fd.append('claim_number', form.claim_number);
             if (form.notes) fd.append('notes', form.notes);
             files.forEach((f) => fd.append('files[]', f));
 
@@ -155,6 +178,27 @@ export default function ProjectInvoices() {
     const deleteExistingFile = async (fileId) => {
         try { await projectInvoiceService.deleteFile(fileId); setExistingFiles((p) => p.filter((f) => f.id !== fileId)); toast.success('File removed'); }
         catch { toast.error('Failed to remove file'); }
+    };
+
+    const addPayment = async () => {
+        if (!editId || !paymentForm.amount || !paymentForm.payment_date) return;
+        setPaymentSaving(true);
+        try {
+            const res = await projectInvoiceService.addPayment(editId, paymentForm);
+            setPayments((p) => [res.data, ...p]);
+            setPaymentForm(emptyPaymentForm);
+            toast.success('Payment recorded');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to record payment');
+        } finally {
+            setPaymentSaving(false);
+        }
+    };
+
+    const removePayment = async (paymentId) => {
+        if (!window.confirm('Remove this payment record?')) return;
+        try { await projectInvoiceService.removePayment(paymentId); setPayments((p) => p.filter((pm) => pm.id !== paymentId)); toast.success('Payment removed'); }
+        catch { toast.error('Failed to remove payment'); }
     };
 
     const fieldClass = (name) =>
@@ -377,6 +421,19 @@ export default function ProjectInvoices() {
                                     placeholder={form.type === 'subcon' ? 'e.g. ABC Construction Sdn Bhd' : 'Defaults to project client'} />
                             </div>
 
+                            {form.type === 'client' && (
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700">Payment Cert</label>
+                                        <input type="date" value={form.payment_cert_date} onChange={(e) => setForm((p) => ({ ...p, payment_cert_date: e.target.value }))} className={fieldClass('payment_cert_date')} />
+                                    </div>
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700">Date Received Claim</label>
+                                        <input type="date" value={form.date_received_claim} onChange={(e) => setForm((p) => ({ ...p, date_received_claim: e.target.value }))} className={fieldClass('date_received_claim')} />
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Invoice No</label>
@@ -411,6 +468,37 @@ export default function ProjectInvoices() {
                                     <input type="date" value={form.client_approved_date} onChange={(e) => setForm((p) => ({ ...p, client_approved_date: e.target.value }))} className={fieldClass('client_approved_date')} />
                                 </div>
                             )}
+
+                            {form.type === 'subcon' && (
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700">Payment Method</label>
+                                        <select value={form.payment_method} onChange={(e) => setForm((p) => ({ ...p, payment_method: e.target.value }))} className={fieldClass('payment_method')}>
+                                            <option value="">Select method...</option>
+                                            {paymentMethods.map((m) => <option key={m.k} value={m.k}>{m.l}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700">Payment to Subcon</label>
+                                        <input type="date" value={form.payment_to_subcon_date} onChange={(e) => setForm((p) => ({ ...p, payment_to_subcon_date: e.target.value }))} className={fieldClass('payment_to_subcon_date')} />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <label className="mb-1 block text-sm font-medium text-gray-700">Claim Number</label>
+                                        <input type="text" value={form.claim_number} onChange={(e) => setForm((p) => ({ ...p, claim_number: e.target.value }))} className={fieldClass('claim_number')} placeholder="e.g. CLM-001" />
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Document No.</label>
+                                    <input type="text" value={form.document_no} onChange={(e) => setForm((p) => ({ ...p, document_no: e.target.value }))} className={fieldClass('document_no')} />
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Date Paid</label>
+                                    <input type="date" value={form.date_paid} onChange={(e) => setForm((p) => ({ ...p, date_paid: e.target.value }))} className={fieldClass('date_paid')} />
+                                </div>
+                            </div>
 
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Notes</label>
@@ -448,6 +536,58 @@ export default function ProjectInvoices() {
                                             </li>
                                         ))}
                                     </ul>
+                                )}
+                            </div>
+
+                            {/* Payment history */}
+                            <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                <label className="mb-2 block text-xs font-bold uppercase text-gray-500">Payment History</label>
+                                {!editId ? (
+                                    <p className="text-xs text-gray-400">Save the invoice first to start recording payments.</p>
+                                ) : (
+                                    <>
+                                        {payments.length > 0 && (
+                                            <ul className="mb-3 space-y-1">
+                                                {payments.map((pm) => (
+                                                    <li key={pm.id} className="flex items-center justify-between gap-2 rounded bg-white px-2 py-1.5 text-xs text-gray-600 ring-1 ring-gray-100">
+                                                        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5">
+                                                            <span className="font-semibold text-gray-900">{fmt(pm.amount)}</span>
+                                                            <span>{pm.payment_date}</span>
+                                                            {pm.document_no && <span className="text-gray-400">Doc: {pm.document_no}</span>}
+                                                            {pm.method && <span className="text-gray-400">{paymentMethods.find((m) => m.k === pm.method)?.l || pm.method}</span>}
+                                                        </span>
+                                                        {canEdit && <button type="button" onClick={() => removePayment(pm.id)} className="shrink-0 text-gray-400 hover:text-red-600"><HiOutlineTrash className="h-3.5 w-3.5" /></button>}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                        {canEdit && (
+                                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:items-end">
+                                                <div className="col-span-1">
+                                                    <label className="mb-1 block text-[11px] font-medium text-gray-500">Amount</label>
+                                                    <input type="number" step="0.01" min="0" value={paymentForm.amount} onChange={(e) => setPaymentForm((p) => ({ ...p, amount: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" placeholder="0.00" />
+                                                </div>
+                                                <div className="col-span-1">
+                                                    <label className="mb-1 block text-[11px] font-medium text-gray-500">Date</label>
+                                                    <input type="date" value={paymentForm.payment_date} onChange={(e) => setPaymentForm((p) => ({ ...p, payment_date: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                                </div>
+                                                <div className="col-span-1">
+                                                    <label className="mb-1 block text-[11px] font-medium text-gray-500">Document No.</label>
+                                                    <input type="text" value={paymentForm.document_no} onChange={(e) => setPaymentForm((p) => ({ ...p, document_no: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                                </div>
+                                                <div className="col-span-1">
+                                                    <label className="mb-1 block text-[11px] font-medium text-gray-500">Method</label>
+                                                    <select value={paymentForm.method} onChange={(e) => setPaymentForm((p) => ({ ...p, method: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                                                        <option value="">-</option>
+                                                        {paymentMethods.map((m) => <option key={m.k} value={m.k}>{m.l}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="col-span-2 sm:col-span-1">
+                                                    <button type="button" disabled={paymentSaving || !paymentForm.amount || !paymentForm.payment_date} onClick={addPayment} className="w-full rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-700 disabled:opacity-50">{paymentSaving ? 'Adding...' : 'Add'}</button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
 

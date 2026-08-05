@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ProjectInvoice;
 use App\Models\ProjectInvoiceFile;
+use App\Models\ProjectInvoicePayment;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -16,6 +17,7 @@ class ProjectInvoiceService
             'project:id,name,code',
             'creator:id,first_name,last_name',
             'files',
+            'payments',
         ])->orderByDesc('invoice_date');
 
         if (!empty($filters['project_id'])) $query->forProject($filters['project_id']);
@@ -109,7 +111,21 @@ class ProjectInvoiceService
             'project:id,name,code',
             'creator:id,first_name,last_name',
             'files',
+            'payments',
         ])->findOrFail($id);
+    }
+
+    public function createPayment(int $invoiceId, array $data, int $userId): ProjectInvoicePayment
+    {
+        $invoice = ProjectInvoice::findOrFail($invoiceId);
+        $data['created_by'] = $userId;
+
+        return $invoice->payments()->create($data);
+    }
+
+    public function deletePayment(int $paymentId): void
+    {
+        ProjectInvoicePayment::findOrFail($paymentId)->delete();
     }
 
     public function storeFilesForInvoice(int $id, array $files): ProjectInvoice

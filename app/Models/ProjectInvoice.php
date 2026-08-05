@@ -16,10 +16,17 @@ class ProjectInvoice extends Model
         'type',
         'party_name',
         'invoice_no',
+        'document_no',
         'invoice_date',
         'amount',
         'status',
         'client_approved_date',
+        'date_paid',
+        'payment_method',
+        'payment_to_subcon_date',
+        'claim_number',
+        'payment_cert_date',
+        'date_received_claim',
         'notes',
         'created_by',
     ];
@@ -29,6 +36,10 @@ class ProjectInvoice extends Model
         return [
             'invoice_date' => 'date:Y-m-d',
             'client_approved_date' => 'date:Y-m-d',
+            'date_paid' => 'date:Y-m-d',
+            'payment_to_subcon_date' => 'date:Y-m-d',
+            'payment_cert_date' => 'date:Y-m-d',
+            'date_received_claim' => 'date:Y-m-d',
             'amount' => 'decimal:2',
         ];
     }
@@ -46,6 +57,11 @@ class ProjectInvoice extends Model
     public function files(): HasMany
     {
         return $this->hasMany(ProjectInvoiceFile::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(ProjectInvoicePayment::class)->orderByDesc('payment_date');
     }
 
     public function scopeByStatus($q, string $s)

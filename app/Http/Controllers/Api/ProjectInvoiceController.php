@@ -38,10 +38,17 @@ class ProjectInvoiceController extends Controller
             'type' => ['required', 'in:client,subcon'],
             'party_name' => ['nullable', 'string', 'max:255'],
             'invoice_no' => ['nullable', 'string', 'max:255'],
+            'document_no' => ['nullable', 'string', 'max:255'],
             'invoice_date' => ['required', 'date'],
             'amount' => ['required', 'numeric', 'min:0'],
             'status' => ['required', 'in:draft,submitted,approved,paid'],
             'client_approved_date' => ['nullable', 'date'],
+            'date_paid' => ['nullable', 'date'],
+            'payment_method' => ['nullable', 'in:cash,online_transfer,cheque'],
+            'payment_to_subcon_date' => ['nullable', 'date'],
+            'claim_number' => ['nullable', 'string', 'max:255'],
+            'payment_cert_date' => ['nullable', 'date'],
+            'date_received_claim' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
             'files' => ['nullable', 'array'],
             'files.*' => ['file', 'max:25600', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
@@ -65,10 +72,17 @@ class ProjectInvoiceController extends Controller
             'type' => ['sometimes', 'required', 'in:client,subcon'],
             'party_name' => ['nullable', 'string', 'max:255'],
             'invoice_no' => ['nullable', 'string', 'max:255'],
+            'document_no' => ['nullable', 'string', 'max:255'],
             'invoice_date' => ['sometimes', 'required', 'date'],
             'amount' => ['sometimes', 'required', 'numeric', 'min:0'],
             'status' => ['sometimes', 'required', 'in:draft,submitted,approved,paid'],
             'client_approved_date' => ['nullable', 'date'],
+            'date_paid' => ['nullable', 'date'],
+            'payment_method' => ['nullable', 'in:cash,online_transfer,cheque'],
+            'payment_to_subcon_date' => ['nullable', 'date'],
+            'claim_number' => ['nullable', 'string', 'max:255'],
+            'payment_cert_date' => ['nullable', 'date'],
+            'date_received_claim' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
             'files' => ['nullable', 'array'],
             'files.*' => ['file', 'max:25600', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
@@ -109,5 +123,27 @@ class ProjectInvoiceController extends Controller
         $this->service->deleteFile($fileId);
 
         return $this->success(null, 'File deleted.');
+    }
+
+    public function storePayment(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0'],
+            'payment_date' => ['required', 'date'],
+            'document_no' => ['nullable', 'string', 'max:255'],
+            'method' => ['nullable', 'in:cash,online_transfer,cheque'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        $payment = $this->service->createPayment($id, $data, $request->user()->id);
+
+        return $this->created($payment, 'Payment recorded.');
+    }
+
+    public function destroyPayment(int $paymentId): JsonResponse
+    {
+        $this->service->deletePayment($paymentId);
+
+        return $this->success(null, 'Payment removed.');
     }
 }

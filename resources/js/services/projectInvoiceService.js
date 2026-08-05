@@ -45,6 +45,14 @@ const projectInvoiceService = {
         const response = await apiClient.delete(`/project-invoices/files/${fileId}`);
         return response.data;
     },
+    async addPayment(id, data) {
+        const response = await apiClient.post(`/project-invoices/${id}/payments`, data);
+        return response.data;
+    },
+    async removePayment(paymentId) {
+        const response = await apiClient.delete(`/project-invoices/payments/${paymentId}`);
+        return response.data;
+    },
     getFileDownloadUrl(fileId) {
         return `/api/project-invoices/files/${fileId}/download`;
     },

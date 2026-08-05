@@ -48,7 +48,7 @@ const navigation = [
             { name: 'All Projects', href: '/projects', icon: HiOutlineBriefcase, permission: 'projects.view' },
             { name: 'Tasks', href: '/tasks', icon: HiOutlineClipboardList, permission: 'tasks.view' },
             { name: 'Milestones', href: '/projects/milestones', icon: HiOutlineFlag, permission: 'projects.view' },
-            { name: 'Invoices', href: '/projects/invoices', icon: HiOutlineDocumentText, permission: 'projects.view' },
+            { name: 'Project Finances', href: '/projects/invoices', icon: HiOutlineDocumentText, permission: 'projects.view' },
             { name: 'Correspondence', href: '/projects/correspondence', icon: HiOutlineDocumentDuplicate, permission: 'projects.view' },
             { name: 'Discussions', href: '/projects/discussions', icon: HiOutlineChatAlt2, permission: 'projects.view' },
             { name: 'Contracts', href: '/projects/contracts', icon: HiOutlineClipboardCheck, permission: 'projects.view' },
