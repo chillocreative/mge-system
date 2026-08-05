@@ -14,10 +14,6 @@ class SiteLog extends Model
         'title',
         'description',
         'weather',
-        'rain_start_time',
-        'rain_end_time',
-        'overcast_time',
-        'clear_time',
         'workers_count',
         'work_performed',
         'materials_used',
@@ -32,10 +28,6 @@ class SiteLog extends Model
         return [
             'log_date' => 'date:Y-m-d',
             'workers_count' => 'integer',
-            'rain_start_time' => 'datetime:H:i',
-            'rain_end_time' => 'datetime:H:i',
-            'overcast_time' => 'datetime:H:i',
-            'clear_time' => 'datetime:H:i',
         ];
     }
 
@@ -52,6 +44,11 @@ class SiteLog extends Model
     public function machinery(): HasMany
     {
         return $this->hasMany(SiteLogMachinery::class);
+    }
+
+    public function weatherEvents(): HasMany
+    {
+        return $this->hasMany(SiteLogWeatherEvent::class)->orderBy('event_time');
     }
 
     public function scopeForProject($query, int $projectId)

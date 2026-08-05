@@ -87,6 +87,7 @@
                     <tr>
                         <th>Date</th>
                         <th>Weather</th>
+                        <th>Weather Times</th>
                         <th style="text-align:right;">Workers</th>
                         <th>Machinery</th>
                     </tr>
@@ -96,11 +97,12 @@
                     <tr>
                         <td>{{ $log->log_date->format('d M Y') }}</td>
                         <td>{{ $log->weather ? ucfirst($log->weather) : '-' }}</td>
+                        <td>{{ $log->weatherEvents->map(fn ($w) => ucfirst(str_replace('_', ' ', $w->condition)) . ' ' . $w->event_time->format('H:i'))->join(', ') ?: '-' }}</td>
                         <td style="text-align:right;">{{ $log->workers_count }}</td>
                         <td>{{ $log->machinery->map(fn ($m) => "{$m->machinery_type} x{$m->quantity}")->join(', ') ?: '-' }}</td>
                     </tr>
                     @empty
-                    <tr><td colspan="4">No site logs recorded for this month.</td></tr>
+                    <tr><td colspan="5">No site logs recorded for this month.</td></tr>
                     @endforelse
                 </tbody>
             </table>

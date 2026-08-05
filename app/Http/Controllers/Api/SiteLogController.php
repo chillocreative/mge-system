@@ -15,10 +15,12 @@ class SiteLogController extends Controller
         'Excavator', 'Bulldozer', 'Crane', 'Compactor', 'Loader', 'Dump Truck', 'Generator', 'Other',
     ];
 
+    private const WEATHER_CONDITIONS = ['rain_start', 'rain_stop', 'overcast', 'clear'];
+
     public function index(int $projectId, Request $request): JsonResponse
     {
         $logs = SiteLog::where('project_id', $projectId)
-            ->with(['logger:id,first_name,last_name', 'machinery'])
+            ->with(['logger:id,first_name,last_name', 'machinery', 'weatherEvents'])
             ->when($request->date_from && $request->date_to, fn ($q) => $q->forPeriod($request->date_from, $request->date_to))
             ->orderByDesc('log_date')
             ->paginate($request->integer('per_page', 15));
@@ -32,21 +34,23 @@ class SiteLogController extends Controller
 
         $validated = $this->validatePayload($request, true);
         $machinery = $validated['machinery'] ?? [];
-        unset($validated['machinery']);
+        $weatherEvents = $validated['weather_events'] ?? [];
+        unset($validated['machinery'], $validated['weather_events']);
 
         $validated['project_id'] = $project->id;
         $validated['logged_by'] = $request->user()->id;
 
         $log = SiteLog::create($validated);
         $this->syncMachinery($log, $machinery);
+        $this->syncWeatherEvents($log, $weatherEvents);
 
-        return $this->created($log->load(['logger:id,first_name,last_name', 'machinery']), 'Site log created.');
+        return $this->created($log->load(['logger:id,first_name,last_name', 'machinery', 'weatherEvents']), 'Site log created.');
     }
 
     public function show(int $projectId, int $logId): JsonResponse
     {
         $log = SiteLog::where('project_id', $projectId)
-            ->with(['logger:id,first_name,last_name', 'machinery'])
+            ->with(['logger:id,first_name,last_name', 'machinery', 'weatherEvents'])
             ->findOrFail($logId);
 
         return $this->success($log);
@@ -58,14 +62,18 @@ class SiteLogController extends Controller
 
         $validated = $this->validatePayload($request, false);
         $machinery = $validated['machinery'] ?? null;
-        unset($validated['machinery']);
+        $weatherEvents = $validated['weather_events'] ?? null;
+        unset($validated['machinery'], $validated['weather_events']);
 
         $log->update($validated);
         if ($machinery !== null) {
             $this->syncMachinery($log, $machinery);
         }
+        if ($weatherEvents !== null) {
+            $this->syncWeatherEvents($log, $weatherEvents);
+        }
 
-        return $this->success($log->fresh()->load(['logger:id,first_name,last_name', 'machinery']), 'Site log updated.');
+        return $this->success($log->fresh()->load(['logger:id,first_name,last_name', 'machinery', 'weatherEvents']), 'Site log updated.');
     }
 
     public function destroy(int $projectId, int $logId): JsonResponse
@@ -86,7 +94,7 @@ class SiteLogController extends Controller
 
         $logs = SiteLog::forProject($projectId)
             ->forPeriod($from, $to)
-            ->with('machinery')
+            ->with(['machinery', 'weatherEvents'])
             ->orderBy('log_date')
             ->get();
 
@@ -134,20 +142,32 @@ class SiteLogController extends Controller
         }
     }
 
+    private function syncWeatherEvents(SiteLog $log, array $weatherEvents): void
+    {
+        $log->weatherEvents()->delete();
+
+        foreach ($weatherEvents as $item) {
+            if (empty($item['condition']) || empty($item['event_time'])) {
+                continue;
+            }
+            $log->weatherEvents()->create([
+                'condition' => $item['condition'],
+                'event_time' => $item['event_time'],
+            ]);
+        }
+    }
+
     private function validatePayload(Request $request, bool $creating): array
     {
         $required = $creating ? 'required' : 'sometimes';
-        $types = implode(',', self::MACHINERY_TYPES);
+        $machineryTypes = implode(',', self::MACHINERY_TYPES);
+        $weatherConditions = implode(',', self::WEATHER_CONDITIONS);
 
         return $request->validate([
             'log_date' => [$required, 'date'],
             'title' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'weather' => ['nullable', 'in:sunny,cloudy,rainy,stormy,windy,other'],
-            'rain_start_time' => ['nullable', 'date_format:H:i'],
-            'rain_end_time' => ['nullable', 'date_format:H:i'],
-            'overcast_time' => ['nullable', 'date_format:H:i'],
-            'clear_time' => ['nullable', 'date_format:H:i'],
             'workers_count' => ['nullable', 'integer', 'min:0'],
             'work_performed' => ['nullable', 'string'],
             'materials_used' => ['nullable', 'string'],
@@ -155,8 +175,11 @@ class SiteLogController extends Controller
             'safety_notes' => ['nullable', 'string'],
             'issues' => ['nullable', 'string'],
             'machinery' => ['nullable', 'array'],
-            'machinery.*.machinery_type' => ['required_with:machinery', 'in:' . $types],
+            'machinery.*.machinery_type' => ['required_with:machinery', 'in:' . $machineryTypes],
             'machinery.*.quantity' => ['nullable', 'integer', 'min:1'],
+            'weather_events' => ['nullable', 'array'],
+            'weather_events.*.condition' => ['required_with:weather_events', 'in:' . $weatherConditions],
+            'weather_events.*.event_time' => ['required_with:weather_events', 'date_format:H:i'],
         ]);
     }
 }

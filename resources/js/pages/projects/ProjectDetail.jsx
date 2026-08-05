@@ -512,11 +512,19 @@ function TimelineTab({ project }) {
 
 // ─── Site Logs Tab ─────────────────────────────────────────────
 const MACHINERY_TYPES = ['Excavator', 'Bulldozer', 'Crane', 'Compactor', 'Loader', 'Dump Truck', 'Generator', 'Other'];
+const WEATHER_CONDITIONS = [
+    { value: 'rain_start', label: 'Rain Start' },
+    { value: 'rain_stop', label: 'Rain Stop' },
+    { value: 'overcast', label: 'Overcast (Mendung)' },
+    { value: 'clear', label: 'Clear / Sunny (Cerah)' },
+];
+const weatherConditionLabel = (v) => WEATHER_CONDITIONS.find((c) => c.value === v)?.label || v;
 const emptySiteLogForm = () => ({
     log_date: new Date().toISOString().split('T')[0],
-    weather: '', rain_start_time: '', rain_end_time: '', overcast_time: '', clear_time: '',
+    weather: '',
     workers_count: '', work_performed: '', materials_used: '', issues: '', safety_notes: '',
     machinery: [],
+    weather_events: [],
 });
 
 function SiteLogsTab({ project, canEdit, onRefresh }) {
@@ -528,6 +536,10 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
     const addMachinery = () => setForm((p) => ({ ...p, machinery: [...p.machinery, { machinery_type: MACHINERY_TYPES[0], quantity: 1 }] }));
     const removeMachinery = (idx) => setForm((p) => ({ ...p, machinery: p.machinery.filter((_, i) => i !== idx) }));
     const updateMachinery = (idx, field, value) => setForm((p) => ({ ...p, machinery: p.machinery.map((m, i) => i === idx ? { ...m, [field]: value } : m) }));
+
+    const addWeatherEvent = () => setForm((p) => ({ ...p, weather_events: [...p.weather_events, { condition: WEATHER_CONDITIONS[0].value, event_time: '' }] }));
+    const removeWeatherEvent = (idx) => setForm((p) => ({ ...p, weather_events: p.weather_events.filter((_, i) => i !== idx) }));
+    const updateWeatherEvent = (idx, field, value) => setForm((p) => ({ ...p, weather_events: p.weather_events.map((w, i) => i === idx ? { ...w, [field]: value } : w) }));
 
     const handleCreate = async (e) => {
         e.preventDefault();
@@ -590,25 +602,28 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                     </div>
 
                     <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
-                        <p className="mb-2 text-xs font-semibold uppercase text-gray-500">Weather Times</p>
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                            <div>
-                                <label className="mb-1 block text-[11px] text-gray-500">Rain Start</label>
-                                <input type="time" value={form.rain_start_time} onChange={(e) => setForm({ ...form, rain_start_time: e.target.value })} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                            </div>
-                            <div>
-                                <label className="mb-1 block text-[11px] text-gray-500">Rain End</label>
-                                <input type="time" value={form.rain_end_time} onChange={(e) => setForm({ ...form, rain_end_time: e.target.value })} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                            </div>
-                            <div>
-                                <label className="mb-1 block text-[11px] text-gray-500">Overcast (Mendung)</label>
-                                <input type="time" value={form.overcast_time} onChange={(e) => setForm({ ...form, overcast_time: e.target.value })} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                            </div>
-                            <div>
-                                <label className="mb-1 block text-[11px] text-gray-500">Clear / Sunny (Cerah)</label>
-                                <input type="time" value={form.clear_time} onChange={(e) => setForm({ ...form, clear_time: e.target.value })} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                            </div>
+                        <div className="mb-2 flex items-center justify-between">
+                            <p className="text-xs font-semibold uppercase text-gray-500">Weather Times</p>
+                            <button type="button" onClick={addWeatherEvent} className="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-700">
+                                <HiOutlinePlus className="h-3.5 w-3.5" /> Add
+                            </button>
                         </div>
+                        <p className="mb-2 text-[11px] text-gray-400">Record each time the weather changes — e.g. rain starts, stops, then starts again later.</p>
+                        {form.weather_events.length === 0 ? (
+                            <p className="text-xs text-gray-400">No weather times recorded</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {form.weather_events.map((w, i) => (
+                                    <div key={i} className="flex items-center gap-2">
+                                        <input type="time" value={w.event_time} onChange={(e) => updateWeatherEvent(i, 'event_time', e.target.value)} className="w-32 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                        <select value={w.condition} onChange={(e) => updateWeatherEvent(i, 'condition', e.target.value)} className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                                            {WEATHER_CONDITIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                                        </select>
+                                        <button type="button" onClick={() => removeWeatherEvent(i)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"><HiOutlineX className="h-3.5 w-3.5" /></button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
@@ -663,6 +678,13 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                                     {log.logger?.first_name} {log.logger?.last_name}
                                 </span>
                             </div>
+                            {log.weather_events?.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {log.weather_events.map((w) => (
+                                        <span key={w.id} className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700">{weatherConditionLabel(w.condition)} {w.event_time}</span>
+                                    ))}
+                                </div>
+                            )}
                             {log.machinery?.length > 0 && (
                                 <div className="mt-2 flex flex-wrap gap-1.5">
                                     {log.machinery.map((m) => (
@@ -798,12 +820,16 @@ function DocumentsTab({ project, canEdit, onRefresh }) {
 }
 
 // ─── Calendar Tab ──────────────────────────────────────────────
+const emptyEventForm = () => ({ title: '', type: 'meeting', start_datetime: '', end_datetime: '', location: '', description: '' });
+const toLocalInput = (dt) => (dt ? String(dt).slice(0, 16) : '');
+
 function CalendarTab({ project, canEdit }) {
     const [events, setEvents] = useState(project.calendar_events || []);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
-    const [form, setForm] = useState({ title: '', type: 'meeting', start_datetime: '', end_datetime: '', location: '', description: '' });
+    const [editingId, setEditingId] = useState(null);
+    const [form, setForm] = useState(emptyEventForm());
     const [saving, setSaving] = useState(false);
 
     const fetchEvents = useCallback(async () => {
@@ -825,17 +851,42 @@ function CalendarTab({ project, canEdit }) {
         return () => clearTimeout(t);
     }, [fetchEvents]);
 
-    const handleCreate = async (e) => {
+    const openCreate = () => {
+        setEditingId(null);
+        setForm(emptyEventForm());
+        setShowForm(true);
+    };
+
+    const openEdit = (event) => {
+        setEditingId(event.id);
+        setForm({
+            title: event.title || '',
+            type: event.type || 'meeting',
+            start_datetime: toLocalInput(event.start_datetime),
+            end_datetime: toLocalInput(event.end_datetime),
+            location: event.location || '',
+            description: event.description || '',
+        });
+        setShowForm(true);
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
         try {
-            await projectService.createEvent(project.id, form);
-            toast.success('Event created');
+            if (editingId) {
+                await projectService.updateEvent(project.id, editingId, form);
+                toast.success('Event updated');
+            } else {
+                await projectService.createEvent(project.id, form);
+                toast.success('Event created');
+            }
             setShowForm(false);
-            setForm({ title: '', type: 'meeting', start_datetime: '', end_datetime: '', location: '', description: '' });
+            setEditingId(null);
+            setForm(emptyEventForm());
             fetchEvents();
         } catch {
-            toast.error('Failed to create event');
+            toast.error(editingId ? 'Failed to update event' : 'Failed to create event');
         } finally {
             setSaving(false);
         }
@@ -857,7 +908,7 @@ function CalendarTab({ project, canEdit }) {
         <Card
             title="Calendar Events"
             action={canEdit && (
-                <button onClick={() => setShowForm(!showForm)} className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700">
+                <button onClick={() => (showForm ? setShowForm(false) : openCreate())} className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700">
                     <HiOutlinePlus className="h-4 w-4" /> New Event
                 </button>
             )}
@@ -874,7 +925,7 @@ function CalendarTab({ project, canEdit }) {
             </div>
 
             {showForm && (
-                <form onSubmit={handleCreate} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
+                <form onSubmit={handleSubmit} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
                     <div className="grid gap-3 sm:grid-cols-2">
                         <input type="text" placeholder="Event title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required className="sm:col-span-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                         <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
@@ -890,8 +941,8 @@ function CalendarTab({ project, canEdit }) {
                         <textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="sm:col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                     </div>
                     <div className="mt-3 flex justify-end gap-2">
-                        <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
-                        <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Creating...' : 'Create'}</button>
+                        <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
+                        <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Saving...' : editingId ? 'Update' : 'Create'}</button>
                     </div>
                 </form>
             )}
@@ -921,9 +972,14 @@ function CalendarTab({ project, canEdit }) {
                                 </div>
                             </div>
                             {canEdit && (
-                                <button onClick={() => handleDelete(event.id)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600">
-                                    <HiOutlineTrash className="h-4 w-4" />
-                                </button>
+                                <div className="flex shrink-0 items-center gap-1">
+                                    <button onClick={() => openEdit(event)} className="rounded p-1 text-gray-400 hover:bg-primary-50 hover:text-primary-600" title="Edit">
+                                        <HiOutlinePencil className="h-4 w-4" />
+                                    </button>
+                                    <button onClick={() => handleDelete(event.id)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600" title="Delete">
+                                        <HiOutlineTrash className="h-4 w-4" />
+                                    </button>
+                                </div>
                             )}
                         </div>
                     ))}

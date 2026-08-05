@@ -30,6 +30,7 @@ class ProjectService
             'milestones.creator:id,first_name,last_name',
             'siteLogs.logger:id,first_name,last_name',
             'siteLogs.machinery',
+            'siteLogs.weatherEvents',
             'documents.uploader:id,first_name,last_name',
             'calendarEvents.creator:id,first_name,last_name',
         ]);
