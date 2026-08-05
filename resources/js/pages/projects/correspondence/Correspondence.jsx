@@ -26,6 +26,14 @@ const statusColors = {
     open: 'bg-green-100 text-green-700',
     pending: 'bg-yellow-100 text-yellow-700',
     closed: 'bg-gray-100 text-gray-600',
+    declined: 'bg-red-100 text-red-700',
+};
+
+const today = () => new Date().toISOString().split('T')[0];
+const dayDiff = (from, to) => {
+    if (!from || !to) return null;
+    const ms = new Date(to) - new Date(from);
+    return Math.max(0, Math.round(ms / 86400000));
 };
 
 const baseForm = {
@@ -247,6 +255,7 @@ export default function Correspondence() {
                     <option value="open">Open</option>
                     <option value="pending">Pending</option>
                     <option value="closed">Closed</option>
+                    <option value="declined">Decline</option>
                 </select>
             </div>
 
@@ -356,7 +365,7 @@ export default function Correspondence() {
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
                                     <select value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
-                                        <option value="open">Open</option><option value="pending">Pending</option><option value="closed">Closed</option>
+                                        <option value="open">Open</option><option value="pending">Pending</option><option value="closed">Closed</option><option value="declined">Decline</option>
                                     </select>
                                 </div>
                             </div>
@@ -379,8 +388,27 @@ export default function Correspondence() {
                                     <input type="date" value={form.due_date} onChange={(e) => setForm((p) => ({ ...p, due_date: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                                 </div>
                             </div>
+                            {form.raised_date && (
+                                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                    <label className="mb-1 block text-xs font-bold uppercase text-gray-500">Duration</label>
+                                    {(() => {
+                                        const closed = form.status === 'closed';
+                                        const endDate = closed ? form.due_date : today();
+                                        const days = dayDiff(form.raised_date, endDate);
+                                        return endDate ? (
+                                            <p className="text-sm text-gray-700">
+                                                {form.raised_date} <span className="text-gray-400">&rarr;</span> {endDate}
+                                                {days !== null && <span className="ml-2 text-xs text-gray-500">({days} day{days === 1 ? '' : 's'}, {closed ? 'closed' : 'open'})</span>}
+                                            </p>
+                                        ) : (
+                                            <p className="text-sm text-gray-400">Set a Close Date to calculate duration.</p>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Response</label>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Remarks</label>
                                 <textarea rows={2} value={form.response} onChange={(e) => setForm((p) => ({ ...p, response: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                             </div>
                             {form.project_id && (
