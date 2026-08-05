@@ -58,6 +58,9 @@ const projectService = {
         const response = await apiClient.delete(`/projects/${projectId}/site-logs/${logId}`);
         return response.data;
     },
+    getSiteLogReportUrl(projectId, month) {
+        return `/api/projects/${projectId}/site-logs/report/pdf?month=${month}`;
+    },
 
     // ── Documents ──
     async getDocuments(projectId, params = {}) {

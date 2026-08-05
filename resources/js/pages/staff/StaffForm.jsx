@@ -34,6 +34,13 @@ const emptyForm = {
     tax_no: '',
     base_salary: '',
     status: 'active',
+    marital_status: '',
+    spouse_name: '',
+    spouse_ic_no: '',
+    number_of_children: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+    emergency_contact_relationship: '',
 };
 
 const inputClass =
@@ -316,6 +323,43 @@ export default function StaffForm() {
                                 <textarea rows={2} value={form.address} onChange={(e) => set('address', e.target.value)} className={inputClass} />
                             </Field>
                         </div>
+                    </div>
+                </div>
+
+                {/* Family & Emergency Contact */}
+                <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
+                    <h2 className="mb-4 text-sm font-semibold uppercase text-gray-500">Family & Emergency Contact</h2>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <Field label="Marital Status" name="marital_status" errors={errors}>
+                            <select value={form.marital_status} onChange={(e) => set('marital_status', e.target.value)} className={inputClass}>
+                                <option value="">Select</option>
+                                <option value="single">Belum Berkahwin</option>
+                                <option value="married">Berkahwin</option>
+                                <option value="divorced">Bercerai</option>
+                            </select>
+                        </Field>
+                        <Field label="Number of Children" name="number_of_children" errors={errors}>
+                            <input type="number" min="0" value={form.number_of_children} onChange={(e) => set('number_of_children', e.target.value)} className={inputClass} />
+                        </Field>
+                        {form.marital_status === 'married' && (
+                            <>
+                                <Field label="Spouse Name" name="spouse_name" errors={errors}>
+                                    <input value={form.spouse_name} onChange={(e) => set('spouse_name', e.target.value)} className={inputClass} />
+                                </Field>
+                                <Field label="Spouse IC No" name="spouse_ic_no" errors={errors}>
+                                    <input value={form.spouse_ic_no} onChange={(e) => set('spouse_ic_no', e.target.value)} className={inputClass} />
+                                </Field>
+                            </>
+                        )}
+                        <Field label="Emergency Contact Name" name="emergency_contact_name" errors={errors}>
+                            <input value={form.emergency_contact_name} onChange={(e) => set('emergency_contact_name', e.target.value)} className={inputClass} />
+                        </Field>
+                        <Field label="Emergency Contact Phone" name="emergency_contact_phone" errors={errors}>
+                            <input value={form.emergency_contact_phone} onChange={(e) => set('emergency_contact_phone', e.target.value)} className={inputClass} />
+                        </Field>
+                        <Field label="Relationship" name="emergency_contact_relationship" errors={errors}>
+                            <input placeholder="e.g. Spouse, Parent, Sibling" value={form.emergency_contact_relationship} onChange={(e) => set('emergency_contact_relationship', e.target.value)} className={inputClass} />
+                        </Field>
                     </div>
                 </div>
 

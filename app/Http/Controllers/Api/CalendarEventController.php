@@ -23,6 +23,13 @@ class CalendarEventController extends Controller
             $query->byType($request->type);
         }
 
+        if ($request->search) {
+            $search = $request->search;
+            $query->where(fn ($q) => $q->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+                ->orWhere('location', 'like', "%{$search}%"));
+        }
+
         $events = $query->orderBy('start_datetime')->get();
 
         return $this->success($events);

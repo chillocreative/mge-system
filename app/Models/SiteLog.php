@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SiteLog extends Model
 {
@@ -13,6 +14,10 @@ class SiteLog extends Model
         'title',
         'description',
         'weather',
+        'rain_start_time',
+        'rain_end_time',
+        'overcast_time',
+        'clear_time',
         'workers_count',
         'work_performed',
         'materials_used',
@@ -27,6 +32,10 @@ class SiteLog extends Model
         return [
             'log_date' => 'date:Y-m-d',
             'workers_count' => 'integer',
+            'rain_start_time' => 'datetime:H:i',
+            'rain_end_time' => 'datetime:H:i',
+            'overcast_time' => 'datetime:H:i',
+            'clear_time' => 'datetime:H:i',
         ];
     }
 
@@ -38,6 +47,16 @@ class SiteLog extends Model
     public function logger(): BelongsTo
     {
         return $this->belongsTo(User::class, 'logged_by');
+    }
+
+    public function machinery(): HasMany
+    {
+        return $this->hasMany(SiteLogMachinery::class);
+    }
+
+    public function scopeForProject($query, int $projectId)
+    {
+        return $query->where('project_id', $projectId);
     }
 
     public function scopeForPeriod($query, string $from, string $to)

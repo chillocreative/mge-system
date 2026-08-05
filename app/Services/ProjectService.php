@@ -29,6 +29,7 @@ class ProjectService
             'tasks.assignee:id,first_name,last_name',
             'milestones.creator:id,first_name,last_name',
             'siteLogs.logger:id,first_name,last_name',
+            'siteLogs.machinery',
             'documents.uploader:id,first_name,last_name',
             'calendarEvents.creator:id,first_name,last_name',
         ]);

@@ -137,6 +137,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', [SiteLogController::class, 'index']);
             Route::post('/', [SiteLogController::class, 'store'])
                 ->middleware('permission:projects.edit');
+            Route::get('/report/pdf', [SiteLogController::class, 'monthlyReportPdf']);
             Route::get('/{siteLog}', [SiteLogController::class, 'show']);
             Route::put('/{siteLog}', [SiteLogController::class, 'update'])
                 ->middleware('permission:projects.edit');

@@ -17,6 +17,8 @@ class Employee extends Model
         'category', 'hire_date', 'resign_date', 'reporting_manager_id',
         'bank_name', 'bank_account_no', 'epf_no', 'socso_no', 'tax_no', 'base_salary',
         'status', 'user_id', 'photo_path', 'created_by',
+        'marital_status', 'spouse_name', 'spouse_ic_no', 'number_of_children',
+        'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship',
     ];
 
     protected function casts(): array

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import projectService from '@/services/projectService';
 import taskService from '@/services/taskService';
@@ -22,6 +22,8 @@ import {
     HiOutlineClock,
     HiOutlineUpload,
     HiOutlineChatAlt2,
+    HiOutlineX,
+    HiOutlineSearch,
 } from 'react-icons/hi';
 
 const statusColors = {
@@ -509,13 +511,23 @@ function TimelineTab({ project }) {
 }
 
 // ─── Site Logs Tab ─────────────────────────────────────────────
+const MACHINERY_TYPES = ['Excavator', 'Bulldozer', 'Crane', 'Compactor', 'Loader', 'Dump Truck', 'Generator', 'Other'];
+const emptySiteLogForm = () => ({
+    log_date: new Date().toISOString().split('T')[0],
+    weather: '', rain_start_time: '', rain_end_time: '', overcast_time: '', clear_time: '',
+    workers_count: '', work_performed: '', materials_used: '', issues: '', safety_notes: '',
+    machinery: [],
+});
+
 function SiteLogsTab({ project, canEdit, onRefresh }) {
     const [showForm, setShowForm] = useState(false);
-    const [form, setForm] = useState({
-        log_date: new Date().toISOString().split('T')[0],
-        title: '', weather: '', workers_count: '', work_performed: '', materials_used: '', issues: '', safety_notes: '',
-    });
+    const [form, setForm] = useState(emptySiteLogForm());
     const [saving, setSaving] = useState(false);
+    const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
+
+    const addMachinery = () => setForm((p) => ({ ...p, machinery: [...p.machinery, { machinery_type: MACHINERY_TYPES[0], quantity: 1 }] }));
+    const removeMachinery = (idx) => setForm((p) => ({ ...p, machinery: p.machinery.filter((_, i) => i !== idx) }));
+    const updateMachinery = (idx, field, value) => setForm((p) => ({ ...p, machinery: p.machinery.map((m, i) => i === idx ? { ...m, [field]: value } : m) }));
 
     const handleCreate = async (e) => {
         e.preventDefault();
@@ -527,7 +539,7 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
             });
             toast.success('Site log created');
             setShowForm(false);
-            setForm({ log_date: new Date().toISOString().split('T')[0], title: '', weather: '', workers_count: '', work_performed: '', materials_used: '', issues: '', safety_notes: '' });
+            setForm(emptySiteLogForm());
             onRefresh();
         } catch {
             toast.error('Failed to create site log');
@@ -541,16 +553,29 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
     return (
         <Card
             title="Site Logs"
-            action={canEdit && (
-                <button onClick={() => setShowForm(!showForm)} className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700">
-                    <HiOutlinePlus className="h-4 w-4" /> New Entry
-                </button>
-            )}
+            action={
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                        <input type="month" value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                        <a
+                            href={projectService.getSiteLogReportUrl(project.id, reportMonth)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                            title="Download monthly report (PDF)"
+                        >
+                            <HiOutlineDocumentDownload className="h-3.5 w-3.5" /> Monthly Report
+                        </a>
+                    </div>
+                    {canEdit && (
+                        <button onClick={() => setShowForm(!showForm)} className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700">
+                            <HiOutlinePlus className="h-4 w-4" /> New Entry
+                        </button>
+                    )}
+                </div>
+            }
         >
             {showForm && (
                 <form onSubmit={handleCreate} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
                     <div className="grid gap-3 sm:grid-cols-2">
-                        <input type="text" placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required className="sm:col-span-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                         <input type="date" value={form.log_date} onChange={(e) => setForm({ ...form, log_date: e.target.value })} required className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                         <select value={form.weather} onChange={(e) => setForm({ ...form, weather: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
                             <option value="">Weather</option>
@@ -561,7 +586,56 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                             <option value="windy">Windy</option>
                             <option value="other">Other</option>
                         </select>
-                        <input type="number" placeholder="Workers on site" value={form.workers_count} onChange={(e) => setForm({ ...form, workers_count: e.target.value })} min="0" className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                        <input type="number" placeholder="Workers on site" value={form.workers_count} onChange={(e) => setForm({ ...form, workers_count: e.target.value })} min="0" className="sm:col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                    </div>
+
+                    <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
+                        <p className="mb-2 text-xs font-semibold uppercase text-gray-500">Weather Times</p>
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            <div>
+                                <label className="mb-1 block text-[11px] text-gray-500">Rain Start</label>
+                                <input type="time" value={form.rain_start_time} onChange={(e) => setForm({ ...form, rain_start_time: e.target.value })} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-[11px] text-gray-500">Rain End</label>
+                                <input type="time" value={form.rain_end_time} onChange={(e) => setForm({ ...form, rain_end_time: e.target.value })} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-[11px] text-gray-500">Overcast (Mendung)</label>
+                                <input type="time" value={form.overcast_time} onChange={(e) => setForm({ ...form, overcast_time: e.target.value })} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-[11px] text-gray-500">Clear / Sunny (Cerah)</label>
+                                <input type="time" value={form.clear_time} onChange={(e) => setForm({ ...form, clear_time: e.target.value })} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
+                        <div className="mb-2 flex items-center justify-between">
+                            <p className="text-xs font-semibold uppercase text-gray-500">Machinery</p>
+                            <button type="button" onClick={addMachinery} className="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-700">
+                                <HiOutlinePlus className="h-3.5 w-3.5" /> Add
+                            </button>
+                        </div>
+                        {form.machinery.length === 0 ? (
+                            <p className="text-xs text-gray-400">No machinery recorded</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {form.machinery.map((m, i) => (
+                                    <div key={i} className="flex items-center gap-2">
+                                        <select value={m.machinery_type} onChange={(e) => updateMachinery(i, 'machinery_type', e.target.value)} className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                                            {MACHINERY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                        <input type="number" min="1" value={m.quantity} onChange={(e) => updateMachinery(i, 'quantity', e.target.value)} className="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                        <button type="button" onClick={() => removeMachinery(i)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"><HiOutlineX className="h-3.5 w-3.5" /></button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
                         <textarea placeholder="Work performed" value={form.work_performed} onChange={(e) => setForm({ ...form, work_performed: e.target.value })} rows={2} className="sm:col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                         <textarea placeholder="Materials used" value={form.materials_used} onChange={(e) => setForm({ ...form, materials_used: e.target.value })} rows={2} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                         <textarea placeholder="Issues / Concerns" value={form.issues} onChange={(e) => setForm({ ...form, issues: e.target.value })} rows={2} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
@@ -580,18 +654,22 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                     {logs.map((log) => (
                         <div key={log.id} className="rounded-lg border border-gray-200 p-4">
                             <div className="flex items-start justify-between">
-                                <div>
-                                    <h4 className="text-sm font-semibold text-gray-900">{log.title}</h4>
-                                    <div className="mt-1 flex items-center gap-3 text-xs text-gray-500">
-                                        <span>{log.log_date}</span>
-                                        {log.weather && <span>{weatherIcons[log.weather] || ''} {log.weather}</span>}
-                                        {log.workers_count > 0 && <span>{log.workers_count} workers</span>}
-                                    </div>
+                                <div className="flex items-center gap-3 text-xs text-gray-500">
+                                    <span className="text-sm font-semibold text-gray-900">{log.log_date}</span>
+                                    {log.weather && <span>{weatherIcons[log.weather] || ''} {log.weather}</span>}
+                                    {log.workers_count > 0 && <span>{log.workers_count} workers</span>}
                                 </div>
                                 <span className="text-xs text-gray-400">
                                     {log.logger?.first_name} {log.logger?.last_name}
                                 </span>
                             </div>
+                            {log.machinery?.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {log.machinery.map((m) => (
+                                        <span key={m.id} className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600">{m.machinery_type} x{m.quantity}</span>
+                                    ))}
+                                </div>
+                            )}
                             {log.work_performed && (
                                 <div className="mt-2">
                                     <p className="text-xs font-medium text-gray-600">Work Performed:</p>
@@ -720,10 +798,32 @@ function DocumentsTab({ project, canEdit, onRefresh }) {
 }
 
 // ─── Calendar Tab ──────────────────────────────────────────────
-function CalendarTab({ project, canEdit, onRefresh }) {
+function CalendarTab({ project, canEdit }) {
+    const [events, setEvents] = useState(project.calendar_events || []);
+    const [loading, setLoading] = useState(false);
+    const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [form, setForm] = useState({ title: '', type: 'meeting', start_datetime: '', end_datetime: '', location: '', description: '' });
     const [saving, setSaving] = useState(false);
+
+    const fetchEvents = useCallback(async () => {
+        setLoading(true);
+        try {
+            const params = {};
+            if (search) params.search = search;
+            const res = await projectService.getEvents(project.id, params);
+            setEvents(res.data || []);
+        } catch {
+            setEvents([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [project.id, search]);
+
+    useEffect(() => {
+        const t = setTimeout(() => fetchEvents(), 300);
+        return () => clearTimeout(t);
+    }, [fetchEvents]);
 
     const handleCreate = async (e) => {
         e.preventDefault();
@@ -733,7 +833,7 @@ function CalendarTab({ project, canEdit, onRefresh }) {
             toast.success('Event created');
             setShowForm(false);
             setForm({ title: '', type: 'meeting', start_datetime: '', end_datetime: '', location: '', description: '' });
-            onRefresh();
+            fetchEvents();
         } catch {
             toast.error('Failed to create event');
         } finally {
@@ -745,13 +845,12 @@ function CalendarTab({ project, canEdit, onRefresh }) {
         try {
             await projectService.deleteEvent(project.id, eventId);
             toast.success('Event deleted');
-            onRefresh();
+            fetchEvents();
         } catch {
             toast.error('Failed to delete');
         }
     };
 
-    const events = project.calendar_events || [];
     const typeColors = { meeting: 'bg-blue-100 text-blue-700', inspection: 'bg-orange-100 text-orange-700', deadline: 'bg-red-100 text-red-700', milestone: 'bg-amber-100 text-amber-700', other: 'bg-gray-100 text-gray-700' };
 
     return (
@@ -763,6 +862,17 @@ function CalendarTab({ project, canEdit, onRefresh }) {
                 </button>
             )}
         >
+            <div className="relative mb-4 max-w-xs">
+                <HiOutlineSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                    type="text"
+                    placeholder="Search events..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                />
+            </div>
+
             {showForm && (
                 <form onSubmit={handleCreate} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -785,7 +895,9 @@ function CalendarTab({ project, canEdit, onRefresh }) {
                     </div>
                 </form>
             )}
-            {events.length === 0 ? (
+            {loading ? (
+                <LoadingSpinner />
+            ) : events.length === 0 ? (
                 <p className="py-6 text-center text-sm text-gray-400">No events scheduled</p>
             ) : (
                 <div className="space-y-3">

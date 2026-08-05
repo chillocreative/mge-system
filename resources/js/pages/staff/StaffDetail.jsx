@@ -14,6 +14,8 @@ const statusColors = {
 
 const labelize = (v) => (v ? String(v).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '-');
 
+const maritalStatusLabels = { single: 'Belum Berkahwin', married: 'Berkahwin', divorced: 'Bercerai' };
+
 function Row({ label, value }) {
     return (
         <div className="flex justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
@@ -125,6 +127,20 @@ export default function StaffDetail() {
                         label="Base Salary"
                         value={emp.base_salary ? `RM ${Number(emp.base_salary).toLocaleString('en-MY', { minimumFractionDigits: 2 })}` : null}
                     />
+                </Card>
+
+                <Card title="Family & Emergency Contact">
+                    <Row label="Marital Status" value={emp.marital_status ? maritalStatusLabels[emp.marital_status] : null} />
+                    {emp.marital_status === 'married' && (
+                        <>
+                            <Row label="Spouse Name" value={emp.spouse_name} />
+                            <Row label="Spouse IC No" value={emp.spouse_ic_no} />
+                        </>
+                    )}
+                    <Row label="Number of Children" value={emp.number_of_children ?? null} />
+                    <Row label="Emergency Contact Name" value={emp.emergency_contact_name} />
+                    <Row label="Emergency Contact Phone" value={emp.emergency_contact_phone} />
+                    <Row label="Relationship" value={emp.emergency_contact_relationship} />
                 </Card>
 
                 <Card title="Bank & Statutory">

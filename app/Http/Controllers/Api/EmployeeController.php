@@ -47,6 +47,13 @@ class EmployeeController extends Controller
             'tax_no' => ['nullable', 'string', 'max:50'],
             'base_salary' => ['nullable', 'numeric', 'min:0'],
             'status' => ['nullable', 'in:active,inactive,resigned'],
+            'marital_status' => ['nullable', 'in:married,single,divorced'],
+            'spouse_name' => ['nullable', 'string', 'max:255'],
+            'spouse_ic_no' => ['nullable', 'string', 'max:50'],
+            'number_of_children' => ['nullable', 'integer', 'min:0'],
+            'emergency_contact_name' => ['nullable', 'string', 'max:255'],
+            'emergency_contact_phone' => ['nullable', 'string', 'max:50'],
+            'emergency_contact_relationship' => ['nullable', 'string', 'max:100'],
             'photo' => ['nullable', 'image', 'max:5120'],
         ]);
 
@@ -89,6 +96,13 @@ class EmployeeController extends Controller
             'tax_no' => ['nullable', 'string', 'max:50'],
             'base_salary' => ['nullable', 'numeric', 'min:0'],
             'status' => ['nullable', 'in:active,inactive,resigned'],
+            'marital_status' => ['nullable', 'in:married,single,divorced'],
+            'spouse_name' => ['nullable', 'string', 'max:255'],
+            'spouse_ic_no' => ['nullable', 'string', 'max:50'],
+            'number_of_children' => ['nullable', 'integer', 'min:0'],
+            'emergency_contact_name' => ['nullable', 'string', 'max:255'],
+            'emergency_contact_phone' => ['nullable', 'string', 'max:50'],
+            'emergency_contact_relationship' => ['nullable', 'string', 'max:100'],
             'photo' => ['nullable', 'image', 'max:5120'],
         ]);
 
