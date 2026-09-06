@@ -210,3 +210,55 @@ The core of the module. Written by Claude directly, test-first — not delegated
 #### ⚠️ Two smaller assumptions logged
 - `new_joiner_proration` values `full` and `none` are treated identically (no proration). The plan lists both without distinguishing them. If `none` was meant to mean "no leave at all in the first year", tell me — one-line change.
 - `staff_leave_entitlement_overrides` (plan 7.2, per-employee contract exceptions) **not built** — plan §27.3 lists it under "boleh menyusul" (can follow later, question H11).
+
+### Phase E — Engine wired in, behind a flag ✅ (commit `a073246`)
+
+`config('leave.engine_enabled')`, default **false**. Two tests pin the flag-off path to exactly what production does today — including the unflattering one documenting that a 100-day annual leave request is currently accepted without complaint.
+
+With the flag on, `apply()` now:
+- computes days via the engine (rest days + public holidays excluded)
+- writes one `leave_days` row per calendar day, excluded ones included with their reason
+- **enforces `requires_attachment`** — declared on `leave_types` since June, never actually checked until now
+- **refuses a request that exceeds the balance**, checked *per leave year* so a New Year-spanning request is measured against both
+- **counts pending requests**, so two overlapping requests cannot both be approved off the same remaining days (plan 8.4)
+
+`approve()` derives balances from `leave_days` rather than incrementing a counter. `reject()` and `cancel()` drop the day rows and the balance recovers on its own (plan 27.13).
+
+#### Two decisions worth knowing
+
+**Legacy requests still count.** Production rows have `days_count` but no `leave_days`. Without a fallback, every employee would appear to have their full entitlement back the moment the engine was switched on — a silent, system-wide over-grant. Covered by a test.
+
+**Hospitalisation shows the effective balance, not the raw cap** — 56 once 4 days of MC are taken, not 60. Plan 7.3.7: showing 60 means the employee requests 60, is refused at 56, and the complaint goes to HR rather than being self-explanatory.
+
+### Phase F — Shadow mode ✅ (commit `feeef82`) ⭐
+
+```bash
+php artisan leave:recalculate --year=2026
+```
+
+Calculates every employee's balance and reports where it differs from what is stored. **Writes nothing** unless `--commit`. Locked years are skipped and reported separately.
+
+Plan 27.14 calls this the most valuable stage of the go-live and I agree — it validates the engine against *every* employee on real data while the current numbers stay in use, replacing the manual 10-employee spot check of plan 27.6 with an automatic check across everybody, at zero risk.
+
+**This is the command to run first against a production dump.** Verified working end-to-end on the local database.
+
+---
+
+## Where this leaves the go-live
+
+| Plan stage | State |
+|---|---|
+| P1 — new tables only | ✅ Done, verified reversible |
+| P2 — seed data | ✅ Done, idempotent |
+| P3 — shadow mode | ✅ **Tool built and tested.** Needs a production dump to run for real |
+| P4 — balances visible to HR only | Needs Phase G admin UI + your sign-off |
+| P5 — open to all staff | 🔴 Your decision. Point of no return |
+
+**79 tests, all passing.** Zero behaviour change in production: the engine is off, and every commit is local — nothing pushed, nothing deployed.
+
+### Suggested order when you wake
+
+1. Answer item 1 (the AL 8-vs-14 conflict) — it blocks everything downstream
+2. Send a production dump, or run the orphan-record SQL in item 3 yourself
+3. Run `leave:recalculate --year=2026` against the dump and read the differences
+4. Decide item 4 (approval routing) — it is a policy call, not a technical one
