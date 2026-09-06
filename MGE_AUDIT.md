@@ -182,7 +182,8 @@ Already built, and it does **not** match the plan's assumption of `Reporting Man
 | M1 | Real frontend stack? | React 19 SPA + Vite 7 + Tailwind 4 (**not** Blade/Livewire/Inertia/Filament) |
 | AB7 | Every staff member has a login? | `employees.user_id` is **nullable** — the schema permits staff without logins, whatever the current data says |
 | E4 | Storage — VPS disk or S3/Spaces? | `FILESYSTEM_DISK=local` |
-| S7 | Chromium on VPS for PDF? | Not needed for existing work — `barryvdh/laravel-dompdf` already installed |
+| S7 | Chromium on VPS for PDF? | Not needed — `barryvdh/laravel-dompdf` already installed |
+| **C8** | **Is the `Monthly Report` button actually working?** ⭐ | ✅ **Yes.** `routes/api.php` has `GET projects/{project}/site-logs/report/pdf` → `SiteLogController@monthlyReportPdf`. The plan lists C8 as one of the eight things blocking a start and as the question that "determines the scope of Ciri 2". It is implemented — Ciri 2 is an improvement to an existing report, not a build |
 
 ---
 
