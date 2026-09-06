@@ -76,7 +76,13 @@ So requests do **not** get stuck today. But it means everyone's leave goes to th
 
 I built work patterns as **per-category with a per-employee override** (plan's recommended option B): Office = Mon–Fri, Site = Mon–Sat resting Sunday. If site crews actually rotate their rest day week to week, option B under-counts and we need option C (per-employee schedule). The override FK is already in place so C is an addition later, not a rewrite.
 
-### 6. 2026 public holidays — I deliberately did not guess them
+### 6. ⚠️ Rebuild the frontend before you deploy
+
+`public/build` is tracked, and `deploy.yml` clears the assets directory then pulls rather than building on the server — so the committed bundle is what production serves. I rebuilt and committed it (`8ca4d7c`), otherwise the deployed app would not contain the new breakdown component.
+
+**But I built against the current working tree, which has uncommitted `package-lock.json` changes that predate this session.** That may not match what `npm ci && npm run build` produces from the committed lockfile. Run a clean rebuild before deploying.
+
+### 7. 2026 public holidays — I deliberately did not guess them
 
 Fixed-date holidays are seeded. Chinese New Year, Hari Raya Aidilfitri/Aidiladha, Deepavali, Wesak, Awal Muharram, Maulidur Rasul, Thaipusam and the Agong's birthday are lunar/gazetted and move every year. Inventing dates would silently mis-deduct leave for every employee. **HR must enter them from the official gazette** — the admin screen for that is Phase G.
 
