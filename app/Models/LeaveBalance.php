@@ -9,6 +9,7 @@ class LeaveBalance extends Model
 {
     protected $fillable = [
         'employee_id', 'leave_type_id', 'year', 'entitled_days', 'used_days', 'remaining_days',
+        'carried_forward', 'adjustment_days', 'rule_snapshot', 'calculated_at', 'is_locked',
     ];
 
     protected function casts(): array
@@ -18,6 +19,11 @@ class LeaveBalance extends Model
             'entitled_days' => 'decimal:1',
             'used_days' => 'decimal:1',
             'remaining_days' => 'decimal:1',
+            'carried_forward' => 'decimal:2',
+            'adjustment_days' => 'decimal:2',
+            'rule_snapshot' => 'array',
+            'calculated_at' => 'datetime',
+            'is_locked' => 'boolean',
         ];
     }
 

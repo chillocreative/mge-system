@@ -9,7 +9,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement('ALTER TABLE site_logs MODIFY title VARCHAR(255) NULL');
+        Schema::table('site_logs', function (Blueprint $table) {
+            $table->string('title')->nullable()->change();
+        });
 
         Schema::table('site_logs', function (Blueprint $table) {
             $table->time('rain_start_time')->nullable()->after('weather');
@@ -25,7 +27,10 @@ return new class extends Migration
             $table->dropColumn(['rain_start_time', 'rain_end_time', 'overcast_time', 'clear_time']);
         });
 
-        DB::statement("UPDATE site_logs SET title = '' WHERE title IS NULL");
-        DB::statement('ALTER TABLE site_logs MODIFY title VARCHAR(255) NOT NULL');
+        DB::table('site_logs')->whereNull('title')->update(['title' => '']);
+
+        Schema::table('site_logs', function (Blueprint $table) {
+            $table->string('title')->nullable(false)->change();
+        });
     }
 };

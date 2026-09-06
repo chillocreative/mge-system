@@ -10,7 +10,7 @@ class LeaveType extends Model
 {
     protected $fillable = [
         'name', 'code', 'default_days_per_year', 'is_paid', 'requires_attachment', 'is_active',
-        'requires_director_approval', 'manager_approver_id', 'director_approver_id',
+        'requires_director_approval', 'manager_approver_id', 'director_approver_id', 'quota_pool_id',
     ];
 
     protected function casts(): array
@@ -39,6 +39,11 @@ class LeaveType extends Model
     public function directorApprover(): BelongsTo
     {
         return $this->belongsTo(User::class, 'director_approver_id');
+    }
+
+    public function quotaPool(): BelongsTo
+    {
+        return $this->belongsTo(LeaveQuotaPool::class, 'quota_pool_id');
     }
 
     // ── Scopes ──

@@ -14,7 +14,7 @@ class Employee extends Model
     protected $fillable = [
         'employee_no', 'first_name', 'last_name', 'ic_passport_no', 'email', 'phone',
         'gender', 'dob', 'address', 'department_id', 'designation_id', 'employment_type',
-        'category', 'hire_date', 'resign_date', 'reporting_manager_id',
+        'category', 'work_pattern_id', 'hire_date', 'resign_date', 'reporting_manager_id',
         'bank_name', 'bank_account_no', 'epf_no', 'socso_no', 'tax_no', 'base_salary',
         'status', 'user_id', 'photo_path', 'created_by',
         'marital_status', 'spouse_name', 'spouse_ic_no', 'number_of_children',
@@ -94,6 +94,16 @@ class Employee extends Model
     public function trainingRequests(): HasMany
     {
         return $this->hasMany(TrainingRequest::class);
+    }
+
+    public function workPattern(): BelongsTo
+    {
+        return $this->belongsTo(WorkPattern::class);
+    }
+
+    public function leaveDays(): HasMany
+    {
+        return $this->hasMany(LeaveDay::class);
     }
 
     public function leaveBalances(): HasMany
