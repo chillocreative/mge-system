@@ -35,7 +35,7 @@ jobs:
         run: chmod -R 775 storage bootstrap/cache
 
       - name: Lint (Pint)
-        run: vendor/bin/pint --test
+        run: php vendor/bin/pint --test
 
       - name: Run tests
         run: php artisan test
