@@ -12,6 +12,8 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             DepartmentSeeder::class,
             AdminUserSeeder::class,
+            LeavePolicySeeder::class,
+            PublicHolidaySeeder::class,
         ]);
     }
 }
