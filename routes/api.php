@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\InternalEmailController;
 use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\LeaveController;
+use App\Http\Controllers\Api\LeavePolicyController;
 use App\Http\Controllers\Api\MaintenanceController;
 use App\Http\Controllers\Api\MeetingController;
 use App\Http\Controllers\Api\MemoController;
@@ -692,6 +693,43 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [LeaveController::class, 'storeType'])->middleware('permission:leave.manage');
         Route::put('/{id}', [LeaveController::class, 'updateType'])->middleware('permission:leave.manage');
         Route::delete('/{id}', [LeaveController::class, 'destroyType'])->middleware('permission:leave.manage');
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | Leave Policy Administration (HR)
+    |----------------------------------------------------------------------
+    |
+    | Entitlement tiers, work patterns, public holidays and policy settings.
+    | Everything that writes is gated on leave.manage — these values decide how
+    | many days every employee is owed, so they are administrator-only.
+    |
+    | Reads are gated on leave.view so the apply form can show the holiday
+    | calendar and explain a day breakdown without granting write access.
+    |
+    */
+    Route::prefix('leave-policy')->group(function () {
+        // Public holidays
+        Route::get('/holidays', [LeavePolicyController::class, 'holidays'])->middleware('permission:leave.view,leave.request,leave.manage');
+        Route::post('/holidays', [LeavePolicyController::class, 'storeHoliday'])->middleware('permission:leave.manage');
+        Route::put('/holidays/{id}', [LeavePolicyController::class, 'updateHoliday'])->middleware('permission:leave.manage');
+        Route::delete('/holidays/{id}', [LeavePolicyController::class, 'destroyHoliday'])->middleware('permission:leave.manage');
+
+        // Work patterns
+        Route::get('/work-patterns', [LeavePolicyController::class, 'workPatterns'])->middleware('permission:leave.view,leave.manage');
+        Route::post('/work-patterns', [LeavePolicyController::class, 'storeWorkPattern'])->middleware('permission:leave.manage');
+        Route::put('/work-patterns/{id}', [LeavePolicyController::class, 'updateWorkPattern'])->middleware('permission:leave.manage');
+
+        // Entitlement tiers
+        Route::get('/entitlement-rules', [LeavePolicyController::class, 'entitlementRules'])->middleware('permission:leave.view,leave.manage');
+        Route::post('/entitlement-rules', [LeavePolicyController::class, 'storeEntitlementRule'])->middleware('permission:leave.manage');
+        Route::put('/entitlement-rules/{id}', [LeavePolicyController::class, 'updateEntitlementRule'])->middleware('permission:leave.manage');
+        Route::delete('/entitlement-rules/{id}', [LeavePolicyController::class, 'destroyEntitlementRule'])->middleware('permission:leave.manage');
+        Route::post('/entitlement-rules/confirm', [LeavePolicyController::class, 'confirmEntitlements'])->middleware('permission:leave.manage');
+
+        // Policy settings
+        Route::get('/settings', [LeavePolicyController::class, 'settings'])->middleware('permission:leave.manage');
+        Route::put('/settings', [LeavePolicyController::class, 'updateSettings'])->middleware('permission:leave.manage');
     });
 
     /*
