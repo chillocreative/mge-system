@@ -21,7 +21,8 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            cd /home/chilloc1/app.mge-eng.com/
+            set -e
+            cd /home/mgeengco/app.mge-eng.com/
 
             # 0. Clear old build assets BEFORE pulling new code
             echo "Clearing old build assets..."
@@ -63,4 +64,3 @@ jobs:
             fi
 
             echo "Deployment complete!"
-            exit 0
