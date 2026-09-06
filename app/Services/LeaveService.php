@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use App\Models\Employee;
 use App\Models\LeaveBalance;
+use App\Models\LeaveDay;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\User;
 use App\Notifications\LeaveStatusNotification;
+use App\Services\Leave\LeaveEngine;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -16,6 +19,8 @@ use Illuminate\Support\Facades\Storage;
 
 class LeaveService
 {
+    public function __construct(private readonly LeaveEngine $engine) {}
+
     // ── Leave Requests ──
 
     public function list(array $filters, int $perPage = 15): LengthAwarePaginator
@@ -56,7 +61,25 @@ class LeaveService
             $end = Carbon::parse($data['end_date']);
             $halfDay = ! empty($data['half_day']);
 
-            $days = $halfDay ? 0.5 : ($start->diffInDays($end) + 1);
+            $employee = Employee::findOrFail($data['employee_id']);
+            $leaveType = LeaveType::findOrFail($data['leave_type_id']);
+
+            $calculated = null;
+
+            if ($this->engine->enabled()) {
+                // Supporting document requirement — declared on leave_types but
+                // never enforced before now.
+                if ($leaveType->requires_attachment && ! $attachment) {
+                    abort(422, "A supporting document is required for {$leaveType->name}.");
+                }
+
+                $calculated = $this->engine->calculate($employee, $start, $end, $halfDay);
+                $days = $calculated->totalDeducted();
+
+                $this->engine->assertWithinBalance($employee, $leaveType, $calculated);
+            } else {
+                $days = $halfDay ? 0.5 : ($start->diffInDays($end) + 1);
+            }
 
             if ($attachment) {
                 $data['attachment_path'] = $attachment->store('leave/attachments', 'local');
@@ -70,6 +93,10 @@ class LeaveService
             $data['created_by'] = $userId;
 
             $request = LeaveRequest::create($data);
+
+            if ($calculated !== null) {
+                $this->engine->persistDays($request, $calculated);
+            }
 
             $request->load([
                 'employee:id,employee_no,first_name,last_name,user_id',
@@ -140,6 +167,15 @@ class LeaveService
             'rejection_reason' => $reason,
         ]);
 
+        if ($this->engine->enabled()) {
+            // A rejected request must stop consuming the pending balance.
+            $this->engine->releaseDays($request);
+            $this->syncBalancesFor($request, [
+                Carbon::parse($request->start_date)->year,
+                Carbon::parse($request->end_date)->year,
+            ]);
+        }
+
         $this->notifyEmployee($request, 'rejected');
 
         return $this->loadFull($request);
@@ -156,14 +192,53 @@ class LeaveService
         $request->rejection_reason = null;
         $request->save();
 
-        $year = Carbon::parse($request->start_date)->year;
-        $balance = $this->ensureBalance($request->employee_id, $request->leave_type_id, $year);
+        if ($this->engine->enabled()) {
+            // Balances are derived from leave_days rather than incremented, so a
+            // request spanning New Year lands on the correct year's balance
+            // instead of being charged entirely to its start date.
+            $this->syncBalancesFor($request);
+        } else {
+            $year = Carbon::parse($request->start_date)->year;
+            $balance = $this->ensureBalance($request->employee_id, $request->leave_type_id, $year);
 
-        $balance->used_days = (float) $balance->used_days + (float) $request->days_count;
-        $balance->remaining_days = (float) $balance->entitled_days - (float) $balance->used_days;
-        $balance->save();
+            $balance->used_days = (float) $balance->used_days + (float) $request->days_count;
+            $balance->remaining_days = (float) $balance->entitled_days - (float) $balance->used_days;
+            $balance->save();
+        }
 
         $this->notifyEmployee($request, 'approved');
+    }
+
+    /**
+     * Recalculate and store the balance snapshot for every leave year this
+     * request touches.
+     *
+     * A request from 30 Dec to 3 Jan draws on two different years' balances, so
+     * updating only the start date's year would leave the other one wrong.
+     *
+     * @param  array<int, int>|null  $years  Defaults to the years the request's leave_days fall in.
+     */
+    private function syncBalancesFor(LeaveRequest $request, ?array $years = null): void
+    {
+        $years ??= LeaveDay::where('leave_request_id', $request->id)
+            ->distinct()
+            ->pluck('year')
+            ->all();
+
+        if (empty($years)) {
+            $years = [Carbon::parse($request->start_date)->year];
+        }
+
+        $employee = $request->employee ?? Employee::find($request->employee_id);
+        $leaveType = $request->leaveType ?? LeaveType::find($request->leave_type_id);
+
+        if (! $employee || ! $leaveType) {
+            return;
+        }
+
+        foreach (array_unique($years) as $year) {
+            $this->engine->syncBalance($employee, $leaveType, (int) $year);
+        }
     }
 
     /**
@@ -274,7 +349,12 @@ class LeaveService
 
             $request->update(['status' => 'cancelled']);
 
-            if ($wasApproved) {
+            if ($this->engine->enabled()) {
+                // Dropping the per-day rows restores the balance on its own —
+                // plan 27.13. Sync afterwards so the stored snapshot agrees.
+                $this->engine->releaseDays($request);
+                $this->syncBalancesFor($request, [Carbon::parse($request->start_date)->year, Carbon::parse($request->end_date)->year]);
+            } elseif ($wasApproved) {
                 $year = Carbon::parse($request->start_date)->year;
                 $balance = LeaveBalance::where('employee_id', $request->employee_id)
                     ->where('leave_type_id', $request->leave_type_id)
