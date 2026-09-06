@@ -162,3 +162,51 @@ Migrations and models delegated to `qwen-agent`; I reviewed and fixed before app
 - `dropForeign()` + `dropColumn()` replaced with the repo's `dropConstrainedForeignId()` convention.
 
 Redundant `protected $table` declarations stripped from the six models to match existing conventions. The driver-aware migration fixes I wrote directly — schema-risky work is not delegated.
+
+### Phase C — Seed data ✅ (commit `dd886ca`)
+
+Work patterns (Office Mon–Fri, Site Mon–Sat), the MC + Hospitalisation 60-day shared pool, 13 global policy defaults, Employment Act entitlement tiers (all flagged `is_seed_default`), and fixed-date public holidays.
+
+**Verified:** seeded twice on both MySQL and sqlite — row counts unchanged. 20 tests pass.
+
+**The idempotency test caught a real bug**, which is exactly why it was written. `firstOrCreate` on a cast `date` column stores `2026-01-01 00:00:00` but looks up `2026-01-01`, so the second run missed the existing row and violated the unique index. That is the "re-run reverts HR's tuning" failure mode of plan 7.3.10(c). Replaced with a `whereDate` lookup that behaves correctly on both drivers.
+
+**Also confirmed:** `leave_types` are seeded **inside the migration itself**, so `default_days_per_year` AL = 14 is already in production. This is the source of the conflict in item 1 above.
+
+**Deliberately omitted:** all lunar/gazetted holidays. See item 6.
+
+### Phase D — Calculation engine ✅ (commit `bed59a1`) ⭐
+
+The core of the module. Written by Claude directly, test-first — not delegated, per the run brief (entitlement logic is money logic).
+
+| Class | Responsibility |
+|---|---|
+| `LeaveDayCalculator` | days in range − rest days − public holidays (plan 27.6b), one row per day |
+| `CalculatedLeave` | result object: total, per-year split, exclusions with reasons |
+| `EntitlementResolver` | service tiers, tier crossing, proration, rounding |
+| `LeavePolicy` | settings resolution (type override → global → hardcoded default) + `rule_snapshot` |
+| `WorkPatternResolver` | which weekdays an employee actually works |
+| `HolidayCalendar` | national + Penang holidays, other states ignored |
+
+**39 new tests**, one per edge case in plan §27.7. **59 tests pass overall.** Pint clean.
+
+#### Design decisions worth knowing
+
+**Safe degradation.** Every fallback errs towards being visible rather than silent:
+
+| Missing config | Behaviour | Why |
+|---|---|---|
+| No work pattern | every day counts | Over-deduction gets reported. A silent under-deduction is found at year end, after the leave was taken |
+| No matching tier | `leave_types.default_days_per_year` | Never zero (plan 7.3.3a) |
+| No hire date | zero service | Never silently award the top tier |
+| Unknown rounding mode | `nearest_half` | Never throw mid-balance-calculation |
+
+**Tier boundary in exactly one method.** `min_years ≤ service < max_years` lives only in `EntitlementResolver::resolveTier()`. Plan 7.3.8 warns that an inconsistent boundary gives staff at exactly 2.00 or 5.00 years different answers on different screens — untraceable once it arrives as an HR complaint. There is a test pinning 1.999999 → lower tier and 2.000000 → upper.
+
+**Rest day beats public holiday.** When a holiday falls on someone's rest day, the recorded reason is `rest_day` — they were not working anyway, so it must not be counted as a bonus day off.
+
+**Nothing is wired up yet.** `config('leave.engine_enabled')` defaults to `false`. Leave behaves today exactly as it did yesterday.
+
+#### ⚠️ Two smaller assumptions logged
+- `new_joiner_proration` values `full` and `none` are treated identically (no proration). The plan lists both without distinguishing them. If `none` was meant to mean "no leave at all in the first year", tell me — one-line change.
+- `staff_leave_entitlement_overrides` (plan 7.2, per-employee contract exceptions) **not built** — plan §27.3 lists it under "boleh menyusul" (can follow later, question H11).
