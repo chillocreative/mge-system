@@ -262,3 +262,87 @@ Plan 27.14 calls this the most valuable stage of the go-live and I agree — it 
 2. Send a production dump, or run the orphan-record SQL in item 3 yourself
 3. Run `leave:recalculate --year=2026` against the dump and read the differences
 4. Decide item 4 (approval routing) — it is a policy call, not a technical one
+
+### Phase G — Policy administration API ✅ (commit `f8fddea`)
+
+14 endpoints under `/api/leave-policy`: public holidays, work patterns, entitlement tiers, policy settings.
+
+**The holidays endpoints are what HR needs first** — the seeder ships fixed-date holidays only and refuses to guess the lunar ones, so this is where the real 2026 gazette gets entered.
+
+`POST /leave-policy/entitlement-rules/confirm` implements plan 7.3.10(b): the list returns `has_unverified_defaults` so the UI can warn that the tiers are unreviewed statutory minimums, and confirming clears the flag. Editing a tier clears it too — an admin who changed the value has by definition looked at it.
+
+**Permission gates written by hand.** Every write is `leave.manage`: these values decide how many days each employee is owed, and an employee who could edit a tier could grant themselves leave. Reads are wider (`leave.view` / `leave.request`) so the apply form can explain a breakdown without write access. Five tests cover the gates.
+
+Deactivation never hard-deletes — past leave records still reference these rows (plan 26.3).
+
+#### Delegation note
+Controller delegated to qwen; review caught four issues before anything ran:
+- `settings()` merged a model collection with a `defaults` key, producing a malformed response — genuinely broken
+- missing `use App\Http\Controllers\Controller` (fatal on first request)
+- `whereYear('date', …)` instead of the denormalised `year` column, bypassing the index added for exactly that query
+- `gt:min_years` on a partial update fails when `min_years` is absent from the payload
+
+### Phase H — Day breakdown on the apply form ✅ (commit `4846cf8`)
+
+`POST /api/leaves/preview` plus a live, debounced panel on the apply form:
+
+```
+7 calendar days selected
+  − Wed 16 Sep · Public holiday (Malaysia Day)
+  − Sat 19 Sep · Rest day
+  − Sun 20 Sep · Rest day
+                                     Deducted   4.0 days
+  Annual remaining                             12.0 / 16.0
+```
+
+Also surfaces the cross-year split, the shared MC + Hospitalisation cap (so a number that appears to move on its own has a visible reason, plan 7.3.7), and a warning when the request already exceeds the balance — better than a 422 after submitting.
+
+The preview is **server-side**: rest days and holidays are policy data, so deriving them in the browser would risk showing a number the backend disagrees with. With the engine off the endpoint reports `engine_enabled: false` and the panel hides itself.
+
+An employee may only preview their own leave — balances are personal data. Covered by a test.
+
+Frontend builds clean (`npm run build`).
+
+---
+
+## Final state
+
+**104 tests, all passing.** Pint clean. Frontend builds. `php artisan route:list` intact.
+
+**Nothing pushed. Nothing deployed. Production is untouched and unchanged** — the engine flag is off, so leave behaves exactly as it did before this session.
+
+### Commits (all local, on `main`)
+
+| Commit | Phase |
+|---|---|
+| `888eb75` | docs: audit, execution plan, progress log |
+| `edc1fab` | Phase B — policy engine schema (P1) |
+| `dd886ca` | Phase C — seed data (P2) |
+| `bed59a1` | Phase D — calculation engine |
+| `a073246` | Phase E — engine wired in behind a flag |
+| `feeef82` | Phase F — shadow mode (P3) |
+| `f8fddea` | Phase G — policy administration API |
+| `4846cf8` | Phase H — apply form day breakdown |
+
+Pre-existing uncommitted changes (`vendor/`, `composer.*`, `CLAUDE.md`, `.gitignore`, `package-lock.json`) were **left untouched** as instructed.
+
+### To turn it on
+
+```bash
+# .env — leave this OFF until the shadow comparison has been reviewed
+LEAVE_ENGINE_ENABLED=true
+```
+
+Until that line exists, none of this affects anyone.
+
+### What I did not do, and why
+
+| Not done | Why |
+|---|---|
+| Data cleanup, orphan repair, opening balances | Needs a production dump. Local DB has 1 employee |
+| P4 / P5 rollout | Irreversible exposure to real staff — your call |
+| Any push or deploy | Explicitly withheld |
+| 2026 lunar holiday dates | Would silently corrupt every calculation. HR enters from the gazette |
+| Ciri 1–6, 10–25 | Deferred by the plan's own §27 reprioritisation |
+| `staff_leave_entitlement_overrides` | Plan §27.3 lists it under "can follow later" (H11) |
+| Admin UI screens for policy settings | API is done and tested; the React screens are the natural next session |
