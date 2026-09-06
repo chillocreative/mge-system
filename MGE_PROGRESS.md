@@ -130,3 +130,35 @@ $days = $halfDay ? 0.5 : ($start->diffInDays($end) + 1);
 ```
 
 Raw calendar days. No rest days, no public holidays, no work pattern, no cross-year split, **no balance check of any kind** — an employee can request 100 days of AL and nothing stops them. `requires_attachment` is declared on `leave_types` and never enforced. Replacing this correctly is the whole job.
+
+### Phase B — P1 schema ✅ (commit `edc1fab`)
+
+Six new tables + three column additions. **Additive only** — nothing reads them yet, so this is the plan's 🟢 near-zero-risk stage on a live system.
+
+| Table | Purpose |
+|---|---|
+| `work_patterns` | per-category rest-day patterns (plan 27.6b) |
+| `public_holidays` | national + state, per year |
+| `leave_policy_settings` | admin-tunable, global or per leave type, versioned via `effective_from` |
+| `leave_entitlement_rules` | service-year tiers, `min ≤ service < max`, with `is_seed_default` flag |
+| `leave_quota_pools` | combined caps — MC + Hospitalisation sharing 60 days |
+| `leave_days` | one row per leave day (plan 27.13) |
+
+Extended, **never renamed** (these columns are live): `leave_balances` += `carried_forward`, `adjustment_days`, `rule_snapshot`, `calculated_at`, `is_locked`; `leave_types` += `quota_pool_id`; `employees` += `work_pattern_id`.
+
+**Verified:** `migrate` → `rollback` → `migrate` round-trip clean on MySQL; column positions confirmed correct in the live schema; 12 tests pass (10 new).
+
+#### 🔧 Side fix — the test suite could never run
+
+Three pre-existing migrations used raw MySQL `ALTER TABLE ... MODIFY`, which sqlite cannot parse. `RefreshDatabase` therefore died at migration **14 of 92**, meaning **no feature test in this repo has ever been able to run**. That is why there were only 2 example tests.
+
+Made them driver-aware (`2026_02_13_000001`, `2026_08_06_000003`, `2026_08_06_000006`). The MySQL branch is byte-identical to before — production behaviour is unchanged, and these migrations have already run there so they will not re-execute. Only sqlite takes the new path.
+
+This was not optional: Phase D's correctness depends entirely on tests, and tests could not run.
+
+#### Delegation note
+Migrations and models delegated to `qwen-agent`; I reviewed and fixed before applying. Two real bugs caught in review:
+- `->constrained()->nullOnDelete()->after(...)` — `after()` chained onto the `ForeignKeyDefinition` instead of the column, so it would not have positioned the column. Reordered.
+- `dropForeign()` + `dropColumn()` replaced with the repo's `dropConstrainedForeignId()` convention.
+
+Redundant `protected $table` declarations stripped from the six models to match existing conventions. The driver-aware migration fixes I wrote directly — schema-risky work is not delegated.
