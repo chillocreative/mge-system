@@ -1,0 +1,66 @@
+name: Deploy to cPanel
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Execute Remote SSH Commands
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd /home/chilloc1/app.mge-eng.com/
+
+            # 0. Clear old build assets BEFORE pulling new code
+            echo "Clearing old build assets..."
+            rm -rf public/build/assets/*.js
+            rm -rf public/build/assets/*.css
+            rm -rf public/build/.vite
+
+            # 1. Pull latest code
+            git fetch origin
+            git reset --hard origin/main
+
+            # 2. Install Dependencies (production only)
+            if command -v composer &> /dev/null
+            then
+                composer install --no-dev --optimize-autoloader --no-interaction
+            fi
+
+            # 3. Fix Permissions
+            chmod -R 775 storage bootstrap/cache
+
+            # 4. Clear ALL Laravel Caches FIRST
+            if [ -f "artisan" ]; then
+                php artisan optimize:clear
+                php artisan cache:clear
+                php artisan config:clear
+                php artisan route:clear
+                php artisan view:clear
+
+                # 5. Run Migrations
+                php artisan migrate --force --no-interaction
+
+                # 6. Storage link (idempotent)
+                php artisan storage:link --force 2>/dev/null || true
+
+                # 7. Re-cache for production
+                php artisan config:cache
+                php artisan route:cache
+                php artisan view:cache
+            fi
+
+            echo "Deployment complete!"
+            exit 0
