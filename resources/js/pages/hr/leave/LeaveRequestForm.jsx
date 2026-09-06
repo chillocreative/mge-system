@@ -6,6 +6,7 @@ import leaveService from '@/services/leaveService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { HiOutlineArrowLeft } from 'react-icons/hi';
+import LeaveDayBreakdown from './LeaveDayBreakdown';
 
 export default function LeaveRequestForm() {
     const navigate = useNavigate();
@@ -19,6 +20,9 @@ export default function LeaveRequestForm() {
     const [types, setTypes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [preview, setPreview] = useState(null);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [previewError, setPreviewError] = useState(null);
     const [form, setForm] = useState({
         employee_id: '',
         leave_type_id: '',
@@ -64,6 +68,52 @@ export default function LeaveRequestForm() {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isFemale, types, form.leave_type_id]);
+
+    // Ask the server what this request would actually cost. Debounced, because
+    // it fires on every date keystroke. The server is the only correct source
+    // here — rest days and public holidays are policy data, so re-deriving them
+    // in the browser would risk showing a number the backend disagrees with.
+    useEffect(() => {
+        const { employee_id, leave_type_id, start_date, end_date, half_day } = form;
+
+        if (!employee_id || !leave_type_id || !start_date || !end_date) {
+            setPreview(null);
+            setPreviewError(null);
+            return;
+        }
+
+        let cancelled = false;
+        setPreviewLoading(true);
+
+        const timer = setTimeout(() => {
+            leaveService
+                .preview({
+                    employee_id,
+                    leave_type_id,
+                    start_date,
+                    end_date: half_day ? start_date : end_date,
+                    half_day,
+                })
+                .then((res) => {
+                    if (cancelled) return;
+                    setPreview(res.data);
+                    setPreviewError(null);
+                })
+                .catch((err) => {
+                    if (cancelled) return;
+                    setPreview(null);
+                    setPreviewError(err.response?.data?.message || null);
+                })
+                .finally(() => {
+                    if (!cancelled) setPreviewLoading(false);
+                });
+        }, 350);
+
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [form.employee_id, form.leave_type_id, form.start_date, form.end_date, form.half_day]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -190,6 +240,13 @@ export default function LeaveRequestForm() {
                         />
                         <label htmlFor="half_day" className="text-sm text-gray-700">Half day (0.5 day)</label>
                     </div>
+
+                    <LeaveDayBreakdown
+                        preview={preview}
+                        loading={previewLoading}
+                        error={previewError}
+                        leaveTypeName={selectedType?.name}
+                    />
 
                     <div>
                         <label className="mb-1 block text-sm font-medium text-gray-700">Reason</label>

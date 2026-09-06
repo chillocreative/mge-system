@@ -679,6 +679,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/pending-approvals', [LeaveController::class, 'pendingApprovals'])->middleware('permission:leave.view');
         Route::get('/my-employee', [LeaveController::class, 'myEmployee'])->middleware('permission:leave.request');
         Route::post('/', [LeaveController::class, 'store'])->middleware('permission:leave.request');
+        // Preview the day breakdown before submitting; controller restricts a
+        // non-admin to their own employee record.
+        Route::post('/preview', [LeaveController::class, 'preview'])->middleware('permission:leave.request,leave.manage');
         Route::get('/{id}', [LeaveController::class, 'show'])->middleware('permission:leave.view');
         Route::get('/{id}/attachment', [LeaveController::class, 'downloadAttachment'])->middleware('permission:leave.view');
         // Gate is leave.view so designated per-type approvers (who may only hold the Employee

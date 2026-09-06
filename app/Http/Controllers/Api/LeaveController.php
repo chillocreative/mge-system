@@ -6,13 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
+use App\Services\Leave\LeaveEngine;
 use App\Services\LeaveService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class LeaveController extends Controller
 {
-    public function __construct(private LeaveService $leaveService) {}
+    public function __construct(
+        private LeaveService $leaveService,
+        private LeaveEngine $engine,
+    ) {}
 
     // ── Leave Requests ──
 
@@ -51,6 +55,69 @@ class LeaveController extends Controller
         $leave = $this->leaveService->apply($validated, $request->user()->id, $attachment);
 
         return $this->created($leave, 'Leave request submitted successfully.');
+    }
+
+    /**
+     * Preview what a leave request would cost, without creating it.
+     *
+     * Plan 27.6b: two employees requesting the same dates can be deducted
+     * different amounts, because office staff rest Sat+Sun while site crews rest
+     * only Sunday. That is correct, but it will read as a bug to the person
+     * looking at it — so the apply form shows the working:
+     *
+     *     12 Sep – 16 Sep (5 calendar days)
+     *     Rest day: 14 Sep (Sunday)
+     *     Public holiday: none
+     *     Deducted from balance: 4.0 days
+     *
+     * Showing the breakdown up front settles the "why is his 4 and mine 5?"
+     * question before it becomes a ticket for HR.
+     */
+    public function preview(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'employee_id' => ['required', 'exists:employees,id'],
+            'leave_type_id' => ['required', 'exists:leave_types,id'],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'half_day' => ['nullable', 'boolean'],
+        ]);
+
+        $employee = Employee::findOrFail($validated['employee_id']);
+        $leaveType = LeaveType::findOrFail($validated['leave_type_id']);
+
+        // An employee may only preview their own leave unless they administer it.
+        $actor = $request->user();
+        if (! $actor->can('leave.manage') && $employee->user_id !== $actor->id) {
+            return $this->forbidden('You can only preview your own leave.');
+        }
+
+        if (! $this->engine->enabled()) {
+            return $this->success(['engine_enabled' => false]);
+        }
+
+        $calculated = $this->engine->calculate(
+            $employee,
+            $validated['start_date'],
+            $validated['end_date'],
+            (bool) ($validated['half_day'] ?? false),
+        );
+
+        $byYear = $calculated->deductedByYear();
+
+        return $this->success([
+            'engine_enabled' => true,
+            'calendar_days' => $calculated->calendarDays(),
+            'deducted_days' => $calculated->totalDeducted(),
+            'deducted_by_year' => $byYear,
+            'spans_multiple_years' => $calculated->spansMultipleYears(),
+            'exclusions' => $calculated->exclusions(),
+            'days' => $calculated->days,
+            'balances' => collect(array_keys($byYear) ?: [(int) date('Y', strtotime($validated['start_date']))])
+                ->mapWithKeys(fn (int $year) => [
+                    $year => $this->engine->summary($employee, $leaveType, $year),
+                ]),
+        ]);
     }
 
     public function show(int $id): JsonResponse

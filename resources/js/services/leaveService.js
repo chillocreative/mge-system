@@ -16,6 +16,12 @@ const leaveService = {
         });
         return response.data;
     },
+    // Ask the server what a request would cost before submitting it, so the
+    // form can show the day-by-day working (rest days, public holidays).
+    async preview(data) {
+        const response = await apiClient.post('/leaves/preview', data);
+        return response.data;
+    },
     async approve(id) {
         const response = await apiClient.post(`/leaves/${id}/approve`);
         return response.data;
