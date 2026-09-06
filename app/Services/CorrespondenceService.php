@@ -16,10 +16,16 @@ class CorrespondenceService
             ->orderByDesc('raised_date')
             ->orderByDesc('id');
 
-        if (!empty($filters['project_id'])) $query->forProject($filters['project_id']);
-        if (!empty($filters['type'])) $query->byType($filters['type']);
-        if (!empty($filters['status'])) $query->byStatus($filters['status']);
-        if (!empty($filters['search'])) {
+        if (! empty($filters['project_id'])) {
+            $query->forProject($filters['project_id']);
+        }
+        if (! empty($filters['type'])) {
+            $query->byType($filters['type']);
+        }
+        if (! empty($filters['status'])) {
+            $query->byStatus($filters['status']);
+        }
+        if (! empty($filters['search'])) {
             $query->where(fn ($q) => $q->where('title', 'like', "%{$filters['search']}%")
                 ->orWhere('reference_no', 'like', "%{$filters['search']}%")
                 ->orWhere('description', 'like', "%{$filters['search']}%"));
@@ -34,6 +40,7 @@ class CorrespondenceService
             $data['created_by'] = $userId;
             $correspondence = ProjectCorrespondence::create($data);
             $this->storeFiles($correspondence, $files);
+
             return $correspondence->load(['project:id,name,code', 'creator:id,first_name,last_name', 'files']);
         });
     }
@@ -44,6 +51,7 @@ class CorrespondenceService
             $correspondence = ProjectCorrespondence::findOrFail($id);
             $correspondence->update($data);
             $this->storeFiles($correspondence, $files);
+
             return $correspondence->load(['project:id,name,code', 'creator:id,first_name,last_name', 'files']);
         });
     }
@@ -66,6 +74,7 @@ class CorrespondenceService
     public function downloadFile(int $fileId)
     {
         $file = ProjectCorrespondenceFile::findOrFail($fileId);
+
         return Storage::disk('local')->download($file->file_path, $file->file_name);
     }
 

@@ -7,21 +7,26 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Concerns\SkipsFailures;
+use Maatwebsite\Excel\Concerns\SkipsOnFailure;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
-use Maatwebsite\Excel\Concerns\SkipsOnFailure;
-use Maatwebsite\Excel\Concerns\SkipsFailures;
 
-class AttendanceImport implements ToCollection, WithHeadingRow, WithValidation, SkipsOnFailure
+class AttendanceImport implements SkipsOnFailure, ToCollection, WithHeadingRow, WithValidation
 {
     use SkipsFailures;
 
     private string $uploadBatch;
+
     private int $uploadedBy;
+
     private array $rowErrors = [];
+
     private int $importedCount = 0;
+
     private int $skippedCount = 0;
+
     private array $userCache = [];
 
     public function __construct(int $uploadedBy)
@@ -48,13 +53,13 @@ class AttendanceImport implements ToCollection, WithHeadingRow, WithValidation, 
                 $clockOutRaw = $this->cleanValue($row[$cols['clock_out']] ?? null);
 
                 // Skip completely empty rows
-                if (!$employeeId && !$dateRaw) {
+                if (! $employeeId && ! $dateRaw) {
                     continue;
                 }
 
                 // Validate employee exists
                 $user = $this->resolveUser($employeeId);
-                if (!$user) {
+                if (! $user) {
                     $this->rowErrors[] = [
                         'row' => $rowNumber,
                         'field' => 'employee_id',
@@ -62,12 +67,13 @@ class AttendanceImport implements ToCollection, WithHeadingRow, WithValidation, 
                         'message' => "Employee ID \"{$employeeId}\" not found.",
                     ];
                     $this->skippedCount++;
+
                     continue;
                 }
 
                 // Parse date
                 $date = $this->parseDate($dateRaw);
-                if (!$date) {
+                if (! $date) {
                     $this->rowErrors[] = [
                         'row' => $rowNumber,
                         'field' => 'date',
@@ -75,6 +81,7 @@ class AttendanceImport implements ToCollection, WithHeadingRow, WithValidation, 
                         'message' => "Invalid date format \"{$dateRaw}\". Expected YYYY-MM-DD or DD/MM/YYYY.",
                     ];
                     $this->skippedCount++;
+
                     continue;
                 }
 
@@ -82,7 +89,7 @@ class AttendanceImport implements ToCollection, WithHeadingRow, WithValidation, 
                 $clockIn = $this->parseDateTime($date, $clockInRaw);
                 $clockOut = $this->parseDateTime($date, $clockOutRaw);
 
-                if ($clockInRaw && !$clockIn) {
+                if ($clockInRaw && ! $clockIn) {
                     $this->rowErrors[] = [
                         'row' => $rowNumber,
                         'field' => 'clock_in',
@@ -90,6 +97,7 @@ class AttendanceImport implements ToCollection, WithHeadingRow, WithValidation, 
                         'message' => "Invalid clock-in time \"{$clockInRaw}\".",
                     ];
                     $this->skippedCount++;
+
                     continue;
                 }
 
@@ -109,13 +117,13 @@ class AttendanceImport implements ToCollection, WithHeadingRow, WithValidation, 
 
                 // Determine status
                 $status = 'present';
-                if (!$clockIn && !$clockOut) {
+                if (! $clockIn && ! $clockOut) {
                     $status = 'absent';
                     $workingHours = 0;
                 } elseif (($workingHours + $overtimeHours) < $halfDayHours) {
                     $status = 'half_day';
                 } elseif ($clockIn) {
-                    $expectedStart = Carbon::parse($date->format('Y-m-d') . ' ' . $shiftStart);
+                    $expectedStart = Carbon::parse($date->format('Y-m-d').' '.$shiftStart);
                     if ($clockIn->diffInMinutes($expectedStart, false) < -$lateThreshold) {
                         $status = 'late';
                     }
@@ -165,7 +173,7 @@ class AttendanceImport implements ToCollection, WithHeadingRow, WithValidation, 
 
     private function resolveUser(mixed $employeeId): ?User
     {
-        if (!$employeeId) {
+        if (! $employeeId) {
             return null;
         }
 
@@ -187,7 +195,7 @@ class AttendanceImport implements ToCollection, WithHeadingRow, WithValidation, 
 
     private function parseDate(mixed $raw): ?Carbon
     {
-        if (!$raw) {
+        if (! $raw) {
             return null;
         }
 
@@ -214,7 +222,7 @@ class AttendanceImport implements ToCollection, WithHeadingRow, WithValidation, 
 
     private function parseDateTime(?Carbon $date, mixed $raw): ?Carbon
     {
-        if (!$raw || !$date) {
+        if (! $raw || ! $date) {
             return null;
         }
 
@@ -223,6 +231,7 @@ class AttendanceImport implements ToCollection, WithHeadingRow, WithValidation, 
             $totalMinutes = round((float) $raw * 24 * 60);
             $hours = intdiv((int) $totalMinutes, 60);
             $minutes = $totalMinutes % 60;
+
             return $date->copy()->setTime($hours, (int) $minutes);
         }
 
@@ -239,6 +248,7 @@ class AttendanceImport implements ToCollection, WithHeadingRow, WithValidation, 
         foreach ($timeFormats as $format) {
             try {
                 $time = Carbon::createFromFormat($format, trim((string) $raw));
+
                 return $date->copy()->setTime($time->hour, $time->minute, $time->second);
             } catch (\Throwable) {
                 continue;
@@ -261,6 +271,7 @@ class AttendanceImport implements ToCollection, WithHeadingRow, WithValidation, 
         if (is_string($value)) {
             return trim($value);
         }
+
         return $value;
     }
 

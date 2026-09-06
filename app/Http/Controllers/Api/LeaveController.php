@@ -20,6 +20,7 @@ class LeaveController extends Controller
     {
         $filters = $request->only(['employee_id', 'status', 'leave_type_id']);
         $perPage = min($request->integer('per_page', 15), 100);
+
         return $this->success($this->leaveService->list($filters, $perPage));
     }
 
@@ -39,7 +40,7 @@ class LeaveController extends Controller
         $type = LeaveType::find($validated['leave_type_id']);
         if ($type && preg_match('/maternity/i', $type->name)) {
             $employee = Employee::find($validated['employee_id']);
-            if (!$employee || $employee->gender !== 'female') {
+            if (! $employee || $employee->gender !== 'female') {
                 return $this->error('Maternity leave is only available to female staff.', 422);
             }
         }
@@ -48,6 +49,7 @@ class LeaveController extends Controller
         unset($validated['attachment']);
 
         $leave = $this->leaveService->apply($validated, $request->user()->id, $attachment);
+
         return $this->created($leave, 'Leave request submitted successfully.');
     }
 
@@ -87,7 +89,7 @@ class LeaveController extends Controller
             'managerApprover:id,first_name,last_name',
         ])->where('status', 'pending')->orderByDesc('created_at');
 
-        if (!$user->can('leave.manage')) {
+        if (! $user->can('leave.manage')) {
             // Designated per-type approvers see their own; system-wide Manager/Director
             // approvers see every request awaiting their stage.
             $query->where(function ($q) use ($user) {
@@ -129,6 +131,7 @@ class LeaveController extends Controller
         ]);
 
         $year = $validated['year'] ?? now()->year;
+
         return $this->success($this->leaveService->balanceFor($validated['employee_id'], $year));
     }
 
@@ -158,7 +161,7 @@ class LeaveController extends Controller
             'director_approver_id' => ['nullable', 'exists:users,id'],
         ]);
 
-        if ($request->boolean('requires_director_approval') && !$request->filled('director_approver_id')) {
+        if ($request->boolean('requires_director_approval') && ! $request->filled('director_approver_id')) {
             return $this->error('A director approver is required when director approval is enabled.', 422);
         }
 
@@ -179,7 +182,7 @@ class LeaveController extends Controller
             'director_approver_id' => ['sometimes', 'nullable', 'exists:users,id'],
         ]);
 
-        if ($request->boolean('requires_director_approval') && !$request->filled('director_approver_id')) {
+        if ($request->boolean('requires_director_approval') && ! $request->filled('director_approver_id')) {
             return $this->error('A director approver is required when director approval is enabled.', 422);
         }
 
@@ -189,6 +192,7 @@ class LeaveController extends Controller
     public function destroyType(int $id): JsonResponse
     {
         $this->leaveService->deleteType($id);
+
         return $this->success(null, 'Leave type deleted successfully.');
     }
 }

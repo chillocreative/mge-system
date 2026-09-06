@@ -45,7 +45,7 @@ class InvoiceService
                 'created_by' => $createdBy,
             ]);
 
-            if (!empty($data['items'])) {
+            if (! empty($data['items'])) {
                 foreach ($data['items'] as $i => $item) {
                     $invoice->items()->create([
                         'description' => $item['description'],
@@ -107,7 +107,7 @@ class InvoiceService
         $query = Invoice::with(['client:id,company_name', 'project:id,name,code', 'creator:id,first_name,last_name'])
             ->withCount('payments');
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             // 'overdue' isn't a stored status value (it's computed from due_date vs.
             // today), so filtering the raw status column for it always returned zero
             // rows even though invoices were in fact overdue. Use the date-based scope
@@ -118,16 +118,16 @@ class InvoiceService
                 $query->byStatus($filters['status']);
             }
         }
-        if (!empty($filters['client_id'])) {
+        if (! empty($filters['client_id'])) {
             $query->forClient((int) $filters['client_id']);
         }
-        if (!empty($filters['project_id'])) {
+        if (! empty($filters['project_id'])) {
             $query->forProject((int) $filters['project_id']);
         }
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $query->where('invoice_number', 'like', "%{$filters['search']}%");
         }
-        if (!empty($filters['date_from']) && !empty($filters['date_to'])) {
+        if (! empty($filters['date_from']) && ! empty($filters['date_to'])) {
             $query->whereBetween('issue_date', [$filters['date_from'], $filters['date_to']]);
         }
 
@@ -169,6 +169,7 @@ class InvoiceService
         if ($invoice->status === 'draft') {
             $invoice->update(['status' => 'sent']);
         }
+
         return $invoice->fresh();
     }
 

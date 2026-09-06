@@ -18,10 +18,16 @@ class EnvironmentalService
         $query = WasteRecord::with(['project:id,name,code', 'recorder:id,first_name,last_name', 'photos'])
             ->orderByDesc('created_at');
 
-        if (!empty($filters['project_id'])) $query->forProject($filters['project_id']);
-        if (!empty($filters['status'])) $query->byStatus($filters['status']);
-        if (!empty($filters['waste_type'])) $query->byType($filters['waste_type']);
-        if (!empty($filters['search'])) {
+        if (! empty($filters['project_id'])) {
+            $query->forProject($filters['project_id']);
+        }
+        if (! empty($filters['status'])) {
+            $query->byStatus($filters['status']);
+        }
+        if (! empty($filters['waste_type'])) {
+            $query->byType($filters['waste_type']);
+        }
+        if (! empty($filters['search'])) {
             $query->where(fn ($q) => $q->where('description', 'like', "%{$filters['search']}%")
                 ->orWhere('hauler', 'like', "%{$filters['search']}%"));
         }
@@ -35,6 +41,7 @@ class EnvironmentalService
             $data['recorded_by'] = $userId;
             $record = WasteRecord::create($data);
             $this->storePhotos($record, $photos);
+
             return $record->load(['project:id,name', 'recorder:id,first_name,last_name', 'photos']);
         });
     }
@@ -43,6 +50,7 @@ class EnvironmentalService
     {
         $record = WasteRecord::findOrFail($id);
         $record->update($data);
+
         return $record->load(['project:id,name', 'recorder:id,first_name,last_name', 'photos']);
     }
 
@@ -53,10 +61,16 @@ class EnvironmentalService
         $query = SiteInspection::with(['project:id,name,code', 'inspector:id,first_name,last_name', 'photos'])
             ->orderByDesc('inspection_date');
 
-        if (!empty($filters['project_id'])) $query->forProject($filters['project_id']);
-        if (!empty($filters['type'])) $query->where('type', $filters['type']);
-        if (!empty($filters['overall_status'])) $query->where('overall_status', $filters['overall_status']);
-        if (!empty($filters['search'])) {
+        if (! empty($filters['project_id'])) {
+            $query->forProject($filters['project_id']);
+        }
+        if (! empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+        if (! empty($filters['overall_status'])) {
+            $query->where('overall_status', $filters['overall_status']);
+        }
+        if (! empty($filters['search'])) {
             $query->where(fn ($q) => $q->where('title', 'like', "%{$filters['search']}%")
                 ->orWhere('findings', 'like', "%{$filters['search']}%"));
         }
@@ -70,6 +84,7 @@ class EnvironmentalService
             $data['inspector_id'] = $userId;
             $inspection = SiteInspection::create($data);
             $this->storePhotos($inspection, $photos);
+
             return $inspection->load(['project:id,name', 'inspector:id,first_name,last_name', 'photos']);
         });
     }
@@ -83,6 +98,7 @@ class EnvironmentalService
     {
         $inspection = SiteInspection::findOrFail($id);
         $inspection->update($data);
+
         return $inspection->load(['project:id,name', 'inspector:id,first_name,last_name', 'photos']);
     }
 
@@ -93,10 +109,16 @@ class EnvironmentalService
         $query = EnvironmentalAudit::with(['project:id,name,code', 'auditor:id,first_name,last_name', 'photos'])
             ->orderByDesc('audit_date');
 
-        if (!empty($filters['project_id'])) $query->forProject($filters['project_id']);
-        if (!empty($filters['status'])) $query->byStatus($filters['status']);
-        if (!empty($filters['type'])) $query->where('type', $filters['type']);
-        if (!empty($filters['search'])) {
+        if (! empty($filters['project_id'])) {
+            $query->forProject($filters['project_id']);
+        }
+        if (! empty($filters['status'])) {
+            $query->byStatus($filters['status']);
+        }
+        if (! empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+        if (! empty($filters['search'])) {
             $query->where(fn ($q) => $q->where('title', 'like', "%{$filters['search']}%")
                 ->orWhere('findings', 'like', "%{$filters['search']}%"));
         }
@@ -110,6 +132,7 @@ class EnvironmentalService
             $data['auditor_id'] = $userId;
             $audit = EnvironmentalAudit::create($data);
             $this->storePhotos($audit, $photos);
+
             return $audit->load(['project:id,name', 'auditor:id,first_name,last_name', 'photos']);
         });
     }
@@ -123,6 +146,7 @@ class EnvironmentalService
     {
         $audit = EnvironmentalAudit::findOrFail($id);
         $audit->update($data);
+
         return $audit->load(['project:id,name', 'auditor:id,first_name,last_name', 'photos']);
     }
 
@@ -157,12 +181,14 @@ class EnvironmentalService
     public function generateInspectionPdf(int $id)
     {
         $record = $this->getInspection($id);
+
         return Pdf::loadView('pdf.environmental-report', ['record' => $record, 'type' => 'Site Inspection Report'])->setPaper('a4');
     }
 
     public function generateAuditPdf(int $id)
     {
         $record = $this->getAudit($id);
+
         return Pdf::loadView('pdf.environmental-report', ['record' => $record, 'type' => 'Environmental Audit Report'])->setPaper('a4');
     }
 

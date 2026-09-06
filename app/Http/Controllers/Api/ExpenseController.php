@@ -45,6 +45,7 @@ class ExpenseController extends Controller
     {
         try {
             $expense = $this->expenseService->approveExpense($id, $request->user()->id);
+
             return $this->success($expense, 'Expense approved.');
         } catch (\InvalidArgumentException $e) {
             return $this->error($e->getMessage(), 422);
@@ -55,6 +56,7 @@ class ExpenseController extends Controller
     {
         try {
             $expense = $this->expenseService->rejectExpense($id, $request->user()->id);
+
             return $this->success($expense, 'Expense rejected.');
         } catch (\InvalidArgumentException $e) {
             return $this->error($e->getMessage(), 422);

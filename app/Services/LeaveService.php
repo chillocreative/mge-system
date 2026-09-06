@@ -26,9 +26,15 @@ class LeaveService
             'approver:id,first_name,last_name',
         ])->orderByDesc('created_at');
 
-        if (!empty($filters['employee_id'])) $query->forEmployee($filters['employee_id']);
-        if (!empty($filters['status'])) $query->byStatus($filters['status']);
-        if (!empty($filters['leave_type_id'])) $query->where('leave_type_id', $filters['leave_type_id']);
+        if (! empty($filters['employee_id'])) {
+            $query->forEmployee($filters['employee_id']);
+        }
+        if (! empty($filters['status'])) {
+            $query->byStatus($filters['status']);
+        }
+        if (! empty($filters['leave_type_id'])) {
+            $query->where('leave_type_id', $filters['leave_type_id']);
+        }
 
         return $query->paginate($perPage);
     }
@@ -48,7 +54,7 @@ class LeaveService
         return DB::transaction(function () use ($data, $userId, $attachment) {
             $start = Carbon::parse($data['start_date']);
             $end = Carbon::parse($data['end_date']);
-            $halfDay = !empty($data['half_day']);
+            $halfDay = ! empty($data['half_day']);
 
             $days = $halfDay ? 0.5 : ($start->diffInDays($end) + 1);
 
@@ -181,7 +187,7 @@ class LeaveService
 
         $allowed = $hasFlag
             || ($designated && $actor->id === $designated)
-            || (!$designated && $actor->can('leave.approve'));
+            || (! $designated && $actor->can('leave.approve'));
 
         abort_unless($allowed, 403, 'You are not allowed to approve this request at this stage.');
     }
@@ -247,7 +253,7 @@ class LeaveService
 
     private function sendLeaveNotification(?int $userId, string $title, string $message, string $action, int $leaveId): void
     {
-        if (!$userId) {
+        if (! $userId) {
             return;
         }
 
@@ -256,7 +262,7 @@ class LeaveService
             $user?->notify(new LeaveStatusNotification($title, $message, $action, $leaveId));
         } catch (\Throwable $e) {
             // Never let a notification/mail failure (e.g. SMTP not configured) break the workflow.
-            Log::warning('Leave notification failed: ' . $e->getMessage());
+            Log::warning('Leave notification failed: '.$e->getMessage());
         }
     }
 
@@ -296,7 +302,7 @@ class LeaveService
             ->where('year', $year)
             ->first();
 
-        if (!$balance) {
+        if (! $balance) {
             $type = LeaveType::findOrFail($leaveTypeId);
             $entitled = (float) $type->default_days_per_year;
             $balance = LeaveBalance::create([
@@ -340,6 +346,7 @@ class LeaveService
     {
         $type = LeaveType::findOrFail($id);
         $type->update($data);
+
         return $type;
     }
 
@@ -353,7 +360,7 @@ class LeaveService
     public function downloadAttachment(int $id)
     {
         $request = LeaveRequest::findOrFail($id);
-        abort_if(!$request->attachment_path || !Storage::disk('local')->exists($request->attachment_path), 404);
+        abort_if(! $request->attachment_path || ! Storage::disk('local')->exists($request->attachment_path), 404);
 
         return Storage::disk('local')->download($request->attachment_path);
     }

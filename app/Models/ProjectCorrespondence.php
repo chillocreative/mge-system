@@ -24,11 +24,33 @@ class ProjectCorrespondence extends Model
         ];
     }
 
-    public function project(): BelongsTo { return $this->belongsTo(Project::class); }
-    public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
-    public function files(): HasMany { return $this->hasMany(ProjectCorrespondenceFile::class); }
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
 
-    public function scopeByType($q, string $type) { return $q->where('type', $type); }
-    public function scopeByStatus($q, string $status) { return $q->where('status', $status); }
-    public function scopeForProject($q, int $id) { return $q->where('project_id', $id); }
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function files(): HasMany
+    {
+        return $this->hasMany(ProjectCorrespondenceFile::class);
+    }
+
+    public function scopeByType($q, string $type)
+    {
+        return $q->where('type', $type);
+    }
+
+    public function scopeByStatus($q, string $status)
+    {
+        return $q->where('status', $status);
+    }
+
+    public function scopeForProject($q, int $id)
+    {
+        return $q->where('project_id', $id);
+    }
 }

@@ -13,13 +13,17 @@ class MaintenanceService
         $query = MaintenanceLog::with(['maintainable', 'creator:id,first_name,last_name'])
             ->orderByDesc('performed_date');
 
-        if (!empty($filters['status'])) $query->byStatus($filters['status']);
-        if (!empty($filters['maintenance_type'])) $query->where('maintenance_type', $filters['maintenance_type']);
-        if (!empty($filters['maintainable_type']) && !empty($filters['maintainable_id'])) {
+        if (! empty($filters['status'])) {
+            $query->byStatus($filters['status']);
+        }
+        if (! empty($filters['maintenance_type'])) {
+            $query->where('maintenance_type', $filters['maintenance_type']);
+        }
+        if (! empty($filters['maintainable_type']) && ! empty($filters['maintainable_id'])) {
             $query->where('maintainable_type', $filters['maintainable_type'])
                 ->where('maintainable_id', $filters['maintainable_id']);
         }
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $query->where(fn ($q) => $q->where('description', 'like', "%{$filters['search']}%")
                 ->orWhere('vendor', 'like', "%{$filters['search']}%"));
         }
@@ -39,6 +43,7 @@ class MaintenanceService
     {
         $data['created_by'] = $userId;
         $log = MaintenanceLog::create($data);
+
         return $log->load(['maintainable', 'creator:id,first_name,last_name']);
     }
 
@@ -51,6 +56,7 @@ class MaintenanceService
     {
         $log = MaintenanceLog::findOrFail($id);
         $log->update($data);
+
         return $log->load(['maintainable', 'creator:id,first_name,last_name']);
     }
 

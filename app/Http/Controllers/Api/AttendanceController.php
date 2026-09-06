@@ -31,7 +31,7 @@ class AttendanceController extends Controller
             $request->user()->id
         );
 
-        $hasErrors = !empty($result['errors']);
+        $hasErrors = ! empty($result['errors']);
         $message = "{$result['imported']} records imported successfully.";
         if ($result['skipped'] > 0) {
             $message .= " {$result['skipped']} rows skipped.";
@@ -131,12 +131,12 @@ class AttendanceController extends Controller
             $request->filled('base_salary') ? (float) $request->base_salary : null
         );
 
-        if ($result['generated'] === 0 && !empty($result['errors'])) {
+        if ($result['generated'] === 0 && ! empty($result['errors'])) {
             return $this->error($result['errors'][0], 422);
         }
 
         $message = "{$result['generated']} payroll records generated.";
-        if (!empty($result['errors'])) {
+        if (! empty($result['errors'])) {
             $message .= ' Some records had errors.';
         }
 
@@ -173,6 +173,7 @@ class AttendanceController extends Controller
     {
         try {
             $record = $this->payrollService->approve($id, $request->user()->id);
+
             return $this->success($record, 'Payroll record approved.');
         } catch (\InvalidArgumentException $e) {
             return $this->error($e->getMessage(), 422);
@@ -186,6 +187,7 @@ class AttendanceController extends Controller
     {
         try {
             $record = $this->payrollService->markPaid($id);
+
             return $this->success($record, 'Payroll record marked as paid.');
         } catch (\InvalidArgumentException $e) {
             return $this->error($e->getMessage(), 422);

@@ -16,6 +16,7 @@ class EnvironmentalController extends Controller
     public function overview(Request $request): JsonResponse
     {
         $stats = $this->environmentalService->getOverviewStats($request->integer('project_id') ?: null);
+
         return $this->success($stats);
     }
 
@@ -24,6 +25,7 @@ class EnvironmentalController extends Controller
     public function wasteRecords(Request $request): JsonResponse
     {
         $filters = $request->only(['project_id', 'status', 'waste_type', 'search']);
+
         return $this->success($this->environmentalService->listWaste($filters, $request->integer('per_page', 15)));
     }
 
@@ -48,6 +50,7 @@ class EnvironmentalController extends Controller
         unset($validated['photos']);
 
         $record = $this->environmentalService->createWaste($validated, $request->user()->id, $photos);
+
         return $this->created($record, 'Waste record created successfully.');
     }
 
@@ -74,6 +77,7 @@ class EnvironmentalController extends Controller
     public function inspections(Request $request): JsonResponse
     {
         $filters = $request->only(['project_id', 'type', 'overall_status', 'search']);
+
         return $this->success($this->environmentalService->listInspections($filters, $request->integer('per_page', 15)));
     }
 
@@ -98,6 +102,7 @@ class EnvironmentalController extends Controller
         unset($validated['photos']);
 
         $inspection = $this->environmentalService->createInspection($validated, $request->user()->id, $photos);
+
         return $this->created($inspection, 'Inspection recorded successfully.');
     }
 
@@ -126,6 +131,7 @@ class EnvironmentalController extends Controller
     public function audits(Request $request): JsonResponse
     {
         $filters = $request->only(['project_id', 'status', 'type', 'search']);
+
         return $this->success($this->environmentalService->listAudits($filters, $request->integer('per_page', 15)));
     }
 
@@ -150,6 +156,7 @@ class EnvironmentalController extends Controller
         unset($validated['photos']);
 
         $audit = $this->environmentalService->createAudit($validated, $request->user()->id, $photos);
+
         return $this->created($audit, 'Audit record created successfully.');
     }
 
@@ -199,7 +206,7 @@ class EnvironmentalController extends Controller
             'audits' => \App\Models\EnvironmentalAudit::class,
         ];
 
-        if (!isset($modelMap[$type])) {
+        if (! isset($modelMap[$type])) {
             return $this->error('Invalid resource type.', 422);
         }
 

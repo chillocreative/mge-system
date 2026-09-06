@@ -32,7 +32,7 @@ class InternalEmailService
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('subject', 'like', "%{$search}%")
-                  ->orWhere('body', 'like', "%{$search}%");
+                    ->orWhere('body', 'like', "%{$search}%");
             });
         }
 
@@ -84,14 +84,14 @@ class InternalEmailService
             ]);
 
             // Set thread_id to self if this is a new thread
-            if (!$email->thread_id) {
+            if (! $email->thread_id) {
                 $email->update(['thread_id' => $email->id]);
             }
 
             // Add recipients
             $recipientUserIds = [];
             foreach (['to', 'cc', 'bcc'] as $type) {
-                if (!empty($data[$type])) {
+                if (! empty($data[$type])) {
                     foreach ($data[$type] as $userId) {
                         EmailRecipient::create([
                             'email_id' => $email->id,
@@ -134,7 +134,7 @@ class InternalEmailService
         return DB::transaction(function () use ($data, $fromUserId, $draftId) {
             $email = $draftId
                 ? InternalEmail::where('id', $draftId)->where('from_user_id', $fromUserId)->where('is_draft', true)->firstOrFail()
-                : new InternalEmail();
+                : new InternalEmail;
 
             $email->fill([
                 'from_user_id' => $fromUserId,
@@ -147,7 +147,7 @@ class InternalEmailService
             // Update recipients
             $email->recipients()->delete();
             foreach (['to', 'cc', 'bcc'] as $type) {
-                if (!empty($data[$type])) {
+                if (! empty($data[$type])) {
                     foreach ($data[$type] as $userId) {
                         EmailRecipient::create([
                             'email_id' => $email->id,
@@ -203,7 +203,7 @@ class InternalEmailService
             ->where('user_id', $userId)
             ->firstOrFail();
 
-        $recipient->update(['starred' => !$recipient->starred]);
+        $recipient->update(['starred' => ! $recipient->starred]);
 
         return $recipient->fresh()->starred;
     }
@@ -283,7 +283,7 @@ class InternalEmailService
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('subject', 'like', "%{$search}%")
-                  ->orWhere('body', 'like', "%{$search}%");
+                    ->orWhere('body', 'like', "%{$search}%");
             });
         }
 

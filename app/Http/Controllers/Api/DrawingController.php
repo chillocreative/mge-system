@@ -55,7 +55,7 @@ class DrawingController extends Controller
     {
         $validated = $request->validate([
             'title' => ['sometimes', 'string', 'max:255'],
-            'drawing_no' => ['sometimes', 'string', 'max:255', 'unique:drawings,drawing_no,' . $id],
+            'drawing_no' => ['sometimes', 'string', 'max:255', 'unique:drawings,drawing_no,'.$id],
             'reference_no' => ['nullable', 'string', 'max:255'],
             'revision' => ['nullable', 'string', 'max:255'],
             'tag' => ['nullable', 'string', 'max:255'],

@@ -11,5 +11,8 @@ class MeetingMinuteFile extends Model
         'meeting_minute_id', 'file_path', 'file_name', 'file_type', 'file_size',
     ];
 
-    public function meeting(): BelongsTo { return $this->belongsTo(MeetingMinute::class, 'meeting_minute_id'); }
+    public function meeting(): BelongsTo
+    {
+        return $this->belongsTo(MeetingMinute::class, 'meeting_minute_id');
+    }
 }

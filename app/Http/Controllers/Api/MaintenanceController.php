@@ -17,6 +17,7 @@ class MaintenanceController extends Controller
             'status', 'maintenance_type', 'maintainable_type', 'maintainable_id', 'search',
         ]);
         $perPage = min($request->integer('per_page', 15), 100);
+
         return $this->success($this->maintenanceService->list($filters, $perPage));
     }
 
@@ -62,12 +63,14 @@ class MaintenanceController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $this->maintenanceService->delete($id);
+
         return $this->success(null, 'Maintenance log deleted.');
     }
 
     public function upcoming(Request $request): JsonResponse
     {
         $days = min($request->integer('days', 30), 365);
+
         return $this->success($this->maintenanceService->upcoming($days));
     }
 }

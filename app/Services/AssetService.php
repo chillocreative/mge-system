@@ -7,7 +7,6 @@ use App\Models\VehicleDocument;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class AssetService
@@ -18,9 +17,15 @@ class AssetService
             ->withCount('documents')
             ->orderByDesc('created_at');
 
-        if (!empty($filters['status'])) $query->byStatus($filters['status']);
-        if (!empty($filters['type'])) $query->byType($filters['type']);
-        if (!empty($filters['search'])) $query->search($filters['search']);
+        if (! empty($filters['status'])) {
+            $query->byStatus($filters['status']);
+        }
+        if (! empty($filters['type'])) {
+            $query->byType($filters['type']);
+        }
+        if (! empty($filters['search'])) {
+            $query->search($filters['search']);
+        }
 
         return $query->paginate($perPage);
     }
@@ -29,6 +34,7 @@ class AssetService
     {
         $data['created_by'] = $userId;
         $vehicle = Vehicle::create($data);
+
         return $vehicle->load(['assignedTo:id,first_name,last_name,employee_no']);
     }
 
@@ -46,6 +52,7 @@ class AssetService
     {
         $vehicle = Vehicle::findOrFail($id);
         $vehicle->update($data);
+
         return $vehicle->load(['assignedTo:id,first_name,last_name,employee_no']);
     }
 

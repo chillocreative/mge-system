@@ -20,10 +20,16 @@ class ProjectInvoiceService
             'payments',
         ])->orderByDesc('invoice_date');
 
-        if (!empty($filters['project_id'])) $query->forProject($filters['project_id']);
-        if (!empty($filters['type'])) $query->byType($filters['type']);
-        if (!empty($filters['status'])) $query->byStatus($filters['status']);
-        if (!empty($filters['search'])) {
+        if (! empty($filters['project_id'])) {
+            $query->forProject($filters['project_id']);
+        }
+        if (! empty($filters['type'])) {
+            $query->byType($filters['type']);
+        }
+        if (! empty($filters['status'])) {
+            $query->byStatus($filters['status']);
+        }
+        if (! empty($filters['search'])) {
             $query->where(fn ($q) => $q->where('invoice_no', 'like', "%{$filters['search']}%")
                 ->orWhere('party_name', 'like', "%{$filters['search']}%")
                 ->orWhere('notes', 'like', "%{$filters['search']}%"));
@@ -38,7 +44,9 @@ class ProjectInvoiceService
     public function summary(array $filters): array
     {
         $base = ProjectInvoice::query();
-        if (!empty($filters['project_id'])) $base->forProject($filters['project_id']);
+        if (! empty($filters['project_id'])) {
+            $base->forProject($filters['project_id']);
+        }
 
         $client = (float) (clone $base)->byType('client')->sum('amount');
         $subcon = (float) (clone $base)->byType('subcon')->sum('amount');
@@ -85,6 +93,7 @@ class ProjectInvoiceService
             $data['created_by'] = $userId;
             $invoice = ProjectInvoice::create($data);
             $this->storeFiles($invoice, $files);
+
             return $invoice->load(['project:id,name,code', 'creator:id,first_name,last_name', 'files']);
         });
     }
@@ -95,6 +104,7 @@ class ProjectInvoiceService
             $invoice = ProjectInvoice::findOrFail($id);
             $invoice->update($data);
             $this->storeFiles($invoice, $files);
+
             return $invoice->load(['project:id,name,code', 'creator:id,first_name,last_name', 'files']);
         });
     }
@@ -132,12 +142,14 @@ class ProjectInvoiceService
     {
         $invoice = ProjectInvoice::findOrFail($id);
         $this->storeFiles($invoice, $files);
+
         return $invoice->load(['project:id,name,code', 'creator:id,first_name,last_name', 'files']);
     }
 
     public function downloadFile(int $fileId)
     {
         $file = ProjectInvoiceFile::findOrFail($fileId);
+
         return Storage::disk('local')->download($file->file_path, $file->file_name);
     }
 

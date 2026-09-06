@@ -18,7 +18,7 @@ class ChatMessageSent implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('chat.room.' . $this->message->chat_room_id),
+            new PrivateChannel('chat.room.'.$this->message->chat_room_id),
         ];
     }
 

@@ -21,16 +21,16 @@ class TrainingService
             'creator:id,first_name,last_name',
         ])->orderByDesc('training_date');
 
-        if (!empty($filters['employee_id'])) {
+        if (! empty($filters['employee_id'])) {
             $query->forEmployee((int) $filters['employee_id']);
         }
-        if (!empty($filters['category'])) {
+        if (! empty($filters['category'])) {
             $query->where('category', $filters['category']);
         }
         if (isset($filters['hrdf_claimable']) && $filters['hrdf_claimable'] !== '') {
             $query->where('hrdf_claimable', (bool) $filters['hrdf_claimable']);
         }
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
@@ -112,10 +112,10 @@ class TrainingService
             'reviewer:id,first_name,last_name',
         ])->orderByDesc('created_at');
 
-        if (!empty($filters['employee_id'])) {
+        if (! empty($filters['employee_id'])) {
             $query->forEmployee((int) $filters['employee_id']);
         }
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->byStatus($filters['status']);
         }
 

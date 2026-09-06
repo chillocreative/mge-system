@@ -19,12 +19,38 @@ class HazardReport extends Model
         return ['resolved_at' => 'datetime'];
     }
 
-    public function project(): BelongsTo { return $this->belongsTo(Project::class); }
-    public function reporter(): BelongsTo { return $this->belongsTo(User::class, 'reported_by'); }
-    public function assignee(): BelongsTo { return $this->belongsTo(User::class, 'assigned_to'); }
-    public function photos(): MorphMany { return $this->morphMany(ReportPhoto::class, 'photoable'); }
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
 
-    public function scopeByStatus($q, string $s) { return $q->where('status', $s); }
-    public function scopeByRisk($q, string $r) { return $q->where('risk_level', $r); }
-    public function scopeForProject($q, int $id) { return $q->where('project_id', $id); }
+    public function reporter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reported_by');
+    }
+
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function photos(): MorphMany
+    {
+        return $this->morphMany(ReportPhoto::class, 'photoable');
+    }
+
+    public function scopeByStatus($q, string $s)
+    {
+        return $q->where('status', $s);
+    }
+
+    public function scopeByRisk($q, string $r)
+    {
+        return $q->where('risk_level', $r);
+    }
+
+    public function scopeForProject($q, int $id)
+    {
+        return $q->where('project_id', $id);
+    }
 }

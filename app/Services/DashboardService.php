@@ -50,7 +50,7 @@ class DashboardService
         $showsPeopleStats = $can('staff.view') || $can('dashboard.view-hr-stats')
             || $can('training.view') || $this->canApproveLeave($user, $can);
 
-        if (!$showsPeopleStats) {
+        if (! $showsPeopleStats) {
             return [];
         }
 
@@ -85,7 +85,7 @@ class DashboardService
             ->whereNotIn('status', ['completed', 'cancelled'])->count();
         $overdue = Task::query()->where('due_date', '<', $today)
             ->whereNotIn('status', ['completed', 'cancelled']);
-        if (!$can('tasks.view')) {
+        if (! $can('tasks.view')) {
             $overdue->where('assigned_to', $user->id);
         }
         $stats['overdue_tasks'] = $overdue->count();
@@ -153,7 +153,7 @@ class DashboardService
 
         // Task breakdown — admins see all, others their own.
         $charts['task_status'] = $this->groupCount(
-            Task::query()->when(!$isAdmin, fn ($q) => $q->where('assigned_to', $user->id)),
+            Task::query()->when(! $isAdmin, fn ($q) => $q->where('assigned_to', $user->id)),
             'status'
         );
 
@@ -351,7 +351,7 @@ class DashboardService
     private function getMyData(User $user): array
     {
         $employee = Employee::where('user_id', $user->id)->first();
-        if (!$employee) {
+        if (! $employee) {
             return [];
         }
 
@@ -380,7 +380,7 @@ class DashboardService
     {
         $query = LeaveRequest::where('status', 'pending');
 
-        if (!$can('leave.manage')) {
+        if (! $can('leave.manage')) {
             $query->where(function ($w) use ($user) {
                 $w->awaitingApprovalBy($user->id);
                 if ($user->is_manager) {

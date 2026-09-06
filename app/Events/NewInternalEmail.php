@@ -21,7 +21,7 @@ class NewInternalEmail implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('user.' . $this->recipientUserId),
+            new PrivateChannel('user.'.$this->recipientUserId),
         ];
     }
 

@@ -36,7 +36,7 @@ class LeaveStatusNotification extends Notification
     {
         return (new MailMessage)
             ->subject($this->title)
-            ->greeting('Hello ' . trim("{$notifiable->first_name} {$notifiable->last_name}") . ',')
+            ->greeting('Hello '.trim("{$notifiable->first_name} {$notifiable->last_name}").',')
             ->line($this->message)
             ->action('Open MGE-PMS', url('/hr/leave'));
     }

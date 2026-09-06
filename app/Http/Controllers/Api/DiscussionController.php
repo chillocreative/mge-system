@@ -16,7 +16,7 @@ class DiscussionController extends Controller
     {
         $projectId = $request->integer('project_id') ?: null;
 
-        if (!$projectId) {
+        if (! $projectId) {
             return $this->success([], 'Select a project to view discussions.');
         }
 

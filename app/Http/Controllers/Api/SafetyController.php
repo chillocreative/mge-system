@@ -16,6 +16,7 @@ class SafetyController extends Controller
     public function overview(Request $request): JsonResponse
     {
         $stats = $this->safetyService->getOverviewStats($request->integer('project_id') ?: null);
+
         return $this->success($stats);
     }
 
@@ -24,6 +25,7 @@ class SafetyController extends Controller
     public function incidents(Request $request): JsonResponse
     {
         $filters = $request->only(['project_id', 'status', 'severity', 'search']);
+
         return $this->success($this->safetyService->listIncidents($filters, $request->integer('per_page', 15)));
     }
 
@@ -51,6 +53,7 @@ class SafetyController extends Controller
         unset($validated['photos']);
 
         $incident = $this->safetyService->createIncident($validated, $request->user()->id, $photos);
+
         return $this->created($incident, 'Incident reported successfully.');
     }
 
@@ -81,6 +84,7 @@ class SafetyController extends Controller
     public function hazards(Request $request): JsonResponse
     {
         $filters = $request->only(['project_id', 'status', 'risk_level', 'search']);
+
         return $this->success($this->safetyService->listHazards($filters, $request->integer('per_page', 15)));
     }
 
@@ -103,6 +107,7 @@ class SafetyController extends Controller
         unset($validated['photos']);
 
         $hazard = $this->safetyService->createHazard($validated, $request->user()->id, $photos);
+
         return $this->created($hazard, 'Hazard reported successfully.');
     }
 
@@ -125,6 +130,7 @@ class SafetyController extends Controller
     public function meetings(Request $request): JsonResponse
     {
         $filters = $request->only(['project_id', 'search']);
+
         return $this->success($this->safetyService->listMeetings($filters, $request->integer('per_page', 15)));
     }
 
@@ -153,6 +159,7 @@ class SafetyController extends Controller
         unset($validated['photos'], $validated['attendee_ids'], $validated['external_names']);
 
         $meeting = $this->safetyService->createMeeting($validated, $request->user()->id, $attendeeIds, $externalNames, $photos);
+
         return $this->created($meeting, 'Meeting logged successfully.');
     }
 
@@ -166,6 +173,7 @@ class SafetyController extends Controller
     public function checklists(Request $request): JsonResponse
     {
         $filters = $request->only(['project_id', 'type', 'overall_status']);
+
         return $this->success($this->safetyService->listChecklists($filters, $request->integer('per_page', 15)));
     }
 
@@ -190,6 +198,7 @@ class SafetyController extends Controller
         unset($validated['photos'], $validated['items']);
 
         $checklist = $this->safetyService->createChecklist($validated, $request->user()->id, $items, $photos);
+
         return $this->created($checklist, 'Checklist created successfully.');
     }
 
@@ -236,7 +245,7 @@ class SafetyController extends Controller
             'checklists' => \App\Models\ComplianceChecklist::class,
         ];
 
-        if (!isset($modelMap[$type])) {
+        if (! isset($modelMap[$type])) {
             return $this->error('Invalid resource type.', 422);
         }
 

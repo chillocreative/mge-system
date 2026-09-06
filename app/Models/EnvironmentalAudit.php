@@ -19,10 +19,28 @@ class EnvironmentalAudit extends Model
         return ['audit_date' => 'date:Y-m-d', 'next_audit_date' => 'date:Y-m-d'];
     }
 
-    public function project(): BelongsTo { return $this->belongsTo(Project::class); }
-    public function auditor(): BelongsTo { return $this->belongsTo(User::class, 'auditor_id'); }
-    public function photos(): MorphMany { return $this->morphMany(ReportPhoto::class, 'photoable'); }
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
 
-    public function scopeByStatus($q, string $s) { return $q->where('status', $s); }
-    public function scopeForProject($q, int $id) { return $q->where('project_id', $id); }
+    public function auditor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'auditor_id');
+    }
+
+    public function photos(): MorphMany
+    {
+        return $this->morphMany(ReportPhoto::class, 'photoable');
+    }
+
+    public function scopeByStatus($q, string $s)
+    {
+        return $q->where('status', $s);
+    }
+
+    public function scopeForProject($q, int $id)
+    {
+        return $q->where('project_id', $id);
+    }
 }

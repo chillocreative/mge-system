@@ -100,7 +100,7 @@ class GoogleCalendarService
             $client = $this->makeClient();
             $token = GoogleCalendarToken::where('user_id', $userId)->first();
 
-            if (!$token || !$token->access_token) {
+            if (! $token || ! $token->access_token) {
                 throw new \RuntimeException('Google Calendar is not connected for this user.');
             }
 
@@ -129,7 +129,7 @@ class GoogleCalendarService
                         'type' => 'other',
                         'start_datetime' => $start->getDateTime() ?: $start->getDate(),
                         'end_datetime' => $end ? ($end->getDateTime() ?: $end->getDate()) : null,
-                        'all_day' => (bool) ($start->getDate() && !$start->getDateTime()),
+                        'all_day' => (bool) ($start->getDate() && ! $start->getDateTime()),
                         'location' => $item->getLocation(),
                         'created_by' => $userId,
                     ]
@@ -154,7 +154,7 @@ class GoogleCalendarService
             $client = $this->makeClient();
             $token = GoogleCalendarToken::where('user_id', $event->created_by)->first();
 
-            if (!$token || !$token->access_token) {
+            if (! $token || ! $token->access_token) {
                 throw new \RuntimeException('Google Calendar is not connected for this user.');
             }
 
@@ -185,14 +185,14 @@ class GoogleCalendarService
 
     private function ensureConfigured(): void
     {
-        if (!$this->isConfigured()) {
+        if (! $this->isConfigured()) {
             throw new \RuntimeException('Google Calendar is not configured. Set GOOGLE_CLIENT_ID/SECRET and install google/apiclient.');
         }
     }
 
     private function makeClient(): \Google\Client
     {
-        $client = new \Google\Client();
+        $client = new \Google\Client;
         $client->setClientId(config('services.google.client_id'));
         $client->setClientSecret(config('services.google.client_secret'));
         $client->setRedirectUri(config('services.google.redirect_uri'));

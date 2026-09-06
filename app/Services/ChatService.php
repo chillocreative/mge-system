@@ -9,7 +9,6 @@ use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class ChatService
 {
@@ -71,6 +70,7 @@ class ChatService
                 'created_by' => $userId,
             ]);
             $room->members()->attach([$userId, $otherUserId]);
+
             return $room;
         });
     }
@@ -180,7 +180,7 @@ class ChatService
         $existing = $room->members()->pluck('user_id')->toArray();
         $new = array_diff($userIds, $existing);
 
-        if (!empty($new)) {
+        if (! empty($new)) {
             $room->members()->attach($new);
         }
     }
@@ -191,6 +191,7 @@ class ChatService
     public function getTotalUnreadCount(int $userId): int
     {
         $rooms = ChatRoom::forUser($userId)->get();
+
         return $rooms->sum(fn ($room) => $room->unreadCountForUser($userId));
     }
 }

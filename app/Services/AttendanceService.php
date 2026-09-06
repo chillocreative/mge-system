@@ -6,7 +6,6 @@ use App\Imports\AttendanceImport;
 use App\Models\AttendanceRecord;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class AttendanceService
@@ -49,21 +48,21 @@ class AttendanceService
         $query = AttendanceRecord::with('user:id,first_name,last_name,email,department_id')
             ->with('user.department:id,name');
 
-        if (!empty($filters['user_id'])) {
+        if (! empty($filters['user_id'])) {
             $query->forUser((int) $filters['user_id']);
         }
 
-        if (!empty($filters['date_from']) && !empty($filters['date_to'])) {
+        if (! empty($filters['date_from']) && ! empty($filters['date_to'])) {
             $query->forPeriod($filters['date_from'], $filters['date_to']);
-        } elseif (!empty($filters['date'])) {
+        } elseif (! empty($filters['date'])) {
             $query->whereDate('date', $filters['date']);
         }
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->byStatus($filters['status']);
         }
 
-        if (!empty($filters['batch'])) {
+        if (! empty($filters['batch'])) {
             $query->byBatch($filters['batch']);
         }
 

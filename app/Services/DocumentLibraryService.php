@@ -17,9 +17,15 @@ class DocumentLibraryService
         $query = CompanyDocument::with('uploader:id,first_name,last_name')
             ->orderByDesc('created_at');
 
-        if (!empty($filters['search'])) $query->search($filters['search']);
-        if (!empty($filters['doc_type'])) $query->byType($filters['doc_type']);
-        if (!empty($filters['status'])) $query->where('status', $filters['status']);
+        if (! empty($filters['search'])) {
+            $query->search($filters['search']);
+        }
+        if (! empty($filters['doc_type'])) {
+            $query->byType($filters['doc_type']);
+        }
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
 
         return $query->paginate($perPage);
     }
@@ -72,6 +78,7 @@ class DocumentLibraryService
     public function download(int $id): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $document = CompanyDocument::findOrFail($id);
+
         return Storage::disk('local')->download($document->file_path, $document->file_name);
     }
 
@@ -82,12 +89,24 @@ class DocumentLibraryService
         $query = Drawing::with(['uploader:id,first_name,last_name', 'project:id,name'])
             ->orderByDesc('created_at');
 
-        if (!empty($filters['search'])) $query->search($filters['search']);
-        if (!empty($filters['discipline'])) $query->byDiscipline($filters['discipline']);
-        if (!empty($filters['tag'])) $query->where('tag', $filters['tag']);
-        if (!empty($filters['status'])) $query->where('status', $filters['status']);
-        if (!empty($filters['project_id'])) $query->where('project_id', $filters['project_id']);
-        if (!empty($filters['contract_id'])) $query->forContract($filters['contract_id']);
+        if (! empty($filters['search'])) {
+            $query->search($filters['search']);
+        }
+        if (! empty($filters['discipline'])) {
+            $query->byDiscipline($filters['discipline']);
+        }
+        if (! empty($filters['tag'])) {
+            $query->where('tag', $filters['tag']);
+        }
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        if (! empty($filters['project_id'])) {
+            $query->where('project_id', $filters['project_id']);
+        }
+        if (! empty($filters['contract_id'])) {
+            $query->forContract($filters['contract_id']);
+        }
 
         return $query->paginate($perPage);
     }
@@ -143,6 +162,7 @@ class DocumentLibraryService
     public function downloadDrawing(int $id): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $drawing = Drawing::findOrFail($id);
+
         return Storage::disk('local')->download($drawing->file_path, $drawing->file_name);
     }
 }

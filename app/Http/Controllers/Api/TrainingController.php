@@ -124,7 +124,7 @@ class TrainingController extends Controller
     {
         $employee = $this->trainingService->myEmployee($request->user()->id);
 
-        if (!$employee) {
+        if (! $employee) {
             return $this->success(['employee' => null, 'records' => [], 'requests' => []]);
         }
 

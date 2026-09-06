@@ -45,6 +45,7 @@ class InventoryController extends Controller
     public function destroyCategory(int $id): JsonResponse
     {
         $this->inventoryService->deleteCategory($id);
+
         return $this->success(null, 'Category deleted.');
     }
 
@@ -54,6 +55,7 @@ class InventoryController extends Controller
     {
         $filters = $request->only(['category_id', 'status', 'search', 'low_stock']);
         $perPage = min($request->integer('per_page', 15), 100);
+
         return $this->success($this->inventoryService->listItems($filters, $perPage));
     }
 
@@ -83,7 +85,7 @@ class InventoryController extends Controller
     {
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
-            'sku' => ['sometimes', 'string', 'max:255', 'unique:inventory_items,sku,' . $id],
+            'sku' => ['sometimes', 'string', 'max:255', 'unique:inventory_items,sku,'.$id],
             'category_id' => ['nullable', 'exists:inventory_categories,id'],
             'unit' => ['nullable', 'string', 'max:50'],
             'reorder_level' => ['nullable', 'numeric', 'min:0'],
@@ -98,6 +100,7 @@ class InventoryController extends Controller
     public function destroyItem(int $id): JsonResponse
     {
         $this->inventoryService->deleteItem($id);
+
         return $this->success(null, 'Item deleted.');
     }
 
@@ -106,6 +109,7 @@ class InventoryController extends Controller
     public function transactions(Request $request, int $itemId): JsonResponse
     {
         $perPage = min($request->integer('per_page', 15), 100);
+
         return $this->success($this->inventoryService->listTransactions($itemId, $perPage));
     }
 
@@ -120,6 +124,7 @@ class InventoryController extends Controller
         ]);
 
         $transaction = $this->inventoryService->recordTransaction($itemId, $validated, $request->user()->id);
+
         return $this->created($transaction, 'Transaction recorded.');
     }
 

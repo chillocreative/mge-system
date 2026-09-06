@@ -134,7 +134,7 @@ class MilestoneController extends Controller
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        if (isset($validated['status']) && $validated['status'] === 'completed' && !$milestone->completed_date) {
+        if (isset($validated['status']) && $validated['status'] === 'completed' && ! $milestone->completed_date) {
             $validated['completed_date'] = now()->toDateString();
             $validated['progress'] = 100;
         }

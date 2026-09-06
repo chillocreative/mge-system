@@ -19,15 +19,15 @@ class TaskRepository extends BaseRepository implements TaskRepositoryInterface
         $query = $this->model->where('project_id', $projectId)
             ->with(['assignee', 'creator']);
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->byStatus($filters['status']);
         }
 
-        if (!empty($filters['assigned_to'])) {
+        if (! empty($filters['assigned_to'])) {
             $query->where('assigned_to', $filters['assigned_to']);
         }
 
-        if (!empty($filters['priority'])) {
+        if (! empty($filters['priority'])) {
             $query->where('priority', $filters['priority']);
         }
 
@@ -39,7 +39,7 @@ class TaskRepository extends BaseRepository implements TaskRepositoryInterface
         $query = $this->model->where('assigned_to', $userId)
             ->with(['project', 'creator']);
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->byStatus($filters['status']);
         }
 

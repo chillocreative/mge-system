@@ -27,6 +27,7 @@ class InventoryService
     {
         $category = InventoryCategory::findOrFail($id);
         $category->update($data);
+
         return $category;
     }
 
@@ -41,10 +42,18 @@ class InventoryService
     {
         $query = InventoryItem::with('category:id,name')->orderBy('name');
 
-        if (!empty($filters['category_id'])) $query->where('category_id', $filters['category_id']);
-        if (!empty($filters['status'])) $query->byStatus($filters['status']);
-        if (!empty($filters['search'])) $query->search($filters['search']);
-        if (!empty($filters['low_stock'])) $query->lowStock();
+        if (! empty($filters['category_id'])) {
+            $query->where('category_id', $filters['category_id']);
+        }
+        if (! empty($filters['status'])) {
+            $query->byStatus($filters['status']);
+        }
+        if (! empty($filters['search'])) {
+            $query->search($filters['search']);
+        }
+        if (! empty($filters['low_stock'])) {
+            $query->lowStock();
+        }
 
         return $query->paginate($perPage);
     }
@@ -53,6 +62,7 @@ class InventoryService
     {
         $data['created_by'] = $userId;
         $item = InventoryItem::create($data);
+
         return $item->load('category:id,name');
     }
 
@@ -70,6 +80,7 @@ class InventoryService
         // quantity_on_hand is managed through transactions, never directly editable here
         unset($data['quantity_on_hand']);
         $item->update($data);
+
         return $item->load('category:id,name');
     }
 

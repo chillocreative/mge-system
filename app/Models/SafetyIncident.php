@@ -24,12 +24,38 @@ class SafetyIncident extends Model
         ];
     }
 
-    public function project(): BelongsTo { return $this->belongsTo(Project::class); }
-    public function reporter(): BelongsTo { return $this->belongsTo(User::class, 'reported_by'); }
-    public function investigator(): BelongsTo { return $this->belongsTo(User::class, 'investigated_by'); }
-    public function photos(): MorphMany { return $this->morphMany(ReportPhoto::class, 'photoable'); }
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
 
-    public function scopeByStatus($q, string $s) { return $q->where('status', $s); }
-    public function scopeBySeverity($q, string $s) { return $q->where('severity', $s); }
-    public function scopeForProject($q, int $id) { return $q->where('project_id', $id); }
+    public function reporter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reported_by');
+    }
+
+    public function investigator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'investigated_by');
+    }
+
+    public function photos(): MorphMany
+    {
+        return $this->morphMany(ReportPhoto::class, 'photoable');
+    }
+
+    public function scopeByStatus($q, string $s)
+    {
+        return $q->where('status', $s);
+    }
+
+    public function scopeBySeverity($q, string $s)
+    {
+        return $q->where('severity', $s);
+    }
+
+    public function scopeForProject($q, int $id)
+    {
+        return $q->where('project_id', $id);
+    }
 }

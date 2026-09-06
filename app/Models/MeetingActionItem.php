@@ -18,6 +18,13 @@ class MeetingActionItem extends Model
         ];
     }
 
-    public function meeting(): BelongsTo { return $this->belongsTo(MeetingMinute::class, 'meeting_minute_id'); }
-    public function assignee(): BelongsTo { return $this->belongsTo(Employee::class, 'assigned_to'); }
+    public function meeting(): BelongsTo
+    {
+        return $this->belongsTo(MeetingMinute::class, 'meeting_minute_id');
+    }
+
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'assigned_to');
+    }
 }

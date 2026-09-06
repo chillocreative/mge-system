@@ -89,7 +89,7 @@ class SiteLogController extends Controller
         $request->validate(['month' => ['required', 'date_format:Y-m']]);
 
         $project = Project::findOrFail($projectId);
-        $from = $request->string('month') . '-01';
+        $from = $request->string('month').'-01';
         $to = date('Y-m-t', strtotime($from));
 
         $logs = SiteLog::forProject($projectId)
@@ -120,11 +120,11 @@ class SiteLogController extends Controller
     private function logoData(): ?string
     {
         $path = public_path('logo.png');
-        if (!is_file($path)) {
+        if (! is_file($path)) {
             return null;
         }
 
-        return 'data:image/png;base64,' . base64_encode(file_get_contents($path));
+        return 'data:image/png;base64,'.base64_encode(file_get_contents($path));
     }
 
     private function syncMachinery(SiteLog $log, array $machinery): void
@@ -175,10 +175,10 @@ class SiteLogController extends Controller
             'safety_notes' => ['nullable', 'string'],
             'issues' => ['nullable', 'string'],
             'machinery' => ['nullable', 'array'],
-            'machinery.*.machinery_type' => ['required_with:machinery', 'in:' . $machineryTypes],
+            'machinery.*.machinery_type' => ['required_with:machinery', 'in:'.$machineryTypes],
             'machinery.*.quantity' => ['nullable', 'integer', 'min:1'],
             'weather_events' => ['nullable', 'array'],
-            'weather_events.*.condition' => ['required_with:weather_events', 'in:' . $weatherConditions],
+            'weather_events.*.condition' => ['required_with:weather_events', 'in:'.$weatherConditions],
             'weather_events.*.event_time' => ['required_with:weather_events', 'date_format:H:i'],
         ]);
     }

@@ -8,7 +8,6 @@ use App\Models\PayrollRecord;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
@@ -155,15 +154,15 @@ class PayrollService
             ->with('user.department:id,name')
             ->with('employee:id,employee_no,first_name,last_name,email');
 
-        if (!empty($filters['user_id'])) {
+        if (! empty($filters['user_id'])) {
             $query->forUser((int) $filters['user_id']);
         }
 
-        if (!empty($filters['period_start']) && !empty($filters['period_end'])) {
+        if (! empty($filters['period_start']) && ! empty($filters['period_end'])) {
             $query->forPeriod($filters['period_start'], $filters['period_end']);
         }
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->byStatus($filters['status']);
         }
 
@@ -369,7 +368,7 @@ class PayrollService
             return null;
         }
 
-        return 'data:image/png;base64,' . base64_encode(file_get_contents($path));
+        return 'data:image/png;base64,'.base64_encode(file_get_contents($path));
     }
 
     /**

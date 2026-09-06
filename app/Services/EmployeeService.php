@@ -19,10 +19,18 @@ class EmployeeService
             'user:id,first_name,last_name,email',
         ])->orderByDesc('created_at');
 
-        if (!empty($filters['search'])) $query->search($filters['search']);
-        if (!empty($filters['department_id'])) $query->where('department_id', $filters['department_id']);
-        if (!empty($filters['category'])) $query->byCategory($filters['category']);
-        if (!empty($filters['status'])) $query->where('status', $filters['status']);
+        if (! empty($filters['search'])) {
+            $query->search($filters['search']);
+        }
+        if (! empty($filters['department_id'])) {
+            $query->where('department_id', $filters['department_id']);
+        }
+        if (! empty($filters['category'])) {
+            $query->byCategory($filters['category']);
+        }
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
 
         return $query->paginate($perPage);
     }

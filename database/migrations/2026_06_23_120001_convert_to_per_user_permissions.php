@@ -15,7 +15,8 @@ use Spatie\Permission\PermissionRegistrar;
  * labels/templates only; per-user access is fully editable on the User Access
  * page. Idempotent — re-running is a no-op once roles hold no permissions.
  */
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();

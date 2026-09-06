@@ -18,23 +18,23 @@ class ProjectRepository extends BaseRepository implements ProjectRepositoryInter
     {
         $query = $this->model->with(['client', 'manager'])->withCount('documents');
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->byStatus($filters['status']);
         }
 
-        if (!empty($filters['priority'])) {
+        if (! empty($filters['priority'])) {
             $query->byPriority($filters['priority']);
         }
 
-        if (!empty($filters['client_id'])) {
+        if (! empty($filters['client_id'])) {
             $query->where('client_id', $filters['client_id']);
         }
 
-        if (!empty($filters['manager_id'])) {
+        if (! empty($filters['manager_id'])) {
             $query->where('manager_id', $filters['manager_id']);
         }
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")

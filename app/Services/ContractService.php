@@ -20,9 +20,13 @@ class ContractService
             'pics',
         ])->orderByDesc('created_at');
 
-        if (!empty($filters['project_id'])) $query->forProject($filters['project_id']);
-        if (!empty($filters['status'])) $query->byStatus($filters['status']);
-        if (!empty($filters['search'])) {
+        if (! empty($filters['project_id'])) {
+            $query->forProject($filters['project_id']);
+        }
+        if (! empty($filters['status'])) {
+            $query->byStatus($filters['status']);
+        }
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(fn ($q) => $q->where('title', 'like', "%{$search}%")
                 ->orWhere('contract_no', 'like', "%{$search}%")
@@ -152,7 +156,9 @@ class ContractService
     private function storeFiles(ProjectContract $contract, array $files): void
     {
         foreach ($files as $file) {
-            if (!$file) continue;
+            if (! $file) {
+                continue;
+            }
             $path = $file->store('projects/contracts', 'local');
             $contract->files()->create([
                 'file_path' => $path,

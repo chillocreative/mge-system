@@ -32,7 +32,7 @@ class AuthService
         $this->notifications->notifyByPermission(
             'users.approve',
             'New user pending approval',
-            trim("{$user->first_name} {$user->last_name}") . " registered and is awaiting approval.",
+            trim("{$user->first_name} {$user->last_name}").' registered and is awaiting approval.',
             'user',
             '/users',
             ['user_id' => $user->id],
@@ -45,7 +45,7 @@ class AuthService
     {
         $user = $this->userRepository->findByEmail($credentials['email']);
 
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);

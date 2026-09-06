@@ -80,7 +80,7 @@ class ProjectDocumentController extends Controller
             ]);
         }
 
-        return $this->created(['count' => count($created)], count($created) . ' file(s) uploaded.');
+        return $this->created(['count' => count($created)], count($created).' file(s) uploaded.');
     }
 
     public function show(int $projectId, int $documentId): JsonResponse

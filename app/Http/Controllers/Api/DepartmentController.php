@@ -16,7 +16,7 @@ class DepartmentController extends Controller
         if ($search = $request->string('search')->toString()) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
@@ -55,8 +55,8 @@ class DepartmentController extends Controller
         $department = Department::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255', 'unique:departments,name,' . $department->id],
-            'code' => ['sometimes', 'string', 'max:50', 'unique:departments,code,' . $department->id],
+            'name' => ['sometimes', 'string', 'max:255', 'unique:departments,name,'.$department->id],
+            'code' => ['sometimes', 'string', 'max:50', 'unique:departments,code,'.$department->id],
             'description' => ['nullable', 'string', 'max:500'],
             'is_active' => ['boolean'],
         ]);

@@ -19,21 +19,42 @@ class ComplianceChecklist extends Model
         return ['checklist_date' => 'date'];
     }
 
-    public function project(): BelongsTo { return $this->belongsTo(Project::class); }
-    public function inspector(): BelongsTo { return $this->belongsTo(User::class, 'inspector_id'); }
-    public function items(): HasMany { return $this->hasMany(ComplianceChecklistItem::class, 'checklist_id')->orderBy('sort_order'); }
-    public function photos(): MorphMany { return $this->morphMany(ReportPhoto::class, 'photoable'); }
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
 
-    public function scopeForProject($q, int $id) { return $q->where('project_id', $id); }
+    public function inspector(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'inspector_id');
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(ComplianceChecklistItem::class, 'checklist_id')->orderBy('sort_order');
+    }
+
+    public function photos(): MorphMany
+    {
+        return $this->morphMany(ReportPhoto::class, 'photoable');
+    }
+
+    public function scopeForProject($q, int $id)
+    {
+        return $q->where('project_id', $id);
+    }
 
     public function recalculateStatus(): void
     {
         $items = $this->items;
-        if ($items->isEmpty()) return;
+        if ($items->isEmpty()) {
+            return;
+        }
 
         $applicable = $items->where('status', '!=', 'na');
         if ($applicable->isEmpty()) {
             $this->update(['overall_status' => 'compliant']);
+
             return;
         }
 

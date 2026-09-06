@@ -23,9 +23,23 @@ class SiteInspection extends Model
         ];
     }
 
-    public function project(): BelongsTo { return $this->belongsTo(Project::class); }
-    public function inspector(): BelongsTo { return $this->belongsTo(User::class, 'inspector_id'); }
-    public function photos(): MorphMany { return $this->morphMany(ReportPhoto::class, 'photoable'); }
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
 
-    public function scopeForProject($q, int $id) { return $q->where('project_id', $id); }
+    public function inspector(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'inspector_id');
+    }
+
+    public function photos(): MorphMany
+    {
+        return $this->morphMany(ReportPhoto::class, 'photoable');
+    }
+
+    public function scopeForProject($q, int $id)
+    {
+        return $q->where('project_id', $id);
+    }
 }

@@ -18,6 +18,7 @@ class VehicleController extends Controller
     {
         $filters = $request->only(['status', 'type', 'search']);
         $perPage = min($request->integer('per_page', 15), 100);
+
         return $this->success($this->assetService->listVehicles($filters, $perPage));
     }
 
@@ -37,6 +38,7 @@ class VehicleController extends Controller
         ]);
 
         $vehicle = $this->assetService->createVehicle($validated, $request->user()->id);
+
         return $this->created($vehicle, 'Vehicle added successfully.');
     }
 
@@ -48,7 +50,7 @@ class VehicleController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         $validated = $request->validate([
-            'registration_no' => ['sometimes', 'string', 'max:255', 'unique:vehicles,registration_no,' . $id],
+            'registration_no' => ['sometimes', 'string', 'max:255', 'unique:vehicles,registration_no,'.$id],
             'make' => ['sometimes', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:255'],
             'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
@@ -66,6 +68,7 @@ class VehicleController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $this->assetService->deleteVehicle($id);
+
         return $this->success(null, 'Vehicle deleted.');
     }
 
@@ -88,12 +91,14 @@ class VehicleController extends Controller
         unset($validated['file']);
 
         $document = $this->assetService->addDocument($vehicleId, $validated, $file);
+
         return $this->created($document, 'Document added.');
     }
 
     public function destroyDocument(int $vehicleId, int $documentId): JsonResponse
     {
         $this->assetService->deleteDocument($vehicleId, $documentId);
+
         return $this->success(null, 'Document deleted.');
     }
 
@@ -101,7 +106,7 @@ class VehicleController extends Controller
     {
         $document = $this->assetService->getDocument($vehicleId, $documentId);
 
-        if (!$document->file_path || !Storage::disk('local')->exists($document->file_path)) {
+        if (! $document->file_path || ! Storage::disk('local')->exists($document->file_path)) {
             return $this->notFound('File not found.');
         }
 
@@ -113,6 +118,7 @@ class VehicleController extends Controller
     public function expiring(Request $request): JsonResponse
     {
         $days = min($request->integer('days', 30), 365);
+
         return $this->success($this->assetService->dashboard($days));
     }
 }

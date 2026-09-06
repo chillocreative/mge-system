@@ -55,7 +55,7 @@ class MemoService
 
             $this->notifications->notifyUserIds(
                 $recipientIds,
-                'New memo: ' . $memo->title,
+                'New memo: '.$memo->title,
                 \Illuminate\Support\Str::limit(strip_tags($memo->body), 120),
                 'memo',
                 '/hr/memos',
@@ -85,7 +85,7 @@ class MemoService
     private function projectAudience(int $projectId): array
     {
         $project = Project::with('members:id')->find($projectId);
-        if (!$project) {
+        if (! $project) {
             return [];
         }
 

@@ -16,19 +16,19 @@ class ExpenseService
             'approver:id,first_name,last_name',
         ]);
 
-        if (!empty($filters['project_id'])) {
+        if (! empty($filters['project_id'])) {
             $query->forProject((int) $filters['project_id']);
         }
-        if (!empty($filters['category'])) {
+        if (! empty($filters['category'])) {
             $query->byCategory($filters['category']);
         }
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->byStatus($filters['status']);
         }
-        if (!empty($filters['date_from']) && !empty($filters['date_to'])) {
+        if (! empty($filters['date_from']) && ! empty($filters['date_to'])) {
             $query->forPeriod($filters['date_from'], $filters['date_to']);
         }
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $query->where('title', 'like', "%{$filters['search']}%");
         }
 

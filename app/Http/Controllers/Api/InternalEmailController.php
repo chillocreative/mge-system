@@ -93,7 +93,7 @@ class InternalEmailController extends Controller
         $validated['thread_id'] = $original->thread_id ?: $original->id;
         $validated['subject'] = str_starts_with($original->subject, 'Re: ')
             ? $original->subject
-            : 'Re: ' . $original->subject;
+            : 'Re: '.$original->subject;
 
         $email = $this->emailService->sendEmail(
             $validated,

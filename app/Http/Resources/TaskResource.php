@@ -14,7 +14,7 @@ class TaskResource extends JsonResource
         return match ($log->action) {
             'created' => 'created this task',
             'updated' => 'updated the task',
-            'status_changed' => 'changed status from ' . str_replace('_', ' ', $p['from'] ?? '?') . ' to ' . str_replace('_', ' ', $p['to'] ?? '?'),
+            'status_changed' => 'changed status from '.str_replace('_', ' ', $p['from'] ?? '?').' to '.str_replace('_', ' ', $p['to'] ?? '?'),
             'reassigned' => 'updated the assignees',
             'attachment_added' => 'added an attachment',
             'deleted' => 'deleted the task',

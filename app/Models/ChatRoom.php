@@ -73,7 +73,8 @@ class ChatRoom extends Model
 
         // For private chats, show the other user's name
         $other = $this->members->firstWhere('id', '!=', $user->id);
-        return $other ? ($other->first_name . ' ' . $other->last_name) : 'Private Chat';
+
+        return $other ? ($other->first_name.' '.$other->last_name) : 'Private Chat';
     }
 
     public function unreadCountForUser(int $userId): int

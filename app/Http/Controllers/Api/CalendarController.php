@@ -69,7 +69,7 @@ class CalendarController extends Controller
     {
         try {
             $code = $request->query('code');
-            if (!$code) {
+            if (! $code) {
                 return $this->error('Missing authorization code.', 422);
             }
             $this->googleService->handleCallback($code, $request->user()->id);

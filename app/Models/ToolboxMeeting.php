@@ -19,10 +19,28 @@ class ToolboxMeeting extends Model
         return ['meeting_date' => 'date'];
     }
 
-    public function project(): BelongsTo { return $this->belongsTo(Project::class); }
-    public function conductor(): BelongsTo { return $this->belongsTo(User::class, 'conducted_by'); }
-    public function attendees(): HasMany { return $this->hasMany(ToolboxMeetingAttendee::class); }
-    public function photos(): MorphMany { return $this->morphMany(ReportPhoto::class, 'photoable'); }
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
 
-    public function scopeForProject($q, int $id) { return $q->where('project_id', $id); }
+    public function conductor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'conducted_by');
+    }
+
+    public function attendees(): HasMany
+    {
+        return $this->hasMany(ToolboxMeetingAttendee::class);
+    }
+
+    public function photos(): MorphMany
+    {
+        return $this->morphMany(ReportPhoto::class, 'photoable');
+    }
+
+    public function scopeForProject($q, int $id)
+    {
+        return $q->where('project_id', $id);
+    }
 }

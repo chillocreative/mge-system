@@ -25,10 +25,28 @@ class MeetingMinute extends Model
         ];
     }
 
-    public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
-    public function project(): BelongsTo { return $this->belongsTo(Project::class); }
-    public function files(): HasMany { return $this->hasMany(MeetingMinuteFile::class); }
-    public function actionItems(): HasMany { return $this->hasMany(MeetingActionItem::class); }
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 
-    public function scopeByStatus($q, string $s) { return $q->where('status', $s); }
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    public function files(): HasMany
+    {
+        return $this->hasMany(MeetingMinuteFile::class);
+    }
+
+    public function actionItems(): HasMany
+    {
+        return $this->hasMany(MeetingActionItem::class);
+    }
+
+    public function scopeByStatus($q, string $s)
+    {
+        return $q->where('status', $s);
+    }
 }

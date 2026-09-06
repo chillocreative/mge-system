@@ -20,11 +20,11 @@ class CalendarService
             'project:id,name',
         ])->orderBy('start_datetime');
 
-        if (!empty($filters['start']) && !empty($filters['end'])) {
+        if (! empty($filters['start']) && ! empty($filters['end'])) {
             $query->forRange($filters['start'], $filters['end']);
         }
 
-        if (!empty($filters['type'])) {
+        if (! empty($filters['type'])) {
             $query->byType($filters['type']);
         }
 

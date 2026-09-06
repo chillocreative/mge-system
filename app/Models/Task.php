@@ -114,6 +114,6 @@ class Task extends Model
     {
         return $this->due_date
             && $this->due_date->isPast()
-            && !in_array($this->status, ['completed', 'cancelled']);
+            && ! in_array($this->status, ['completed', 'cancelled']);
     }
 }

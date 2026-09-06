@@ -14,14 +14,14 @@ class NotificationService
 {
     public function notify(?User $user, string $title, string $message, string $type = 'info', ?string $link = null, array $extra = []): void
     {
-        if (!$user) {
+        if (! $user) {
             return;
         }
 
         try {
             $user->notify(new SystemNotification($title, $message, $type, $link, $extra));
         } catch (\Throwable $e) {
-            Log::warning('Notification failed: ' . $e->getMessage());
+            Log::warning('Notification failed: '.$e->getMessage());
         }
     }
 
@@ -60,7 +60,7 @@ class NotificationService
             $users = User::permission($permission)->where('status', 'active')->get();
             $this->notifyMany($users, $title, $message, $type, $link, $extra);
         } catch (\Throwable $e) {
-            Log::warning('Notification by permission failed: ' . $e->getMessage());
+            Log::warning('Notification by permission failed: '.$e->getMessage());
         }
     }
 }

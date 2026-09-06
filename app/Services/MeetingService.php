@@ -20,10 +20,16 @@ class MeetingService
             'actionItems',
         ])->orderByDesc('meeting_date');
 
-        if (!empty($filters['status'])) $query->byStatus($filters['status']);
-        if (!empty($filters['date_from'])) $query->whereDate('meeting_date', '>=', $filters['date_from']);
-        if (!empty($filters['date_to'])) $query->whereDate('meeting_date', '<=', $filters['date_to']);
-        if (!empty($filters['search'])) {
+        if (! empty($filters['status'])) {
+            $query->byStatus($filters['status']);
+        }
+        if (! empty($filters['date_from'])) {
+            $query->whereDate('meeting_date', '>=', $filters['date_from']);
+        }
+        if (! empty($filters['date_to'])) {
+            $query->whereDate('meeting_date', '<=', $filters['date_to']);
+        }
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(fn ($q) => $q->where('title', 'like', "%{$search}%")
                 ->orWhere('location', 'like', "%{$search}%")
@@ -64,14 +70,14 @@ class MeetingService
         return DB::transaction(function () use ($id, $data, $files) {
             $meeting = MeetingMinute::findOrFail($id);
 
-            $actionItemsCleared = !empty($data['action_items_cleared']);
+            $actionItemsCleared = ! empty($data['action_items_cleared']);
             $hasActionItems = array_key_exists('action_items', $data) || $actionItemsCleared;
             $actionItems = $data['action_items'] ?? [];
             unset($data['action_items'], $data['action_items_cleared']);
 
-            $attendeesCleared = !empty($data['attendees_cleared']);
+            $attendeesCleared = ! empty($data['attendees_cleared']);
             unset($data['attendees_cleared']);
-            if ($attendeesCleared && !array_key_exists('attendees', $data)) {
+            if ($attendeesCleared && ! array_key_exists('attendees', $data)) {
                 $data['attendees'] = [];
             }
 
@@ -124,7 +130,9 @@ class MeetingService
     private function storeFiles(MeetingMinute $meeting, array $files): void
     {
         foreach ($files as $file) {
-            if (!$file) continue;
+            if (! $file) {
+                continue;
+            }
             $path = $file->store('meetings/files', 'local');
             $meeting->files()->create([
                 'file_path' => $path,
@@ -138,7 +146,9 @@ class MeetingService
     private function syncActionItems(MeetingMinute $meeting, array $actionItems): void
     {
         foreach ($actionItems as $item) {
-            if (empty($item['item'])) continue;
+            if (empty($item['item'])) {
+                continue;
+            }
             MeetingActionItem::create([
                 'meeting_minute_id' => $meeting->id,
                 'item' => $item['item'],

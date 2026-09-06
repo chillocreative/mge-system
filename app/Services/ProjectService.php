@@ -43,7 +43,7 @@ class ProjectService
     {
         $project = $this->projectRepository->create($data);
 
-        if (!empty($data['member_ids'])) {
+        if (! empty($data['member_ids'])) {
             $members = collect($data['member_ids'])->mapWithKeys(fn ($userId) => [
                 $userId => ['role' => 'member', 'joined_at' => now()],
             ]);

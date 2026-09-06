@@ -109,6 +109,6 @@ class Project extends Model
     {
         return $this->end_date
             && $this->end_date->isPast()
-            && !in_array($this->status, ['completed', 'cancelled']);
+            && ! in_array($this->status, ['completed', 'cancelled']);
     }
 }

@@ -48,6 +48,6 @@ class Milestone extends Model
     {
         return $this->due_date
             && $this->due_date->isPast()
-            && !in_array($this->status, ['completed']);
+            && ! in_array($this->status, ['completed']);
     }
 }

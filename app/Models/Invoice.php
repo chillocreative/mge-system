@@ -95,7 +95,7 @@ class Invoice extends Model
     public function isOverdue(): bool
     {
         return $this->due_date?->isPast()
-            && !in_array($this->status, ['paid', 'cancelled']);
+            && ! in_array($this->status, ['paid', 'cancelled']);
     }
 
     public function recalculateTotals(): void
