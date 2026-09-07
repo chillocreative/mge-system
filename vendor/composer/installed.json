@@ -216,6 +216,50 @@
             "install-path": "../carbonphp/carbon-doctrine-types"
         },
         {
+            "name": "chillocreative/qwen-agent",
+            "version": "1.0.0",
+            "version_normalized": "1.0.0.0",
+            "source": {
+                "type": "git",
+                "url": "git@github.com:chillocreative/qwen-agent.git",
+                "reference": "587ddda6dc1ba418dacf7934a14b691d2bd186cc"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/chillocreative/qwen-agent/zipball/587ddda6dc1ba418dacf7934a14b691d2bd186cc",
+                "reference": "587ddda6dc1ba418dacf7934a14b691d2bd186cc",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
+                "php": "^8.2"
+            },
+            "time": "2026-08-24T09:04:05+00:00",
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Chillocreative\\QwenAgent\\QwenAgentServiceProvider"
+                    ]
+                }
+            },
+            "installation-source": "dist",
+            "autoload": {
+                "psr-4": {
+                    "Chillocreative\\QwenAgent\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "Reusable Qwen coding sub-agent service + Artisan command for Laravel projects (Claude-as-lead delegation pattern)",
+            "support": {
+                "source": "https://github.com/chillocreative/qwen-agent/tree/1.0.0",
+                "issues": "https://github.com/chillocreative/qwen-agent/issues"
+            },
+            "install-path": "../chillocreative/qwen-agent"
+        },
+        {
             "name": "composer/pcre",
             "version": "3.3.2",
             "version_normalized": "3.3.2.0",
@@ -10184,6 +10228,7 @@
     ],
     "dev": true,
     "dev-package-names": [
+        "chillocreative/qwen-agent",
         "fakerphp/faker",
         "filp/whoops",
         "hamcrest/hamcrest-php",

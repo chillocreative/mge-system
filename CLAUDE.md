@@ -164,3 +164,14 @@ php artisan db:seed
 - Excel import classes in `app/Imports/`
 - Activity logging in `ActivityLog` model
 - File uploads stored in `storage/app/public/` — ensure `php artisan storage:link` is run
+
+## Qwen sub-agent (Claude-as-lead delegation)
+
+This project has `chillocreative/qwen-agent` installed (path-repo at `../qwen-agent`), providing a low-cost Qwen coding sub-agent for routine implementation work.
+
+- Delegate a task: `php artisan qwen:agent storage/app/qwen-tasks/some-task.txt --context=app/Models/Foo.php,app/Http/Controllers/FooController.php`
+- The command is read-only — it never writes to this project. Review Qwen's output and apply changes yourself (as Claude/lead engineer).
+- Config via `.env`: `QWEN_API_KEY`, `QWEN_BASE_URL` (defaults to DashScope intl endpoint), `QWEN_MODEL` (defaults to `qwen3.7-flash`).
+- `storage/app/qwen-tasks/` is gitignored scratch space for task prompts/responses.
+
+Use this for well-scoped, mechanical sub-tasks (boilerplate, repetitive edits, straightforward bugfixes) to save cost/time, while keeping architectural decisions and review with Claude.

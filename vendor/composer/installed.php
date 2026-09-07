@@ -3,7 +3,7 @@
         'name' => 'laravel/laravel',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => 'b337dd4342ef695b3f8aac5ead38de3ba73b468a',
+        'reference' => 'cf7926677c19f63683b4369861366cd7d4437900',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -36,6 +36,15 @@
             'install_path' => __DIR__ . '/../carbonphp/carbon-doctrine-types',
             'aliases' => array(),
             'dev_requirement' => false,
+        ),
+        'chillocreative/qwen-agent' => array(
+            'pretty_version' => '1.0.0',
+            'version' => '1.0.0.0',
+            'reference' => '587ddda6dc1ba418dacf7934a14b691d2bd186cc',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../chillocreative/qwen-agent',
+            'aliases' => array(),
+            'dev_requirement' => true,
         ),
         'composer/pcre' => array(
             'pretty_version' => '3.3.2',
@@ -463,7 +472,7 @@
         'laravel/laravel' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => 'b337dd4342ef695b3f8aac5ead38de3ba73b468a',
+            'reference' => 'cf7926677c19f63683b4369861366cd7d4437900',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
