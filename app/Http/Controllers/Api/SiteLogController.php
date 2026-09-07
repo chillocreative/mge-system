@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Project;
 use App\Models\SiteLog;
+use App\Models\SiteLogMachinery;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -124,6 +125,59 @@ class SiteLogController extends Controller
         $log->delete();
 
         return $this->success(null, 'Site log deleted.');
+    }
+
+    /**
+     * Monthly machinery usage report for a project (Ciri 2), counted in DAYS.
+     *
+     * The critical rule (plan 2.3.1): count the number of DISTINCT dates each
+     * machinery type appears on — not the number of rows and not the sum of
+     * quantities. A machine logged seven times on one day is one day of use, not
+     * seven. Utilisation is days-used over the number of distinct site-log days
+     * in the month, which answers the question the boss asks next ("why was the
+     * roller only used a third of the time?").
+     */
+    public function machineryReport(int $projectId, Request $request): JsonResponse
+    {
+        $request->validate(['month' => ['required', 'date_format:Y-m']]);
+
+        $month = $request->string('month')->value();
+        $from = $month.'-01';
+        $to = date('Y-m-t', strtotime($from));
+
+        $rows = SiteLogMachinery::query()
+            ->join('site_logs', 'site_logs.id', '=', 'site_log_machinery.site_log_id')
+            ->where('site_logs.project_id', $projectId)
+            ->whereBetween('site_logs.log_date', [$from, $to])
+            ->groupBy('site_log_machinery.machinery_type')
+            ->selectRaw('site_log_machinery.machinery_type as type')
+            ->selectRaw('COUNT(DISTINCT site_logs.log_date) as days_used')
+            ->selectRaw('MIN(site_logs.log_date) as first_used')
+            ->selectRaw('MAX(site_logs.log_date) as last_used')
+            ->orderByDesc('days_used')
+            ->get();
+
+        // Distinct working days actually logged in the month — the utilisation base.
+        $workingDays = (int) SiteLog::forProject($projectId)
+            ->forPeriod($from, $to)
+            ->distinct()
+            ->count('log_date');
+
+        $machinery = $rows->map(fn ($r) => [
+            'type' => $r->type,
+            'days_used' => (int) $r->days_used,
+            'first_used' => $r->first_used,
+            'last_used' => $r->last_used,
+            'utilisation' => $workingDays > 0 ? round($r->days_used / $workingDays * 100) : 0,
+        ]);
+
+        return $this->success([
+            'month' => $month,
+            'working_days' => $workingDays,
+            'machinery_count' => $machinery->count(),
+            'total_machine_days' => (int) $machinery->sum('days_used'),
+            'machinery' => $machinery,
+        ]);
     }
 
     public function monthlyReportPdf(int $projectId, Request $request)

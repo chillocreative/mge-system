@@ -16,6 +16,7 @@ import {
     HiOutlineTrash,
     HiOutlinePlus,
     HiOutlineDocumentDownload,
+    HiOutlineTruck,
     HiOutlineClipboardList,
     HiOutlineFlag,
     HiOutlineDocumentText,
@@ -532,6 +533,22 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
     const [form, setForm] = useState(emptySiteLogForm());
     const [saving, setSaving] = useState(false);
     const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
+    const [machineryReport, setMachineryReport] = useState(null);
+    const [machineryLoading, setMachineryLoading] = useState(false);
+
+    const openMachineryReport = async () => {
+        setMachineryLoading(true);
+        setMachineryReport({ open: true, data: null });
+        try {
+            const res = await projectService.getMachineryReport(project.id, reportMonth);
+            setMachineryReport({ open: true, data: res.data });
+        } catch {
+            toast.error('Failed to load machinery report');
+            setMachineryReport(null);
+        } finally {
+            setMachineryLoading(false);
+        }
+    };
 
     const addMachinery = () => setForm((p) => ({ ...p, machinery: [...p.machinery, { machinery_type: MACHINERY_TYPES[0], quantity: 1 }] }));
     const removeMachinery = (idx) => setForm((p) => ({ ...p, machinery: p.machinery.filter((_, i) => i !== idx) }));
@@ -576,6 +593,13 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                         >
                             <HiOutlineDocumentDownload className="h-3.5 w-3.5" /> Monthly Report
                         </a>
+                        <button
+                            onClick={openMachineryReport}
+                            className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                            title="Machinery usage (days)"
+                        >
+                            <HiOutlineTruck className="h-3.5 w-3.5" /> Machinery
+                        </button>
                     </div>
                     {canEdit && (
                         <button onClick={() => setShowForm(!showForm)} className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700">
@@ -706,6 +730,54 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                             )}
                         </div>
                     ))}
+                </div>
+            )}
+        {machineryReport?.open && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setMachineryReport(null)}>
+                    <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="mb-4 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900">Machinery Usage</h3>
+                                <p className="text-xs text-gray-500">{reportMonth} · counted in days used</p>
+                            </div>
+                            <button onClick={() => setMachineryReport(null)} className="rounded p-1 text-gray-400 hover:bg-gray-100">✕</button>
+                        </div>
+                        {machineryLoading ? (
+                            <p className="py-6 text-center text-sm text-gray-400">Loading…</p>
+                        ) : !machineryReport.data || machineryReport.data.machinery.length === 0 ? (
+                            <p className="py-6 text-center text-sm text-gray-400">No machinery recorded for this month.</p>
+                        ) : (
+                            <>
+                                <div className="mb-3 flex gap-4 text-sm text-gray-600">
+                                    <span><b>{machineryReport.data.machinery_count}</b> machine type(s)</span>
+                                    <span><b>{machineryReport.data.total_machine_days}</b> machine-days</span>
+                                    <span><b>{machineryReport.data.working_days}</b> working day(s)</span>
+                                </div>
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
+                                            <th className="py-2 text-left font-medium">Machinery</th>
+                                            <th className="py-2 text-right font-medium">Days</th>
+                                            <th className="py-2 text-right font-medium">First</th>
+                                            <th className="py-2 text-right font-medium">Last</th>
+                                            <th className="py-2 text-right font-medium">Utilisation</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {machineryReport.data.machinery.map((m) => (
+                                            <tr key={m.type} className="border-b border-gray-100 last:border-0">
+                                                <td className="py-2 text-gray-800">{m.type}</td>
+                                                <td className="py-2 text-right font-semibold text-gray-900">{m.days_used}</td>
+                                                <td className="py-2 text-right text-gray-500">{(m.first_used || '').slice(0, 10)}</td>
+                                                <td className="py-2 text-right text-gray-500">{(m.last_used || '').slice(0, 10)}</td>
+                                                <td className="py-2 text-right text-gray-600">{m.utilisation}%</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </>
+                        )}
+                    </div>
                 </div>
             )}
         </Card>

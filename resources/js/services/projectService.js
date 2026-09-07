@@ -61,6 +61,10 @@ const projectService = {
     getSiteLogReportUrl(projectId, month) {
         return `/api/projects/${projectId}/site-logs/report/pdf?month=${month}`;
     },
+    async getMachineryReport(projectId, month) {
+        const response = await apiClient.get(`/projects/${projectId}/site-logs/report/machinery`, { params: { month } });
+        return response.data;
+    },
 
     // ── Documents ──
     async getDocuments(projectId, params = {}) {
