@@ -63,6 +63,58 @@ class AssetService
 
     // ── Documents ──
 
+    public function listAssignments(int $vehicleId)
+    {
+        return \App\Models\VehicleProjectAssignment::where('vehicle_id', $vehicleId)
+            ->with('project:id,name,code,status')
+            ->orderByDesc('assigned_at')
+            ->get()
+            ->map(fn ($a) => [
+                'id' => $a->id,
+                'project_id' => $a->project_id,
+                'project' => $a->project ? ['id' => $a->project->id, 'name' => $a->project->name, 'code' => $a->project->code] : null,
+                'assigned_at' => optional($a->assigned_at)->format('Y-m-d'),
+                'released_at' => optional($a->released_at)->format('Y-m-d'),
+                'active' => $a->released_at === null,
+                'notes' => $a->notes,
+            ]);
+    }
+
+    /**
+     * Assign a vehicle to a project. A vehicle is on one project at a time, so
+     * any still-open assignment is released the day before the new one starts
+     * — keeping the history clean and non-overlapping (plan 24.2/Y1).
+     */
+    public function assignToProject(int $vehicleId, array $data, int $userId): \App\Models\VehicleProjectAssignment
+    {
+        $vehicle = Vehicle::findOrFail($vehicleId);
+        $assignedAt = $data['assigned_at'] ?? now()->toDateString();
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($vehicle, $data, $assignedAt, $userId) {
+            \App\Models\VehicleProjectAssignment::where('vehicle_id', $vehicle->id)
+                ->whereNull('released_at')
+                ->update(['released_at' => $assignedAt]);
+
+            return \App\Models\VehicleProjectAssignment::create([
+                'vehicle_id' => $vehicle->id,
+                'project_id' => $data['project_id'],
+                'assigned_at' => $assignedAt,
+                'notes' => $data['notes'] ?? null,
+                'created_by' => $userId,
+            ]);
+        });
+    }
+
+    public function releaseFromProject(int $vehicleId, int $assignmentId): void
+    {
+        $assignment = \App\Models\VehicleProjectAssignment::where('vehicle_id', $vehicleId)
+            ->findOrFail($assignmentId);
+
+        if ($assignment->released_at === null) {
+            $assignment->update(['released_at' => now()->toDateString()]);
+        }
+    }
+
     public function addDocument(int $vehicleId, array $data, ?UploadedFile $file = null): VehicleDocument
     {
         $vehicle = Vehicle::findOrFail($vehicleId);

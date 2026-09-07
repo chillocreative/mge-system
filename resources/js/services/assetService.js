@@ -18,6 +18,18 @@ const assetService = {
         const response = await apiClient.put(`/vehicles/${id}`, data);
         return response.data;
     },
+    async listAssignments(vehicleId) {
+        const response = await apiClient.get(`/vehicles/${vehicleId}/assignments`);
+        return response.data;
+    },
+    async assignProject(vehicleId, data) {
+        const response = await apiClient.post(`/vehicles/${vehicleId}/assignments`, data);
+        return response.data;
+    },
+    async releaseProject(vehicleId, assignmentId) {
+        const response = await apiClient.delete(`/vehicles/${vehicleId}/assignments/${assignmentId}`);
+        return response.data;
+    },
     async deleteVehicle(id) {
         const response = await apiClient.delete(`/vehicles/${id}`);
         return response.data;

@@ -790,6 +790,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{id}', [VehicleController::class, 'show'])->middleware('permission:assets.view');
         Route::put('/{id}', [VehicleController::class, 'update'])->middleware('permission:assets.manage');
         Route::delete('/{id}', [VehicleController::class, 'destroy'])->middleware('permission:assets.manage');
+        Route::get('/{vehicle}/assignments', [VehicleController::class, 'assignments'])->middleware('permission:assets.view');
+        Route::post('/{vehicle}/assignments', [VehicleController::class, 'assignProject'])->middleware('permission:assets.manage');
+        Route::delete('/{vehicle}/assignments/{assignmentId}', [VehicleController::class, 'releaseProject'])->middleware('permission:assets.manage');
         Route::post('/{vehicle}/documents', [VehicleController::class, 'storeDocument'])->middleware('permission:assets.manage');
         Route::delete('/{vehicle}/documents/{document}', [VehicleController::class, 'destroyDocument'])->middleware('permission:assets.manage');
         Route::get('/{vehicle}/documents/{document}/download', [VehicleController::class, 'downloadDocument'])->middleware('permission:assets.view');

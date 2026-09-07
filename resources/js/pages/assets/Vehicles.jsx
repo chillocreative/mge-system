@@ -13,6 +13,7 @@ import {
     HiOutlineExclamation,
     HiOutlineCube,
     HiOutlineChevronRight,
+    HiOutlinePencilAlt,
 } from 'react-icons/hi';
 
 const statusColors = {
@@ -42,6 +43,9 @@ export default function Vehicles() {
     const [lowStockCount, setLowStockCount] = useState(0);
     const [form, setForm] = useState({
         registration_no: '',
+        chassis_no: '',
+        engine_no: '',
+        serial_no: '',
         make: '',
         model: '',
         year: '',
@@ -105,7 +109,7 @@ export default function Vehicles() {
             await assetService.createVehicle(payload);
             toast.success('Vehicle added');
             setShowForm(false);
-            setForm({ registration_no: '', make: '', model: '', year: '', type: 'car', purchase_date: '', current_value: '', assigned_to: '', status: 'active', notes: '' });
+            setForm({ registration_no: '', chassis_no: '', engine_no: '', serial_no: '', make: '', model: '', year: '', type: 'car', purchase_date: '', current_value: '', assigned_to: '', status: 'active', notes: '' });
             fetchVehicles();
             fetchSummary();
         } catch (err) {
@@ -245,8 +249,8 @@ export default function Vehicles() {
                                             <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[v.status]}`}>{v.status}</span>
                                         </td>
                                         <td className="px-4 py-3 text-right">
-                                            <Link to={`/assets/vehicles/${v.id}`} className="inline-flex items-center text-gray-400 hover:text-primary-600">
-                                                <HiOutlineChevronRight className="h-5 w-5" />
+                                            <Link to={`/assets/vehicles/${v.id}`} className="inline-flex items-center text-gray-400 hover:text-primary-600" title="Open / edit">
+                                                <HiOutlinePencilAlt className="h-5 w-5" />
                                             </Link>
                                         </td>
                                     </tr>
@@ -300,6 +304,18 @@ export default function Vehicles() {
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Model</label>
                                     <input type="text" value={form.model} onChange={(e) => setForm((p) => ({ ...p, model: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Chassis No</label>
+                                    <input type="text" value={form.chassis_no} onChange={(e) => setForm((p) => ({ ...p, chassis_no: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Engine No</label>
+                                    <input type="text" value={form.engine_no} onChange={(e) => setForm((p) => ({ ...p, engine_no: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Serial No</label>
+                                    <input type="text" value={form.serial_no} onChange={(e) => setForm((p) => ({ ...p, serial_no: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">

@@ -28,6 +28,9 @@ class VehicleController extends Controller
             'registration_no' => ['required', 'string', 'max:255', 'unique:vehicles,registration_no'],
             'make' => ['required', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:255'],
+            'chassis_no' => ['nullable', 'string', 'max:255'],
+            'engine_no' => ['nullable', 'string', 'max:255'],
+            'serial_no' => ['nullable', 'string', 'max:255'],
             'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
             'type' => ['required', 'in:car,van,truck,lorry,machinery,other'],
             'purchase_date' => ['nullable', 'date'],
@@ -53,6 +56,9 @@ class VehicleController extends Controller
             'registration_no' => ['sometimes', 'string', 'max:255', 'unique:vehicles,registration_no,'.$id],
             'make' => ['sometimes', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:255'],
+            'chassis_no' => ['nullable', 'string', 'max:255'],
+            'engine_no' => ['nullable', 'string', 'max:255'],
+            'serial_no' => ['nullable', 'string', 'max:255'],
             'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
             'type' => ['sometimes', 'in:car,van,truck,lorry,machinery,other'],
             'purchase_date' => ['nullable', 'date'],
@@ -73,6 +79,31 @@ class VehicleController extends Controller
     }
 
     // ── Documents ──
+
+    public function assignments(int $vehicleId): JsonResponse
+    {
+        return $this->success($this->assetService->listAssignments($vehicleId));
+    }
+
+    public function assignProject(Request $request, int $vehicleId): JsonResponse
+    {
+        $validated = $request->validate([
+            'project_id' => ['required', 'exists:projects,id'],
+            'assigned_at' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $assignment = $this->assetService->assignToProject($vehicleId, $validated, $request->user()->id);
+
+        return $this->created($assignment, 'Vehicle assigned to project.');
+    }
+
+    public function releaseProject(int $vehicleId, int $assignmentId): JsonResponse
+    {
+        $this->assetService->releaseFromProject($vehicleId, $assignmentId);
+
+        return $this->success(null, 'Vehicle released from project.');
+    }
 
     public function storeDocument(Request $request, int $vehicleId): JsonResponse
     {

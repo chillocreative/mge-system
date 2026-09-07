@@ -14,6 +14,7 @@ class Vehicle extends Model
 
     protected $fillable = [
         'registration_no', 'make', 'model', 'year', 'type',
+        'chassis_no', 'engine_no', 'serial_no',
         'purchase_date', 'current_value', 'assigned_to', 'status',
         'notes', 'created_by',
     ];
@@ -32,6 +33,16 @@ class Vehicle extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(VehicleDocument::class);
+    }
+
+    public function projectAssignments(): HasMany
+    {
+        return $this->hasMany(VehicleProjectAssignment::class);
+    }
+
+    public function currentProjectAssignment()
+    {
+        return $this->hasOne(VehicleProjectAssignment::class)->whereNull('released_at')->latestOfMany();
     }
 
     public function assignedTo(): BelongsTo

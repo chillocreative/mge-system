@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import assetService from '@/services/assetService';
+import projectService from '@/services/projectService';
 import maintenanceService from '@/services/maintenanceService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -41,6 +42,9 @@ export default function VehicleDetail() {
         doc_type: 'road_tax', provider: '', policy_or_ref_no: '', amount: '',
         start_date: '', expiry_date: '', notes: '', file: null,
     });
+    const [assignments, setAssignments] = useState([]);
+    const [projects, setProjects] = useState([]);
+    const [assignForm, setAssignForm] = useState({ project_id: '', assigned_at: '', notes: '' });
     const [maintForm, setMaintForm] = useState({
         maintenance_type: 'preventive', performed_date: new Date().toISOString().split('T')[0],
         next_due_date: '', description: '', cost: '', vendor: '', performed_by: '', status: 'completed',
@@ -58,7 +62,39 @@ export default function VehicleDetail() {
         }
     };
 
-    useEffect(() => { fetchVehicle(); }, [id]);
+    const fetchAssignments = async () => {
+        try {
+            const res = await assetService.listAssignments(id);
+            setAssignments(res.data || []);
+        } catch { setAssignments([]); }
+    };
+
+    useEffect(() => {
+        fetchVehicle();
+        fetchAssignments();
+        projectService.list({ per_page: 100 }).then((r) => setProjects(r.data?.data || r.data || [])).catch(() => {});
+    }, [id]);
+
+    const submitAssign = async (e) => {
+        e.preventDefault();
+        if (!assignForm.project_id) return;
+        try {
+            await assetService.assignProject(id, assignForm);
+            toast.success('Vehicle assigned to project');
+            setAssignForm({ project_id: '', assigned_at: '', notes: '' });
+            fetchAssignments();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Assignment failed');
+        }
+    };
+
+    const releaseAssign = async (assignmentId) => {
+        try {
+            await assetService.releaseProject(id, assignmentId);
+            toast.success('Released');
+            fetchAssignments();
+        } catch { toast.error('Failed to release'); }
+    };
 
     const handleDocSubmit = async (e) => {
         e.preventDefault();
@@ -131,8 +167,54 @@ export default function VehicleDetail() {
                     <div><p className="text-gray-500">Assigned To</p><p className="font-medium text-gray-900">{vehicle.assigned_to?.full_name || '-'}</p></div>
                     <div><p className="text-gray-500">Purchase Date</p><p className="font-medium text-gray-900">{vehicle.purchase_date || '-'}</p></div>
                     <div><p className="text-gray-500">Current Value</p><p className="font-medium text-gray-900">{vehicle.current_value ? `RM ${Number(vehicle.current_value).toLocaleString('en-MY', { minimumFractionDigits: 2 })}` : '-'}</p></div>
+                    <div><p className="text-gray-500">Chassis No</p><p className="font-medium text-gray-900">{vehicle.chassis_no || '-'}</p></div>
+                    <div><p className="text-gray-500">Engine No</p><p className="font-medium text-gray-900">{vehicle.engine_no || '-'}</p></div>
+                    <div><p className="text-gray-500">Serial No</p><p className="font-medium text-gray-900">{vehicle.serial_no || '-'}</p></div>
                 </div>
                 {vehicle.notes && <p className="mt-4 text-sm text-gray-600">{vehicle.notes}</p>}
+            </div>
+
+            {/* Project Assignment (Ciri 24) */}
+            <div className="mb-6 rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
+                <h2 className="mb-4 text-sm font-semibold uppercase text-gray-500">Project Assignment</h2>
+
+                {(() => {
+                    const current = assignments.find((a) => a.active);
+                    return current ? (
+                        <div className="mb-4 flex items-center justify-between rounded-lg bg-primary-50 px-4 py-3 ring-1 ring-primary-100">
+                            <div className="text-sm">
+                                <span className="font-medium text-gray-900">Currently on {current.project?.name}</span>
+                                <span className="ml-2 text-gray-500">since {current.assigned_at}</span>
+                            </div>
+                            <button onClick={() => releaseAssign(current.id)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-white">Release</button>
+                        </div>
+                    ) : (
+                        <p className="mb-4 text-sm text-gray-400">Not currently assigned to a project.</p>
+                    );
+                })()}
+
+                <form onSubmit={submitAssign} className="mb-4 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+                    <select value={assignForm.project_id} onChange={(e) => setAssignForm((p) => ({ ...p, project_id: e.target.value }))} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                        <option value="">Assign to project…</option>
+                        {projects.map((pr) => <option key={pr.id} value={pr.id}>{pr.code ? `${pr.code} — ` : ''}{pr.name}</option>)}
+                    </select>
+                    <input type="date" value={assignForm.assigned_at} onChange={(e) => setAssignForm((p) => ({ ...p, assigned_at: e.target.value }))} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                    <button type="submit" disabled={!assignForm.project_id} className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">Assign</button>
+                </form>
+
+                {assignments.length > 0 && (
+                    <ul className="divide-y divide-gray-100 text-sm">
+                        {assignments.map((a) => (
+                            <li key={a.id} className="flex items-center justify-between py-2">
+                                <span className="text-gray-700">
+                                    {a.project?.name || '—'}
+                                    <span className="ml-2 text-xs text-gray-400">{a.assigned_at}{a.released_at ? ` → ${a.released_at}` : ' → present'}</span>
+                                </span>
+                                {a.active && <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">active</span>}
+                            </li>
+                        ))}
+                    </ul>
+                )}
             </div>
 
             {/* Documents */}
