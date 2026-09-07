@@ -80,7 +80,7 @@ class LeaveSeederTest extends TestCase
         $this->assertTrue($rules->every(fn ($r) => ! $r->is_seed_default));
     }
 
-    public function test_sick_leave_is_still_the_unconfirmed_statutory_minimum(): void
+    public function test_sick_leave_uses_mge_confirmed_tiers(): void
     {
         $this->seed(LeavePolicySeeder::class);
 
@@ -90,10 +90,10 @@ class LeaveSeederTest extends TestCase
 
         $this->assertSame([14.0, 18.0, 22.0], $rules->pluck('days')->map(fn ($d) => (float) $d)->all());
 
-        // Only Annual Leave was confirmed. MC must keep warning until HR reviews
-        // it, otherwise an unexamined statutory default becomes policy silently
-        // (plan 7.3.10).
-        $this->assertTrue($rules->every(fn ($r) => $r->is_seed_default));
+        // These equal the Employment Act minimum, but they are now a confirmed
+        // choice rather than an unexamined fallback — which is what the flag
+        // records (plan 7.3.10).
+        $this->assertTrue($rules->every(fn ($r) => ! $r->is_seed_default));
     }
 
     public function test_it_seeds_global_policy_defaults_with_carry_forward_off(): void

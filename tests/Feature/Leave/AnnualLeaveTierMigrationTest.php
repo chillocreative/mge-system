@@ -8,13 +8,16 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Covers the data migration that applies MGE's confirmed Annual Leave tiers
- * (14 / 16 / 18, Rahim 7 Sep 2026), replacing the Employment Act placeholder.
+ * Covers the two data migrations that put MGE's confirmed entitlement policy in
+ * place (Rahim, 7 Sep 2026): Annual Leave 14 / 16 / 18, replacing the Employment
+ * Act placeholder, and Sick Leave 14 / 18 / 22, whose numbers stay put while its
+ * review flag clears.
  *
- * The protective test is the one that matters. Plan 7.3.10(c) warns that code
- * which silently reverts an entitlement HR has tuned produces a bug that is
+ * The protective tests are the ones that matter. Plan 7.3.10(c) warns that code
+ * which silently reverts an entitlement someone has tuned produces a bug that is
  * almost impossible to trace: the number changes and nothing in the UI records
- * that it happened, or why.
+ * that it happened, or why. Each migration therefore guards on both the review
+ * flag and the value, in both directions.
  */
 class AnnualLeaveTierMigrationTest extends TestCase
 {
@@ -94,7 +97,8 @@ class AnnualLeaveTierMigrationTest extends TestCase
 
         $this->migration()->up();
 
-        // Only Annual Leave was confirmed; MC keeps warning until HR reviews it.
+        // The Annual Leave migration must not reach into other leave types;
+        // Sick Leave is handled by its own migration below.
         $this->assertSame(14.0, (float) $rule->fresh()->days);
         $this->assertTrue($rule->fresh()->is_seed_default);
     }
@@ -118,6 +122,78 @@ class AnnualLeaveTierMigrationTest extends TestCase
 
         $this->assertSame(8.0, (float) $rule->fresh()->days);
         $this->assertTrue($rule->fresh()->is_seed_default);
+    }
+
+    // ── Sick leave confirmation (2026_09_07_160001) ────────────────────────
+
+    private function sickMigration(): object
+    {
+        return require database_path('migrations/2026_09_07_160001_confirm_sick_leave_tiers.php');
+    }
+
+    private function seedSickTier(float $min, ?float $max, float $days, bool $seedDefault): LeaveEntitlementRule
+    {
+        return LeaveEntitlementRule::create([
+            'leave_type_id' => LeaveType::where('code', 'MC')->sole()->id,
+            'min_years' => $min,
+            'max_years' => $max,
+            'days' => $days,
+            'is_seed_default' => $seedDefault,
+            'is_active' => true,
+        ]);
+    }
+
+    public function test_it_confirms_sick_leave_tiers_without_changing_the_numbers(): void
+    {
+        $lower = $this->seedSickTier(0, 2, 14, seedDefault: true);
+        $middle = $this->seedSickTier(2, 5, 18, seedDefault: true);
+        $top = $this->seedSickTier(5, null, 22, seedDefault: true);
+
+        $this->sickMigration()->up();
+
+        // The entitlement itself must not move — this is a review-state change.
+        $this->assertSame(14.0, (float) $lower->fresh()->days);
+        $this->assertSame(18.0, (float) $middle->fresh()->days);
+        $this->assertSame(22.0, (float) $top->fresh()->days);
+
+        // What changes is that they are no longer unexamined defaults.
+        $this->assertFalse($lower->fresh()->is_seed_default);
+        $this->assertFalse($middle->fresh()->is_seed_default);
+        $this->assertFalse($top->fresh()->is_seed_default);
+    }
+
+    public function test_it_does_not_confirm_a_sick_tier_whose_value_was_changed(): void
+    {
+        // Someone set the junior MC tier to 16. It is no longer the row we
+        // seeded, so its review state is not ours to flip.
+        $edited = $this->seedSickTier(0, 2, 16, seedDefault: true);
+
+        $this->sickMigration()->up();
+
+        $this->assertSame(16.0, (float) $edited->fresh()->days);
+        $this->assertTrue($edited->fresh()->is_seed_default);
+    }
+
+    public function test_confirming_sick_leave_leaves_annual_leave_alone(): void
+    {
+        $annual = $this->seedTier(0, 2, 8, seedDefault: true);
+
+        $this->sickMigration()->up();
+
+        $this->assertTrue($annual->fresh()->is_seed_default);
+        $this->assertSame(8.0, (float) $annual->fresh()->days);
+    }
+
+    public function test_sick_leave_confirmation_rolls_back(): void
+    {
+        $rule = $this->seedSickTier(0, 2, 14, seedDefault: true);
+
+        $this->sickMigration()->up();
+        $this->assertFalse($rule->fresh()->is_seed_default);
+
+        $this->sickMigration()->down();
+        $this->assertTrue($rule->fresh()->is_seed_default);
+        $this->assertSame(14.0, (float) $rule->fresh()->days);
     }
 
     public function test_rollback_does_not_touch_a_tier_edited_after_the_migration(): void

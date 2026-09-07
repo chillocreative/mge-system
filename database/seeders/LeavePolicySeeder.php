@@ -17,12 +17,12 @@ use Illuminate\Database\Seeder;
  * that out as a failure mode that is almost impossible to detect afterwards,
  * because the numbers change with no trace in the UI.
  *
- * ⚠️ The entitlement tiers below are Employment Act 1955 *minimums*, seeded with
- * is_seed_default = true so the UI can flag them as unverified (plan 7.3.10a).
- * They are a starting point, not MGE's confirmed policy — and they currently
- * DISAGREE with leave_types.default_days_per_year, which the live system already
- * seeds at 14 days of Annual Leave. See MGE_PROGRESS.md item 1. Do not enable the
- * engine against these values until HR confirms them.
+ * The entitlement tiers below are MGE's own policy, confirmed by Rahim on
+ * 7 Sep 2026 — Annual 14/16/18, Sick 14/18/22 — and therefore seeded with
+ * is_seed_default = false. Any tier added later without review should carry
+ * is_seed_default = true so the settings screen can flag it (plan 7.3.10a):
+ * that flag records whether a human ever looked at the number, not what the
+ * number happens to be.
  */
 class LeavePolicySeeder extends Seeder
 {
@@ -124,10 +124,11 @@ class LeavePolicySeeder extends Seeder
      * seeding all along. Flagged is_seed_default = false because it is a
      * confirmed business decision, not an unreviewed statutory fallback.
      *
-     * SICK LEAVE — still the Employment Act 1955 minimum (14/18/22) and still
-     * flagged is_seed_default = true, because nobody has confirmed it. The
-     * settings screen will keep warning about MC until HR reviews it
-     * (plan 7.3.10a).
+     * SICK LEAVE — 14 / 18 / 22, confirmed by Rahim on 7 Sep 2026. These happen
+     * to equal the Employment Act minimum, but that is now a deliberate choice
+     * rather than an unexamined fallback, so it is flagged confirmed too. The
+     * distinction matters: plan 7.3.10 is about whether a human ever looked at
+     * the number, not about what the number is.
      */
     private function seedEntitlementRules(): void
     {
@@ -138,8 +139,8 @@ class LeavePolicySeeder extends Seeder
                 'rows' => [[0, 2, 14], [2, 5, 16], [5, null, 18]],
             ],
             'MC' => [
-                'confirmed' => false,
-                'note' => 'Employment Act 1955 minimum. NOT YET CONFIRMED BY HR — review before relying on it.',
+                'confirmed' => true,
+                'note' => 'MGE company policy, confirmed 7 Sep 2026. Matches the Employment Act minimum.',
                 'rows' => [[0, 2, 14], [2, 5, 18], [5, null, 22]],
             ],
         ];

@@ -4,6 +4,7 @@ namespace Tests\Feature\Leave;
 
 use App\Models\LeaveEntitlementRule;
 use App\Models\LeavePolicySetting;
+use App\Models\LeaveType;
 use App\Models\PublicHoliday;
 use App\Models\User;
 use Database\Seeders\LeavePolicySeeder;
@@ -48,6 +49,23 @@ class LeavePolicyApiTest extends TestCase
         $user->givePermissionTo($permissions);
 
         return $user;
+    }
+
+    /**
+     * Every seeded tier is now confirmed MGE policy, so tests about the
+     * "unreviewed default" warning create their own unverified row. That keeps
+     * them testing the mechanism rather than the seed data.
+     */
+    private function unverifiedRule(): LeaveEntitlementRule
+    {
+        return LeaveEntitlementRule::create([
+            'leave_type_id' => LeaveType::where('code', 'EL')->sole()->id,
+            'min_years' => 0,
+            'max_years' => 2,
+            'days' => 3,
+            'is_seed_default' => true,
+            'is_active' => true,
+        ]);
     }
 
     // ── Permission gates ───────────────────────────────────────────────────
@@ -143,17 +161,25 @@ class LeavePolicyApiTest extends TestCase
 
     public function test_the_tier_list_flags_unverified_seed_defaults(): void
     {
-        $response = $this->actingAs($this->user(['leave.manage']))
-            ->getJson('/api/leave-policy/entitlement-rules')
-            ->assertOk();
+        // Seeded AL and MC tiers are confirmed policy, so nothing is flagged...
+        $clean = $this->actingAs($this->user(['leave.manage']))
+            ->getJson('/api/leave-policy/entitlement-rules')->assertOk();
+        $this->assertFalse($clean->json('data.has_unverified_defaults'));
 
-        // Plan 7.3.10(a): the screen must be able to warn that these are
-        // statutory minimums nobody has reviewed.
+        // ...until an unreviewed tier exists. Plan 7.3.10(a): the screen must be
+        // able to warn that a number nobody has looked at is in force.
+        $this->unverifiedRule();
+
+        $response = $this->actingAs($this->user(['leave.manage']))
+            ->getJson('/api/leave-policy/entitlement-rules')->assertOk();
+
         $this->assertTrue($response->json('data.has_unverified_defaults'));
     }
 
     public function test_hr_can_confirm_the_tiers_and_clear_the_warning(): void
     {
+        $this->unverifiedRule();
+
         $this->actingAs($this->user(['leave.manage']))
             ->postJson('/api/leave-policy/entitlement-rules/confirm')
             ->assertOk();
@@ -168,14 +194,14 @@ class LeavePolicyApiTest extends TestCase
 
     public function test_editing_a_tier_marks_it_as_reviewed(): void
     {
-        $rule = LeaveEntitlementRule::where('is_seed_default', true)->first();
+        $rule = $this->unverifiedRule();
 
         $this->actingAs($this->user(['leave.manage']))
-            ->putJson("/api/leave-policy/entitlement-rules/{$rule->id}", ['days' => 14])
+            ->putJson("/api/leave-policy/entitlement-rules/{$rule->id}", ['days' => 5])
             ->assertOk();
 
         $rule->refresh();
-        $this->assertSame(14.0, (float) $rule->days);
+        $this->assertSame(5.0, (float) $rule->days);
 
         // An admin who edited the value has necessarily looked at it.
         $this->assertFalse($rule->is_seed_default);

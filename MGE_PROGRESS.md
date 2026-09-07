@@ -18,7 +18,15 @@ Ordered by how much damage a wrong answer causes.
 
 This is more generous than the Employment Act minimum of 8/12/16, and consistent with the 14 days `leave_types.default_days_per_year` had been using all along — so seeding the Act figures would have quietly cut junior staff by 6 days.
 
-**Sick Leave is still unconfirmed.** It remains at the Act minimum (14/18/22), still flagged `is_seed_default = true`, and the settings screen keeps warning about it. Confirm MC when you get a chance.
+**Sick Leave confirmed too** (same session): 14 / 18 / 22. The numbers are unchanged — they equal the Act minimum — but they are now a decision somebody made rather than an unexamined fallback, so the flag is cleared and the settings screen no longer warns.
+
+**All entitlement tiers are now confirmed policy.** Nothing in the system is running on a number nobody has looked at.
+
+| Service | Annual | Sick |
+|---|---|---|
+| < 2 years | 14 | 14 |
+| 2–5 years | 16 | 18 |
+| 5 years+ | 18 | 22 |
 
 <details><summary>Original conflict, for the record</summary>
 
