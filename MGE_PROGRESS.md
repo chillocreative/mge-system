@@ -458,3 +458,47 @@ The second one was the same drift: `FRONTEND_URL` is the sole entry in `config/c
 **Verified:** `/sanctum/csrf-cookie` 204 → `POST /api/login` 200 → `GET /api/user` 200, and a real browser login reaching the Dashboard with data. The single console 401 is the pre-login `/api/user` bootstrap check — expected.
 
 ⚠️ **`.env.example` still carries the old domain.** I left it alone because it was already modified before this session and the brief said not to sweep pre-existing changes. Worth updating separately so the next clone does not hit this.
+
+---
+
+## Session 2 — 7 Sep afternoon (engine live + UI build-out)
+
+Leave engine was enabled in production earlier this session. Shipped since, each tested and deploy-verified:
+
+| Feature | State |
+|---|---|
+| Balance display = enforced figure (bug fix) | ✅ live |
+| Employee search combobox (4 screens) + employee numbers | ✅ live |
+| Leave balance card on Staff Detail | ✅ live |
+| Deploy hardening — pull before clean | ✅ live |
+| qwen-agent moved to require-dev (was breaking deploy) | ✅ live |
+| **Public Holidays admin screen + national 2026 calendar seeded** | ✅ live |
+| **Sidebar accordion (Ciri 12)** | ✅ live |
+| **Ciri 9 — status→login propagation, last_working_date, audit** | ✅ live |
+
+133 tests. Public holidays: national only, state excluded by decision; Islamic dates need HR to confirm against the federal warta.
+
+### Honest scope statement — the remaining plan
+
+**Leave block — small, safe, still to do:**
+- `staff_leave_entitlement_overrides` (per-employee contract exceptions) — additive
+- Opening-balance tool (load Jan–Aug 2026 days already taken) — needs HR's figures
+- Ciri 6 — employee_no change audit trail (editing already works; nothing keys on the value)
+
+**The 23 other features are NOT one-session work, and some must not be built without a decision first.** The plan itself (§32) lists five hard-to-reverse decisions. Three of them gate whole modules:
+
+| Decision needed | Blocks |
+|---|---|
+| Timeline as source of truth (R1) | Entire Correspondence block (Ciri 1/16/17/19) |
+| `project_parties` vs three fixed parties (R2) | Correspondence block |
+| Recurring events (O5) | Ciri 14 (multi-staff events) |
+| Leave privacy (N1) | Ciri 13 (HR Calendar) |
+
+Building these on a live system and pushing them means baking those decisions in irreversibly. I will build every decision-free part, but I will surface these forks rather than guess them — a wrong foundation here is expensive to undo.
+
+**Roughly decision-free, buildable when reached (dependency order):**
+1. Shared notification engine (`notification_preferences`, `notification_logs`, throttle/log) — unblocks Ciri 3/11/14
+2. Ciri 11 (Memo → notification), Ciri 3 (project-change notification) — once #1 exists
+3. Ciri 15 (staff↔project pivot + cards), Ciri 20 (site-log edit window)
+4. Shared upload engine → Ciri 4 (Drawings folder), Ciri 5 (BQ import)
+5. Assets block (Ciri 21–24), Ciri 2 (machinery report), Safety block (Ciri 25)
