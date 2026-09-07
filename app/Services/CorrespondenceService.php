@@ -68,7 +68,11 @@ class CorrespondenceService
 
     public function getOne(int $id): ProjectCorrespondence
     {
-        return ProjectCorrespondence::with(['project:id,name,code', 'creator:id,first_name,last_name', 'files'])->findOrFail($id);
+        return ProjectCorrespondence::with([
+            'project:id,name,code', 'creator:id,first_name,last_name', 'files',
+            'currentParty:id,name,type', 'closer:id,first_name,last_name',
+            'events' => fn ($q) => $q->with(['fromParty:id,name', 'toParty:id,name', 'creator:id,first_name,last_name']),
+        ])->findOrFail($id);
     }
 
     public function downloadFile(int $fileId)

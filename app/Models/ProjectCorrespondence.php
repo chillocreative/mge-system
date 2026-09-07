@@ -14,6 +14,7 @@ class ProjectCorrespondence extends Model
     protected $fillable = [
         'project_id', 'type', 'reference_no', 'title', 'description',
         'status', 'raised_date', 'due_date', 'response', 'created_by',
+        'current_party_id', 'expected_close_date', 'actual_close_date', 'closing_reference', 'closed_by',
     ];
 
     protected function casts(): array
@@ -21,6 +22,8 @@ class ProjectCorrespondence extends Model
         return [
             'raised_date' => 'date:Y-m-d',
             'due_date' => 'date:Y-m-d',
+            'expected_close_date' => 'date:Y-m-d',
+            'actual_close_date' => 'date:Y-m-d',
         ];
     }
 
@@ -37,6 +40,21 @@ class ProjectCorrespondence extends Model
     public function files(): HasMany
     {
         return $this->hasMany(ProjectCorrespondenceFile::class);
+    }
+
+    public function currentParty(): BelongsTo
+    {
+        return $this->belongsTo(ProjectParty::class, 'current_party_id');
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(CorrespondenceEvent::class)->orderBy('created_at');
+    }
+
+    public function closer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'closed_by');
     }
 
     public function scopeByType($q, string $type)

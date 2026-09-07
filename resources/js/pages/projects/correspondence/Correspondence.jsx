@@ -4,10 +4,11 @@ import correspondenceService from '@/services/correspondenceService';
 import projectService from '@/services/projectService';
 import ProjectFilesPanel from '@/components/ProjectFilesPanel';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import CorrespondenceWorkflowDrawer from './CorrespondenceWorkflowDrawer';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus, HiOutlineSearch, HiOutlineDocumentText, HiOutlinePencil,
-    HiOutlineTrash, HiOutlineDownload, HiOutlinePaperClip, HiOutlineCog, HiOutlineX,
+    HiOutlineTrash, HiOutlineDownload, HiOutlinePaperClip, HiOutlineCog, HiOutlineX, HiOutlineClock,
 } from 'react-icons/hi';
 
 const BADGE_COLORS = {
@@ -56,6 +57,7 @@ export default function Correspondence() {
     const [projects, setProjects] = useState([]);
     const [types, setTypes] = useState([]);
 
+    const [workflowItem, setWorkflowItem] = useState(null);
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [saving, setSaving] = useState(false);
@@ -308,6 +310,7 @@ export default function Correspondence() {
                                                 {item.files?.length > 0 && (
                                                     <button onClick={() => handleDownload(item.files[0])} className="rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600" title="Download first attachment"><HiOutlineDownload className="h-4 w-4" /></button>
                                                 )}
+                                                <button onClick={() => setWorkflowItem(item)} className="rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600" title="Workflow & history"><HiOutlineClock className="h-4 w-4" /></button>
                                                 {canEdit && (
                                                     <>
                                                         <button onClick={() => openEdit(item)} className="rounded p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600" title="Edit"><HiOutlinePencil className="h-4 w-4" /></button>
@@ -332,6 +335,15 @@ export default function Correspondence() {
                         </div>
                     )}
                 </div>
+            )}
+
+            {workflowItem && (
+                <CorrespondenceWorkflowDrawer
+                    correspondence={workflowItem}
+                    canEdit={canEdit}
+                    onClose={() => setWorkflowItem(null)}
+                    onChanged={() => fetchItems(pagination.current_page || 1)}
+                />
             )}
 
             {/* Create / Edit Modal */}
