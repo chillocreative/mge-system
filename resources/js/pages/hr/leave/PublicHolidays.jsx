@@ -172,7 +172,7 @@ export default function PublicHolidays() {
                 <span>
                     A leave request that spans a public holiday does not deduct that day. If a holiday is
                     missing here, staff lose a day of leave for it — so enter every gazetted date for {year},
-                    including the ones whose dates change each year (Hari Raya, Deepavali, Maulidur Rasul, and Penang state days).
+                    including the ones whose dates change each year (Hari Raya, Deepavali, Maulidur Rasul, Awal Muharram).
                 </span>
             </div>
 
