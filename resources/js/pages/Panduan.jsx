@@ -423,14 +423,14 @@ export default function Panduan() {
                         Panduan ringkas cara menggunakan setiap modul. Cari topik di bawah, atau pilih modul di menu sisi.
                     </p>
                     <div className="relative mt-5 max-w-xl">
-                        <svg className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" /></svg>
+                        <svg className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" /></svg>
                         <input
                             ref={searchRef}
                             type="text"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder="Cari topik… (cth: cuti, HIRARC, invois)"
-                            className="w-full rounded-xl border-0 py-3 pl-11 pr-10 text-sm text-slate-800 shadow-lg ring-1 ring-black/5 focus:outline-none focus:ring-2 focus:ring-white"
+                            className="w-full rounded-xl border border-white bg-white py-3.5 pl-11 pr-10 text-sm font-medium text-slate-900 shadow-xl ring-1 ring-black/10 placeholder:font-normal placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                         {query && (
                             <button onClick={() => { setQuery(''); searchRef.current?.focus(); }} className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Kosongkan">
