@@ -15,6 +15,8 @@ class CompanyEvent extends Model
         'start_datetime',
         'end_datetime',
         'all_day',
+        'recurrence',
+        'recurrence_until',
         'location',
         'employee_id',
         'project_id',
@@ -26,6 +28,7 @@ class CompanyEvent extends Model
     protected function casts(): array
     {
         return [
+            'recurrence_until' => 'date:Y-m-d',
             'start_datetime' => 'datetime',
             'end_datetime' => 'datetime',
             'all_day' => 'boolean',
@@ -40,6 +43,11 @@ class CompanyEvent extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    public function attendees(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Employee::class, 'company_event_attendees')->withTimestamps();
     }
 
     public function project(): BelongsTo

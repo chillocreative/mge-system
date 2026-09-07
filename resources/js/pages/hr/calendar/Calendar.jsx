@@ -73,6 +73,9 @@ function emptyForm(dateKey) {
         location: '',
         employee_id: '',
         project_id: '',
+        recurrence: 'none',
+        recurrence_until: '',
+        attendee_ids: [],
     };
 }
 
@@ -82,6 +85,7 @@ export default function Calendar() {
 
     const [viewDate, setViewDate] = useState(startOfMonth(new Date()));
     const [events, setEvents] = useState([]);
+    const [overlay, setOverlay] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -111,6 +115,15 @@ export default function Calendar() {
         } finally {
             setLoading(false);
         }
+
+        // Ciri 13: overlay approved leave + public holidays (privacy handled
+        // server-side — a non-HR viewer only ever gets their own leave back).
+        try {
+            const agg = await calendarService.aggregate({ start: toDateKey(rangeStart), end: toDateKey(rangeEnd) });
+            setOverlay((agg.data || []).filter((i) => i.source === 'leave' || i.source === 'holiday'));
+        } catch {
+            setOverlay([]);
+        }
     }, [rangeStart, rangeEnd]);
 
     useEffect(() => {
@@ -134,8 +147,22 @@ export default function Calendar() {
             const key = toDateKey(new Date(ev.start_datetime.replace(' ', 'T')));
             (map[key] ||= []).push(ev);
         }
+        // Read-only overlay (leave spans multiple days; holidays are single-day).
+        for (const item of overlay) {
+            const startKey = String(item.start).slice(0, 10);
+            const endKey = item.end ? String(item.end).slice(0, 10) : startKey;
+            for (let d = new Date(`${startKey}T00:00:00`); toDateKey(d) <= endKey; d.setDate(d.getDate() + 1)) {
+                const key = toDateKey(d);
+                (map[key] ||= []).push({
+                    id: `${item.source}-${item.ref_id}-${key}`,
+                    title: item.title,
+                    type: item.type,
+                    _readonly: true,
+                });
+            }
+        }
         return map;
-    }, [events]);
+    }, [events, overlay]);
 
     const monthLabel = viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     const todayKey = toDateKey(new Date());
@@ -162,6 +189,9 @@ export default function Calendar() {
             location: ev.location || '',
             employee_id: ev.employee_id || '',
             project_id: ev.project_id || '',
+            recurrence: ev.recurrence || 'none',
+            recurrence_until: ev.recurrence_until ? String(ev.recurrence_until).slice(0, 10) : '',
+            attendee_ids: (ev.attendees || []).map((a) => a.id),
         });
         setShowForm(true);
     };
@@ -181,6 +211,9 @@ export default function Calendar() {
                 location: form.location || null,
                 employee_id: form.employee_id || null,
                 project_id: form.project_id || null,
+                recurrence: form.recurrence || 'none',
+                recurrence_until: form.recurrence === 'none' ? null : (form.recurrence_until || null),
+                attendee_ids: form.attendee_ids,
             };
             if (form.id) {
                 await calendarService.updateEvent(form.id, payload);
@@ -337,10 +370,10 @@ export default function Calendar() {
                                                     key={ev.id}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        openEdit(ev);
+                                                        if (!ev._readonly) openEdit(ev);
                                                     }}
-                                                    title={ev.title}
-                                                    className={`block w-full truncate rounded px-1.5 py-0.5 text-left text-xs font-medium ring-1 ${TYPE_COLORS[ev.type] || TYPE_COLORS.other}`}
+                                                    title={ev._readonly ? `${ev.title} (read-only)` : ev.title}
+                                                    className={`block w-full truncate rounded px-1.5 py-0.5 text-left text-xs font-medium ring-1 ${TYPE_COLORS[ev.type] || TYPE_COLORS.other} ${ev._readonly ? 'cursor-default opacity-90' : ''}`}
                                                 >
                                                     {ev.title}
                                                 </button>
@@ -472,6 +505,48 @@ export default function Calendar() {
                                             ))}
                                         </select>
                                     </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700">Repeats</label>
+                                        <select
+                                            value={form.recurrence}
+                                            onChange={(e) => setForm((p) => ({ ...p, recurrence: e.target.value }))}
+                                            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                        >
+                                            <option value="none">Does not repeat</option>
+                                            <option value="daily">Daily</option>
+                                            <option value="weekly">Weekly</option>
+                                            <option value="monthly">Monthly</option>
+                                        </select>
+                                    </div>
+                                    {form.recurrence !== 'none' && (
+                                        <div>
+                                            <label className="mb-1 block text-sm font-medium text-gray-700">Repeat until</label>
+                                            <input
+                                                type="date"
+                                                value={form.recurrence_until}
+                                                onChange={(e) => setForm((p) => ({ ...p, recurrence_until: e.target.value }))}
+                                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Attendees (staff)</label>
+                                    <select
+                                        multiple
+                                        value={form.attendee_ids.map(String)}
+                                        onChange={(e) => setForm((p) => ({ ...p, attendee_ids: [...e.target.selectedOptions].map((o) => Number(o.value)) }))}
+                                        className="h-28 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                    >
+                                        {employees.map((emp) => (
+                                            <option key={emp.id} value={emp.id}>
+                                                {emp.employee_no ? `${emp.employee_no} — ` : ''}{emp.full_name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim()}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="mt-1 text-xs text-gray-400">Hold Cmd/Ctrl to select more than one. Added staff are notified.</p>
                                 </div>
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Description</label>

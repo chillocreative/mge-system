@@ -6,6 +6,10 @@ const calendarService = {
         const response = await apiClient.get('/calendar/events', { params });
         return response.data;
     },
+    async aggregate(params = {}) {
+        const response = await apiClient.get('/calendar/aggregate', { params });
+        return response.data;
+    },
     async createEvent(data) {
         const response = await apiClient.post('/calendar/events', data);
         return response.data;

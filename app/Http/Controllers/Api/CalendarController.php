@@ -26,6 +26,13 @@ class CalendarController extends Controller
         return $this->success($this->calendarService->list($filters));
     }
 
+    public function aggregate(Request $request): JsonResponse
+    {
+        $filters = $request->only(['start', 'end']);
+
+        return $this->success($this->calendarService->aggregate($filters, $request->user()));
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $this->validateEvent($request);
@@ -107,6 +114,10 @@ class CalendarController extends Controller
             'location' => ['nullable', 'string', 'max:255'],
             'employee_id' => ['nullable', 'exists:employees,id'],
             'project_id' => ['nullable', 'exists:projects,id'],
+            'recurrence' => ['nullable', 'in:none,daily,weekly,monthly'],
+            'recurrence_until' => ['nullable', 'date'],
+            'attendee_ids' => ['nullable', 'array'],
+            'attendee_ids.*' => ['integer', 'exists:employees,id'],
         ]);
     }
 }

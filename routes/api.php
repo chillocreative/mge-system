@@ -770,6 +770,7 @@ Route::middleware('auth:sanctum')->group(function () {
     */
     Route::prefix('calendar')->group(function () {
         Route::get('/events', [CalendarController::class, 'index'])->middleware('permission:calendar.view');
+        Route::get('/aggregate', [CalendarController::class, 'aggregate'])->middleware('permission:calendar.view');
         Route::post('/events', [CalendarController::class, 'store'])->middleware('permission:calendar.manage');
         Route::put('/events/{id}', [CalendarController::class, 'update'])->middleware('permission:calendar.manage');
         Route::delete('/events/{id}', [CalendarController::class, 'destroy'])->middleware('permission:calendar.manage');
