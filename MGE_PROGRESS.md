@@ -315,9 +315,15 @@ Frontend builds clean (`npm run build`).
 
 **104 tests, all passing.** Pint clean. Frontend builds. `php artisan route:list` intact.
 
-**Nothing pushed. Nothing deployed. Production is untouched and unchanged** — the engine flag is off, so leave behaves exactly as it did before this session.
+**Pushed and deployed on 7 Sep, 14:53 (+08), on Rahim's approval.**
 
-### Commits (all local, on `main`)
+- CI green (backend + frontend), deploy to cPanel succeeded in 32s
+- All 9 new migrations ran cleanly on production. The 3 edited migrations did **not** re-run — they were already recorded, exactly as intended
+- Production verified healthy afterwards: `/api/health` 200, `/` 200, `POST /api/login` returns 422 on an empty body (validation), not 500
+
+**Production behaviour is unchanged.** `LEAVE_ENGINE_ENABLED` is not set on the production server, so the engine stays off and leave works exactly as it did before. The new tables exist but nothing reads them yet — this is precisely stage P1/P2 of plan 27.14.
+
+### Commits (on `main`, pushed)
 
 | Commit | Phase |
 |---|---|
