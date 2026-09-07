@@ -537,3 +537,22 @@ Plus earlier this session: Leave engine live, holidays admin, sidebar accordion 
 - Fill `hire_date` for the 5 staff missing it
 - Confirm Islamic 2026 holiday dates against the federal warta
 - Email channel stays off until SMTP verified (then flip `NOTIFICATIONS_EMAIL_ENABLED`)
+
+---
+
+## Batch 6 progress (7 Sep, late)
+
+| Sub-batch | Feature | State |
+|---|---|---|
+| 6a | Ciri 2 — days-based machinery usage report | ✅ live |
+| 6b | Ciri 22/23/24 — vehicle serial numbers, project assignment (history), pencil icon | ✅ live |
+
+**190 tests. All pushed, CI + deploy verified, prod healthy.**
+
+### Remaining — each needs a decision I won't guess on a live system
+
+- **Ciri 21** (machinery→asset sync): needs the machinery-master modeling decided — vehicles-of-type-machinery, inventory, or a new table; and whether site logs auto-create assets.
+- **Ciri 13** (HR Calendar aggregate): 🔴 carries the **leave-privacy decision (N1)** — one of the plan's five hard-to-reverse choices. Showing who is on what leave (esp. MC) to the wrong audience is a real privacy harm that is hard to walk back, so I will not default it. Need: who sees leave on the shared calendar — HR + self only, or names visible to all, or an anonymised "unavailable"?
+- **Ciri 14** (multi-staff events): needs the **recurring-events decision (O5)**. The multi-staff pivot + notifications are decision-free and I can build those; recurrence is the fork.
+- **Ciri 25** (Safety block): plan-sized "Besar", 10 sub-features (Z1–Z12) with their own sub-decisions (PTW approval flow, man-hours source, toolbox-vs-safety-meeting overlap). A multi-batch effort in itself.
+- **Correspondence block (Ciri 1/16/17/19 + 18)**: you said proceed; I'll build it additively with the plan's recommended defaults for R1 (timeline as source of truth) and R2 (project_parties) logged as assumptions — but it is the largest single block and reshapes a live module, so it warrants being its own focused session.
