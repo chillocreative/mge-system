@@ -3,10 +3,12 @@ import { useAuth } from '@/context/AuthContext';
 import safetyService from '@/services/safetyService';
 import projectService from '@/services/projectService';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 import {
     HiOutlineExclamationCircle, HiOutlineShieldCheck, HiOutlineUserGroup,
     HiOutlineClipboardCheck, HiOutlinePlus, HiOutlineSearch, HiOutlineDownload,
     HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineX, HiOutlinePhotograph,
+    HiOutlineScale,
 } from 'react-icons/hi';
 
 const TABS = [
@@ -90,6 +92,9 @@ export default function Safety() {
                     <h1 className="text-2xl font-bold text-gray-900">Safety & OSHA</h1>
                     <p className="mt-1 text-sm text-gray-500">Incidents, hazards, toolbox meetings & compliance</p>
                 </div>
+                <Link to="/safety/hirarc" className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <HiOutlineScale className="h-4 w-4" /> HIRARC
+                </Link>
             </div>
 
             {/* Tabs */}

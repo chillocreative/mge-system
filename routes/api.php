@@ -33,6 +33,7 @@ use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectDocumentController;
 use App\Http\Controllers\Api\ProjectInvoiceController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\HirarcController;
 use App\Http\Controllers\Api\SafetyController;
 use App\Http\Controllers\Api\SiteLogController;
 use App\Http\Controllers\Api\TaskController;
@@ -491,6 +492,14 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('permission:safety.view');
 
     // Incidents
+    Route::prefix('safety/hirarc')->group(function () {
+        Route::get('/', [HirarcController::class, 'index'])->middleware('permission:safety.view');
+        Route::post('/', [HirarcController::class, 'store'])->middleware('permission:safety.create');
+        Route::get('/{id}', [HirarcController::class, 'show'])->middleware('permission:safety.view');
+        Route::put('/{id}', [HirarcController::class, 'update'])->middleware('permission:safety.manage');
+        Route::delete('/{id}', [HirarcController::class, 'destroy'])->middleware('permission:safety.manage');
+    });
+
     Route::prefix('safety/incidents')->group(function () {
         Route::get('/', [SafetyController::class, 'incidents'])
             ->middleware('permission:safety.view');

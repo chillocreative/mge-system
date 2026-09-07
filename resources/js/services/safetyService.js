@@ -44,6 +44,26 @@ const safetyService = {
         apiClient.post(`/safety/${type}/${id}/photos`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
         }),
+    async listHirarc(params = {}) {
+        const response = await apiClient.get('/safety/hirarc', { params });
+        return response.data;
+    },
+    async getHirarc(id) {
+        const response = await apiClient.get(`/safety/hirarc/${id}`);
+        return response.data;
+    },
+    async createHirarc(data) {
+        const response = await apiClient.post('/safety/hirarc', data);
+        return response.data;
+    },
+    async updateHirarc(id, data) {
+        const response = await apiClient.put(`/safety/hirarc/${id}`, data);
+        return response.data;
+    },
+    async archiveHirarc(id) {
+        const response = await apiClient.delete(`/safety/hirarc/${id}`);
+        return response.data;
+    },
 };
 
 export default safetyService;
