@@ -171,6 +171,14 @@ This project has `chillocreative/qwen-agent` installed (path-repo at `../qwen-ag
 
 - Delegate a task: `php artisan qwen:agent storage/app/qwen-tasks/some-task.txt --context=app/Models/Foo.php,app/Http/Controllers/FooController.php`
 - The command is read-only — it never writes to this project. Review Qwen's output and apply changes yourself (as Claude/lead engineer).
+- ⚠️ **Do not remove the `repositories` block from `composer.json`.** The package name
+  `chillocreative/qwen-agent` is not registered on Packagist, so that entry is what
+  keeps Composer resolving it from our own repo. Without it, anyone who claims that
+  name on Packagist could have their code installed by a future `composer update`.
+  Reviewed and accepted as a known risk on 7 Sep 2026.
+- Keep it in `require-dev`, never `require`. Deploy runs `composer install --no-dev`,
+  and the production server cannot reach GitHub — a `require` entry makes every
+  deploy fail.
 - Config via `.env`: `QWEN_API_KEY`, `QWEN_BASE_URL` (defaults to DashScope intl endpoint), `QWEN_MODEL` (defaults to `qwen3.7-flash`).
 - `storage/app/qwen-tasks/` is gitignored scratch space for task prompts/responses.
 
