@@ -231,7 +231,13 @@ class EntitlementResolver
 
     private function exitDate(Employee $employee): ?Carbon
     {
-        return $employee->resign_date ? Carbon::parse($employee->resign_date)->startOfDay() : null;
+        // Prorate to the last day actually worked when it is known; the
+        // resignation notice date (resign_date) is only a fallback. Plan 9.4 is
+        // explicit that the two differ and entitlement follows the last working
+        // day.
+        $exit = $employee->last_working_date ?? $employee->resign_date;
+
+        return $exit ? Carbon::parse($exit)->startOfDay() : null;
     }
 
     /**

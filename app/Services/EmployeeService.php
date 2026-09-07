@@ -6,6 +6,7 @@ use App\Models\Employee;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class EmployeeService
@@ -70,9 +71,53 @@ class EmployeeService
             $data['photo_path'] = $photo->store('employees/photos', 'local');
         }
 
-        $employee->update($data);
+        // Detect an employment-status change so it can be stamped and propagated
+        // to the login account. Compared before the update is applied.
+        $statusChanged = array_key_exists('status', $data) && $data['status'] !== $employee->status;
+
+        if ($statusChanged) {
+            $data['status_changed_at'] = now();
+            $data['status_changed_by'] = auth()->id();
+        }
+
+        DB::transaction(function () use ($employee, $data, $statusChanged) {
+            $employee->update($data);
+
+            if ($statusChanged) {
+                $this->syncLoginAccess($employee);
+            }
+        });
 
         return $employee->load(['department:id,name', 'designation:id,name', 'manager:id,first_name,last_name']);
+    }
+
+    /**
+     * Keep the linked login account in step with employment status.
+     *
+     * Login is already blocked for any user whose status is not 'active'
+     * (AuthService), so making a resigned or inactive employee's account
+     * non-active is what actually stops a former employee logging in — the gap
+     * the plan raises in Ciri 9. Reactivating restores access.
+     *
+     * Only ever toggles between 'active' and 'inactive'. A user parked at
+     * 'pending', 'suspended' or 'rejected' is left alone: those states are
+     * decisions made elsewhere and are not ours to override from here.
+     */
+    private function syncLoginAccess(Employee $employee): void
+    {
+        $user = $employee->user;
+
+        if (! $user) {
+            return;
+        }
+
+        $employed = $employee->status === 'active';
+
+        if (! $employed && $user->status === 'active') {
+            $user->update(['status' => 'inactive']);
+        } elseif ($employed && $user->status === 'inactive') {
+            $user->update(['status' => 'active']);
+        }
     }
 
     public function delete(int $id): void

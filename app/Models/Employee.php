@@ -15,6 +15,7 @@ class Employee extends Model
         'employee_no', 'first_name', 'last_name', 'ic_passport_no', 'email', 'phone',
         'gender', 'dob', 'address', 'department_id', 'designation_id', 'employment_type',
         'category', 'work_pattern_id', 'hire_date', 'resign_date', 'reporting_manager_id',
+        'last_working_date', 'resignation_reason', 'status_changed_at', 'status_changed_by',
         'bank_name', 'bank_account_no', 'epf_no', 'socso_no', 'tax_no', 'base_salary',
         'status', 'user_id', 'photo_path', 'created_by',
         'marital_status', 'spouse_name', 'spouse_ic_no', 'number_of_children',
@@ -27,6 +28,8 @@ class Employee extends Model
             'dob' => 'date:Y-m-d',
             'hire_date' => 'date:Y-m-d',
             'resign_date' => 'date:Y-m-d',
+            'last_working_date' => 'date:Y-m-d',
+            'status_changed_at' => 'datetime',
             'base_salary' => 'decimal:2',
         ];
     }
