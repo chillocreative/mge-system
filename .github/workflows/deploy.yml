@@ -24,15 +24,27 @@ jobs:
             set -e
             cd /home/mgeengco/app.mge-eng.com/
 
-            # 0. Clear old build assets BEFORE pulling new code
-            echo "Clearing old build assets..."
-            rm -rf public/build/assets/*.js
-            rm -rf public/build/assets/*.css
-            rm -rf public/build/.vite
-
-            # 1. Pull latest code
+            # 1. Pull latest code FIRST.
+            #    Deliberately before any cleanup. This step reaches out to
+            #    GitHub and can fail on a transient network problem — it did on
+            #    7 Sep 2026, when the server could not reach github.com:443.
+            #    Anything destructive that runs before it turns a failed deploy
+            #    into a broken site: assets were deleted, the pull failed, and
+            #    production served no CSS or JS until the deploy was re-run.
+            #    A deploy that fails must leave the site exactly as it was.
             git fetch origin
             git reset --hard origin/main
+
+            # 1b. Remove build assets left over from older deploys.
+            #     git reset --hard has already restored every committed asset, so
+            #     whatever remains untracked here is stale. git clean removes
+            #     exactly those, scoped to this one directory.
+            #     Vite hashes file names, so a stale file can never be served in
+            #     place of a current one — this is housekeeping, not correctness,
+            #     which is why it is safe to run after the pull rather than
+            #     before it.
+            echo "Removing stale build assets..."
+            git clean -fdx public/build/assets
 
             # 2. Install Dependencies (production only)
             if command -v composer &> /dev/null
