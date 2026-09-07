@@ -8,7 +8,7 @@ import {
     HiOutlineExclamationCircle, HiOutlineShieldCheck, HiOutlineUserGroup,
     HiOutlineClipboardCheck, HiOutlinePlus, HiOutlineSearch, HiOutlineDownload,
     HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineX, HiOutlinePhotograph,
-    HiOutlineScale,
+    HiOutlineScale, HiOutlineChartBar,
 } from 'react-icons/hi';
 
 const TABS = [
@@ -98,6 +98,9 @@ export default function Safety() {
                     </Link>
                     <Link to="/safety/permits" className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
                         <HiOutlineClipboardCheck className="h-4 w-4" /> Permits
+                    </Link>
+                    <Link to="/safety/statistics" className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <HiOutlineChartBar className="h-4 w-4" /> Statistics
                     </Link>
                 </div>
             </div>
@@ -387,7 +390,7 @@ function ChecklistsTable({ items, onView }) {
 
 /* ── Incident Create Modal ── */
 function IncidentModal({ projects, onClose, onSaved }) {
-    const [form, setForm] = useState({ project_id: '', title: '', description: '', incident_date: '', incident_time: '', location: '', severity: 'minor', type: 'near_miss', injured_person: '', injury_description: '', root_cause: '' });
+    const [form, setForm] = useState({ project_id: '', title: '', description: '', incident_date: '', incident_time: '', location: '', severity: 'minor', type: 'near_miss', injured_person: '', injury_description: '', days_lost: '', root_cause: '' });
     const [photos, setPhotos] = useState([]);
     const [saving, setSaving] = useState(false);
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -420,6 +423,7 @@ function IncidentModal({ projects, onClose, onSaved }) {
                     <Select label="Type *" value={form.type} onChange={v => set('type', v)}
                         options={['injury','near_miss','property_damage','environmental','fire','other'].map(s => ({ value: s, label: s.replace(/_/g, ' ') }))} required />
                     <Input label="Injured Person" value={form.injured_person} onChange={v => set('injured_person', v)} />
+                    <Input label="Days Lost" type="number" value={form.days_lost} onChange={v => set('days_lost', v)} />
                 </div>
                 <Textarea label="Description *" value={form.description} onChange={v => set('description', v)} required />
                 <Textarea label="Injury Description" value={form.injury_description} onChange={v => set('injury_description', v)} />

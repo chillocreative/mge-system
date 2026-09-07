@@ -11,7 +11,7 @@ class SafetyIncident extends Model
     protected $fillable = [
         'project_id', 'reported_by', 'title', 'description',
         'incident_date', 'incident_time', 'location',
-        'severity', 'type', 'injured_person', 'injury_description',
+        'severity', 'type', 'injured_person', 'injury_description', 'days_lost',
         'root_cause', 'corrective_action', 'preventive_action',
         'status', 'investigated_by', 'closed_at',
     ];

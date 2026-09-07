@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\ProjectDocumentController;
 use App\Http\Controllers\Api\ProjectInvoiceController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SafetyController;
+use App\Http\Controllers\Api\SafetyStatisticsController;
 use App\Http\Controllers\Api\SiteLogController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TrainingController;
@@ -564,6 +565,14 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Safety photo uploads
+    // ── Safety Statistics + man-hours ──
+    Route::get('/safety/statistics', [SafetyStatisticsController::class, 'index'])->middleware('permission:safety.view');
+    Route::prefix('safety/man-hours')->group(function () {
+        Route::get('/', [SafetyStatisticsController::class, 'manHoursIndex'])->middleware('permission:safety.view');
+        Route::post('/', [SafetyStatisticsController::class, 'manHoursStore'])->middleware('permission:safety.manage');
+        Route::delete('/{id}', [SafetyStatisticsController::class, 'manHoursDestroy'])->middleware('permission:safety.manage');
+    });
+
     Route::post('/safety/{type}/{id}/photos', [SafetyController::class, 'uploadPhotos'])
         ->middleware('permission:safety.create');
 

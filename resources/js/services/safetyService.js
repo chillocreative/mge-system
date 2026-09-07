@@ -98,6 +98,24 @@ const safetyService = {
         const response = await apiClient.post(`/safety/permits/${id}/close`);
         return response.data;
     },
+
+    // ── Statistics + man-hours ──
+    async getStatistics(params = {}) {
+        const response = await apiClient.get('/safety/statistics', { params });
+        return response.data;
+    },
+    async listManHours(params = {}) {
+        const response = await apiClient.get('/safety/man-hours', { params });
+        return response.data;
+    },
+    async recordManHours(data) {
+        const response = await apiClient.post('/safety/man-hours', data);
+        return response.data;
+    },
+    async deleteManHours(id) {
+        const response = await apiClient.delete(`/safety/man-hours/${id}`);
+        return response.data;
+    },
 };
 
 export default safetyService;
