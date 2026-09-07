@@ -76,7 +76,18 @@ The four real ones: MGE01 and PTG01 Annual 8 → 14 (the newly confirmed policy)
 
 Rahim's decision: HR fills these in manually. Accepted — it is data entry, not code. To stop it being missed, `leave:recalculate` now **names the affected employees** every run, since that is the command you run before deciding the engine is safe to enable.
 
-**Minor observations for review:** Emergency Leave is set to 0 days; `leave_types.default_days_per_year` for Annual is still 8 and now disagrees with the confirmed tiers (fallback only, no impact, but worth aligning); Maternity 98 and Paternity 7 are both correct per the 2023 amendment; 9 of 10 staff have no reporting manager, which does **not** block anything because approval routes by leave type.
+**Minor observations — Rahim reviewed all six and decided: keep as they are.** No changes made, and they should not be raised again unless something depends on them.
+
+| Observation | Decision |
+|---|---|
+| Emergency Leave = 0 days | Keep as is |
+| Unpaid Leave = 0 days | Keep as is |
+| `leave_types.default_days_per_year` for Annual still 8, disagrees with the confirmed tiers | Keep as is — fallback only, tiers win, no practical impact |
+| Maternity 98 · Paternity 7 | Correct per the 2023 amendment, keep |
+| 9 of 10 staff have no reporting manager | Keep — does not block, approval routes by leave type |
+| TST123 Leman still active | Keep as is |
+
+**Hire dates:** HR will fill these in themselves, since the system is new to them and they are working through staff records anyway. No code change needed — `leave:recalculate` names the affected people every run, so the gap stays visible until it is closed.
 
 <details><summary>Original request, for the record</summary>
 
