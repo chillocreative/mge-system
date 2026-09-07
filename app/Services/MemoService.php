@@ -60,6 +60,7 @@ class MemoService
                 'memo',
                 '/hr/memos',
                 ['memo_id' => $memo->id],
+                'memo',
             );
 
             return $memo->load('sender:id,first_name,last_name', 'project:id,name', 'attachments');

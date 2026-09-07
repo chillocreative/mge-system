@@ -56,6 +56,11 @@ class ProjectService
 
     public function updateProject(int $id, array $data): Project
     {
+        // Capture the before-values of the fields worth notifying on, so a
+        // meaningful change can be detected after the update.
+        $before = $this->projectRepository->find($id);
+        $originals = $before ? $this->meaningfulFields($before) : [];
+
         $project = $this->projectRepository->update($id, $data);
 
         if (isset($data['member_ids'])) {
@@ -68,7 +73,69 @@ class ProjectService
             $this->notifyMembersAdded($project, $newlyAdded);
         }
 
+        $this->notifyProjectUpdated($project, $originals);
+
         return $project->load(['client', 'manager']);
+    }
+
+    /**
+     * Fields whose change is worth telling the team about (Ciri 3). Everything
+     * else — timestamps, view counts, internal bookkeeping — is deliberately
+     * excluded so notifications stay signal, not noise (plan 3.3 field blacklist).
+     *
+     * @return array<string, mixed>
+     */
+    private function meaningfulFields(Project $project): array
+    {
+        return $project->only([
+            'name', 'status', 'priority', 'description',
+            'start_date', 'end_date', 'budget', 'manager_id', 'client_id',
+        ]);
+    }
+
+    /**
+     * Notify the project's members that something changed — but only on a real
+     * change, only the fields that matter, and never the person who made it
+     * (plan 3.3: field blacklist + exclude the actor).
+     */
+    private function notifyProjectUpdated(Project $project, array $originals): void
+    {
+        if ($originals === []) {
+            return;
+        }
+
+        $current = $this->meaningfulFields($project);
+
+        $changed = [];
+        foreach ($current as $field => $value) {
+            if ((string) ($originals[$field] ?? '') !== (string) ($value ?? '')) {
+                $changed[] = str_replace('_', ' ', $field);
+            }
+        }
+
+        if ($changed === []) {
+            return;
+        }
+
+        $actorId = auth()->id();
+        $recipients = $project->members()->pluck('users.id')
+            ->reject(fn ($id) => $id === $actorId)
+            ->values()
+            ->all();
+
+        if ($recipients === []) {
+            return;
+        }
+
+        $this->notifications->notifyUserIds(
+            $recipients,
+            'Project updated: '.$project->name,
+            'Updated '.implode(', ', $changed).'.',
+            'project',
+            "/projects/{$project->id}",
+            ['project_id' => $project->id, 'changed' => $changed],
+            'project',
+        );
     }
 
     public function deleteProject(int $id): bool
@@ -88,6 +155,7 @@ class ProjectService
             'project',
             "/projects/{$project->id}",
             ['project_id' => $project->id],
+            'project',
         );
     }
 
