@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import staffService from '@/services/staffService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import StaffLeaveBalanceCard from './StaffLeaveBalanceCard';
 import toast from 'react-hot-toast';
 import { HiOutlinePencil, HiOutlineArrowLeft } from 'react-icons/hi';
 
@@ -169,6 +170,13 @@ export default function StaffDetail() {
                         </div>
                     )}
                 </Card>
+
+                {/* Staff detail is gated on staff.view, but leave balances need
+                    leave.view — a different permission. Check it here rather
+                    than letting the request 403 on the screen. */}
+                {(can('leave.view') || can('leave.manage')) && (
+                    <StaffLeaveBalanceCard employeeId={emp.id} />
+                )}
             </div>
         </div>
     );
