@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import correspondenceService from '@/services/correspondenceService';
 import projectService from '@/services/projectService';
+import projectSiteService from '@/services/projectSiteService';
 import ProjectFilesPanel from '@/components/ProjectFilesPanel';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import CorrespondenceWorkflowDrawer from './CorrespondenceWorkflowDrawer';
@@ -38,7 +39,7 @@ const dayDiff = (from, to) => {
 };
 
 const baseForm = {
-    project_id: '', type: '', reference_no: '', title: '', description: '',
+    project_id: '', site_id: '', type: '', reference_no: '', title: '', description: '',
     status: 'open', raised_date: new Date().toISOString().split('T')[0], due_date: '', response: '', files: [],
 };
 const emptyTypeForm = { name: '', code: '', full_name: '', color: 'gray', sort_order: 0, is_active: true };
@@ -62,6 +63,7 @@ export default function Correspondence() {
     const [editingId, setEditingId] = useState(null);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState(baseForm);
+    const [sites, setSites] = useState([]);
 
     // Manage types modal
     const [showTypes, setShowTypes] = useState(false);
@@ -109,6 +111,11 @@ export default function Correspondence() {
         fetchTypes();
     }, []);
 
+    useEffect(() => {
+        if (!form.project_id) { setSites([]); return; }
+        projectSiteService.list(form.project_id, true).then((r) => setSites(r.data || [])).catch(() => setSites([]));
+    }, [form.project_id]);
+
     const openCreate = () => {
         setEditingId(null);
         setForm({ ...baseForm, type: activeTypes[0]?.code || '' });
@@ -118,7 +125,7 @@ export default function Correspondence() {
     const openEdit = (item) => {
         setEditingId(item.id);
         setForm({
-            project_id: item.project_id || '', type: item.type || '', reference_no: item.reference_no || '',
+            project_id: item.project_id || '', site_id: item.site_id || '', type: item.type || '', reference_no: item.reference_no || '',
             title: item.title || '', description: item.description || '', status: item.status || 'open',
             raised_date: item.raised_date ? String(item.raised_date).split('T')[0] : '',
             due_date: item.due_date ? String(item.due_date).split('T')[0] : '',
@@ -137,6 +144,7 @@ export default function Correspondence() {
             fd.append('title', form.title);
             fd.append('status', form.status);
             fd.append('raised_date', form.raised_date);
+            if (form.site_id) fd.append('site_id', form.site_id);
             if (form.reference_no) fd.append('reference_no', form.reference_no);
             if (form.description) fd.append('description', form.description);
             if (form.due_date) fd.append('due_date', form.due_date);
@@ -355,9 +363,16 @@ export default function Correspondence() {
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Project *</label>
-                                    <select value={form.project_id} onChange={(e) => setForm((p) => ({ ...p, project_id: e.target.value }))} required className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                                    <select value={form.project_id} onChange={(e) => setForm((p) => ({ ...p, project_id: e.target.value, site_id: '' }))} required className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
                                         <option value="">Select project</option>
                                         {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Site</label>
+                                    <select value={form.site_id} onChange={(e) => setForm((p) => ({ ...p, site_id: e.target.value }))} disabled={!form.project_id || sites.length === 0} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                                        <option value="">{form.project_id ? (sites.length ? 'No specific site' : 'No sites defined') : 'Select a project first'}</option>
+                                        {sites.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
                                     </select>
                                 </div>
                                 <div>

@@ -12,7 +12,7 @@ class CorrespondenceService
 {
     public function list(array $filters, int $perPage = 15): LengthAwarePaginator
     {
-        $query = ProjectCorrespondence::with(['project:id,name,code', 'creator:id,first_name,last_name', 'files'])
+        $query = ProjectCorrespondence::with(['project:id,name,code', 'site:id,name', 'creator:id,first_name,last_name', 'files'])
             ->orderByDesc('raised_date')
             ->orderByDesc('id');
 
@@ -69,7 +69,7 @@ class CorrespondenceService
     public function getOne(int $id): ProjectCorrespondence
     {
         return ProjectCorrespondence::with([
-            'project:id,name,code', 'creator:id,first_name,last_name', 'files',
+            'project:id,name,code', 'site:id,name', 'creator:id,first_name,last_name', 'files',
             'currentParty:id,name,type', 'closer:id,first_name,last_name',
             'events' => fn ($q) => $q->with(['fromParty:id,name', 'toParty:id,name', 'creator:id,first_name,last_name']),
         ])->findOrFail($id);

@@ -45,6 +45,7 @@
             <div class="row"><div class="label">Project</div><div class="value">{{ $c->project?->name }}{{ $c->project?->code ? ' ('.$c->project->code.')' : '' }}</div></div>
             <div class="row"><div class="label">Status</div><div class="value"><span class="badge badge-{{ $c->status }}">{{ $c->status }}</span></div></div>
             <div class="row"><div class="label">Currently at</div><div class="value">{{ $c->currentParty?->name ?? '—' }}</div></div>
+            <div class="row"><div class="label">Site</div><div class="value">{{ $c->site?->name ?? '—' }}</div></div>
             <div class="row"><div class="label">Raised</div><div class="value">{{ optional($c->raised_date)->format('d M Y') }} by {{ trim(($c->creator?->first_name ?? '').' '.($c->creator?->last_name ?? '')) ?: '—' }}</div></div>
             <div class="row"><div class="label">Due</div><div class="value">{{ optional($c->due_date)->format('d M Y') ?? '—' }}</div></div>
             <div class="row"><div class="label">Expected close</div><div class="value">{{ optional($c->expected_close_date)->format('d M Y') ?? '—' }}</div></div>

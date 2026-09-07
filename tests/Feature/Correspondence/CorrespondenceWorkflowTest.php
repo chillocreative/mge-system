@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\ProjectCorrespondence;
 use App\Models\ProjectCorrespondenceFile;
 use App\Models\ProjectParty;
+use App\Models\ProjectSite;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -132,5 +133,18 @@ class CorrespondenceWorkflowTest extends TestCase
             ->assertOk();
         $this->assertCount(1, $res->json('data'));
         $this->assertSame('A', $res->json('data.0.name'));
+    }
+
+    public function test_a_correspondence_can_be_filed_under_its_projects_site_but_not_anothers(): void
+    {
+        $project = Project::create(['name' => 'P', 'code' => 'PC'.random_int(1000, 9999), 'status' => 'in_progress']);
+        $site = ProjectSite::create(['project_id' => $project->id, 'name' => 'Zone 1']);
+        $foreign = ProjectSite::create(['project_id' => Project::create(['name' => 'Q', 'code' => 'QC'.random_int(1000, 9999), 'status' => 'in_progress'])->id, 'name' => 'Foreign']);
+        $editor = $this->user(['projects.view', 'projects.edit']);
+
+        $ok = ['project_id' => $project->id, 'type' => 'ncr', 'title' => 'X', 'raised_date' => now()->toDateString()];
+
+        $this->actingAs($editor)->postJson('/api/correspondence', array_merge($ok, ['site_id' => $site->id]))->assertCreated();
+        $this->actingAs($editor)->postJson('/api/correspondence', array_merge($ok, ['site_id' => $foreign->id]))->assertStatus(422);
     }
 }

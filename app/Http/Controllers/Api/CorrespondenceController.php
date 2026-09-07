@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\AssertsSiteInProject;
 use App\Http\Controllers\Controller;
 use App\Models\ProjectCorrespondence;
 use App\Services\CorrespondenceService;
@@ -12,6 +13,8 @@ use RuntimeException;
 
 class CorrespondenceController extends Controller
 {
+    use AssertsSiteInProject;
+
     public function __construct(
         private CorrespondenceService $correspondenceService,
         private CorrespondenceWorkflowService $workflow,
@@ -29,6 +32,7 @@ class CorrespondenceController extends Controller
     {
         $validated = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
+            'site_id' => ['nullable', 'exists:project_sites,id'],
             'type' => ['required', 'exists:correspondence_types,code'],
             'reference_no' => ['nullable', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
@@ -46,6 +50,8 @@ class CorrespondenceController extends Controller
         $files = $request->file('files', []);
         unset($validated['files']);
 
+        $this->assertSiteInProject($validated['site_id'] ?? null, $validated['project_id'] ?? null);
+
         $correspondence = $this->correspondenceService->create($validated, $request->user()->id, $files);
         $this->workflow->recordRaised($correspondence, $request->user()->id);
 
@@ -61,6 +67,7 @@ class CorrespondenceController extends Controller
     {
         $validated = $request->validate([
             'project_id' => ['sometimes', 'exists:projects,id'],
+            'site_id' => ['nullable', 'exists:project_sites,id'],
             'type' => ['sometimes', 'exists:correspondence_types,code'],
             'reference_no' => ['nullable', 'string', 'max:255'],
             'title' => ['sometimes', 'string', 'max:255'],
@@ -77,6 +84,11 @@ class CorrespondenceController extends Controller
 
         $files = $request->file('files', []);
         unset($validated['files']);
+
+        $this->assertSiteInProject(
+            $validated['site_id'] ?? null,
+            $validated['project_id'] ?? ProjectCorrespondence::whereKey($id)->value('project_id'),
+        );
 
         return $this->success($this->correspondenceService->update($id, $validated, $files), 'Correspondence updated successfully.');
     }

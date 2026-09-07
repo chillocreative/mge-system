@@ -12,7 +12,7 @@ class ProjectCorrespondence extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'project_id', 'type', 'reference_no', 'title', 'description',
+        'project_id', 'site_id', 'type', 'reference_no', 'title', 'description',
         'status', 'raised_date', 'due_date', 'response', 'created_by',
         'current_party_id', 'expected_close_date', 'actual_close_date', 'closing_reference', 'closed_by',
     ];
@@ -30,6 +30,11 @@ class ProjectCorrespondence extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(ProjectSite::class);
     }
 
     public function creator(): BelongsTo
