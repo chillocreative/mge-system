@@ -8,6 +8,24 @@
 
 ---
 
+## 🟢 ENGINE ENABLEMENT — Rahim's decisions, 7 Sep 2026
+
+Rahim reviewed the outstanding risks and chose to proceed. Recorded here so the trade-offs are on the record rather than in a chat log.
+
+| Known gap | Effect once the engine is on | Decision |
+|---|---|---|
+| **Public holidays incomplete** — only 6 fixed-date entries; Deepavali, Maulidur Rasul and Penang state days are missing | Leave spanning a missing holiday **is deducted**. Staff quietly lose days. This is the only gap that costs staff rather than favours them | **Proceed.** HR will inform staff directly |
+| **5 of 10 staff have no `hire_date`** | They fall into the lowest tier (14 days). Anyone with real service is under-granted by up to 4 days | **Proceed.** HR fills the dates in later; corrects itself once entered |
+| **MC + Hospitalisation now require an attachment** | An employee applying for sick leave without a document is refused outright | Intended (plan AB5). HR to announce |
+
+**What improves immediately:** rest days and public holidays stop being deducted, so staff get days back. On the production snapshot, PTG01 SITI's 17–21 Sep leave drops from 5 days to 3, and her Annual balance goes from 3 to 9. ERLI's goes from 7 to 13.
+
+**Existing approved leave is not recalculated.** Stored `days_count` values stay as they are; the engine applies to new requests only.
+
+**Rollback is one line:** remove `LEAVE_ENGINE_ENABLED` from the production `.env` and redeploy. Because balances are computed live rather than migrated, enabling and disabling are both instant and leave no data to unwind.
+
+---
+
 ## ⚠️ NEEDS YOUR CONFIRMATION
 
 Ordered by how much damage a wrong answer causes.
