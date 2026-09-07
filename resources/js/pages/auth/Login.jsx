@@ -112,10 +112,17 @@ export default function Login() {
                     <p className="text-xs font-medium text-emerald-300/60">
                         © {new Date().getFullYear()} Multi Green Engineering Sdn. Bhd.
                     </p>
-                    <a href="https://mge-eng.com" target="_blank" rel="noopener noreferrer"
-                        className="text-[10px] font-bold uppercase tracking-widest text-lime-300 transition-colors hover:text-lime-200">
-                        mge-eng.com
-                    </a>
+                    <div className="flex items-center gap-4">
+                        <a href="https://mge-eng.com" target="_blank" rel="noopener noreferrer"
+                            className="text-[10px] font-bold uppercase tracking-widest text-lime-300 transition-colors hover:text-lime-200">
+                            mge-eng.com
+                        </a>
+                        <span className="text-lime-300/30">|</span>
+                        <Link to="/panduan"
+                            className="text-[10px] font-bold uppercase tracking-widest text-lime-300 transition-colors hover:text-lime-200">
+                            Panduan Pengguna
+                        </Link>
+                    </div>
                 </div>
             </div>
 
