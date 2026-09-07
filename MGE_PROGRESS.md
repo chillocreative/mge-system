@@ -28,6 +28,11 @@ Rahim reviewed the outstanding risks and chose to proceed. Recorded here so the 
 
 ## ⚠️ NEEDS YOUR CONFIRMATION
 
+> **STATUS 7 Sep 2026 (late):** Batches 6 (Safety) and 7 (Correspondence) are now COMPLETE and live in production — the last two blocks you named. The 25 plan features are substantially built and deployed. What remains is NOT code:
+> 1. **HR/ops data entry** — run `leave:opening-balance` with Jan–Aug figures; fill `hire_date` for 5 staff; confirm Islamic 2026 holiday dates vs federal warta; flip `NOTIFICATIONS_EMAIL_ENABLED` once SMTP is verified.
+> 2. **One deferred structural item — `project_sites` (multi-site per project):** NOT built on purpose. It is a large refactor touching site logs, incidents, permits and correspondence on a live DB, and every module already carries a working free-text `location`. Confirm you actually want a multi-site hierarchy before I refactor — otherwise free-text location stays.
+> 3. Safety sub-items (Safety Meetings / Safety Activity / Safety PIC) were **not duplicated** — toolbox meetings + attendees, checklists, and project_members role-tagging already cover them. Say if you want dedicated modules instead.
+
 Ordered by how much damage a wrong answer causes.
 
 ### 1. ✅ RESOLVED — Annual Leave is 14 / 16 / 18
@@ -570,3 +575,51 @@ Plus earlier this session: Leave engine live, holidays admin, sidebar accordion 
 **Correspondence block (Ciri 1/16/17/19 + 18).** Build additively with plan defaults logged: R1 = timeline/events as the record (correspondence_events), R2 = project_parties (flexible, not three hardcoded). Adds status master-data, dual close dates, "currently at" party, closing conditions (ref + attachment), and per-correspondence PDF. Reshapes a live module, so: new tables alongside existing project_correspondences, never rewriting existing rows.
 
 Both are ready to start; each is multiple ships.
+
+### Batch 6e — HIRARC (Ciri 25 Safety, sub-batch 1) — SHIPPED
+- Tables: `hirarc_assessments`, `hirarc_items`; models with project/preparer relations.
+- `RiskMatrix` helper (DOSH 5×5): rating = L×S (clamped 1-5), banded low/medium/high/critical.
+- `HirarcController` CRUD; **anti-spoof**: rating/level recomputed server-side, never trusted from payload; destroy = archive (safety records never hard-deleted).
+- Routes `safety/hirarc` gated safety.view/create/manage.
+- Standalone page `/safety/hirarc` (list + create/edit modal, dynamic hazard rows, live risk preview), linked from Safety page header.
+- 8 tests (RiskMatrix unit + Hirarc feature incl. anti-spoof). Full suite: 207 passing.
+- Also committed the previously-untracked Batch 5 `BoqImportTest.php`.
+- Commits `aacc364` + Pint fix `8918141`. CI green, deploy to cPanel succeeded.
+
+### Batch 6f — Permit To Work (PTW) (Ciri 25 Safety, sub-batch 2) — SHIPPED
+- Table `work_permits`; `WorkPermit` model (+ polymorphic attachments via shared Attachment engine).
+- `WorkPermitService` owns the state machine — draft→pending→approved/rejected, approved→closed — guarded in the service so transitions can't be bypassed; approved permit frozen except close.
+- **Expiry is derived, never stored**: `effective_status` returns "expired" once an approved permit's valid_to passes → no cron can leave a permit live past its window.
+- Sequential `PTW-YYYY-####` numbering.
+- Routes `safety/permits` (view/create requesters; manage for approve/reject/close); illegal transitions → 422.
+- Standalone `/safety/permits` page (status badges, save-draft / save-&-submit, inline approve/reject/close) linked from Safety page.
+- 7 feature tests (happy path + every illegal transition + frozen-when-approved + derived expiry). Suite: 214 passing.
+- Commit `e6c97aa`. CI green, deploy succeeded.
+- ASSUMPTION (Z5): single-approver — anyone with safety.manage can approve. No multi-step approver chain (log for HR confirm).
+
+### Batch 6g — Safety Statistics (LTIFR / man-hours) — SHIPPED
+- `safety_man_hours` (per project per month, unique-key upsert) + `days_lost` on incidents (marks lost-time injuries).
+- `SafetyStatisticsService`: LTIFR = LTI×1e6/man-hours; severity rate = days-lost×1e6/man-hours; **null (not zero) when no man-hours** recorded.
+- Endpoints: GET `/safety/statistics` (view); `/safety/man-hours` list (view), upsert+delete (manage). Incident form now captures Days Lost.
+- Standalone `/safety/statistics` page: KPI cards + severity/type breakdown + manager man-hours editor. Linked from Safety page.
+- 4 feature tests. Suite: 218 passing. Commit `855854a`. CI + deploy green.
+- ASSUMPTION (Z6): man-hours entered manually per project-month (attendance has no reliable hours), not inferred.
+
+### Safety block (Ciri 25) — substantial modules SHIPPED; remaining items deferred with rationale
+Shipped this session: HIRARC (6e), PTW (6f), Statistics/LTIFR (6g). Already existed before: incidents, hazards, toolbox meetings (+attendees), compliance checklists, site inspections.
+**Deferred (logged for HR/Rahim confirm, NOT built to avoid risk/duplication):**
+- **project_sites / site_id (multi-site per project):** a large structural change touching site logs, incidents, permits, correspondence. Every module already carries a free-text `location` that works. Forcing a multi-site hierarchy refactor overnight is high-risk for low marginal value → kept free-text location; needs explicit scope confirmation before refactor.
+- **Safety Meetings (Z1):** toolbox_meetings + attendees already serve this; not duplicated.
+- **Safety Activity log:** overlaps toolbox meetings + checklists; not duplicated.
+- **Safety PIC:** project_members already supports role-tagged members; a dedicated safety-PIC role can be assigned there without new schema.
+
+
+### Batch 7 — Correspondence workflow (Ciri 1/16/17/19) — SHIPPED
+Purely additive; existing project_correspondences rows untouched.
+- `project_parties` (flexible per-project parties, not 3 hardcoded); `correspondence_events` (append-only history written in same txn as the change).
+- New columns: `current_party_id` ("currently at"), `expected_close_date` + `actual_close_date` (dual close dates), `closing_reference`, `closed_by`.
+- `CorrespondenceWorkflowService` owns transitions. **Close guarded**: requires closing reference AND ≥1 attachment; stamps actual close date server-side.
+- Endpoints: `/correspondence/{id}` events/handover/note/status/close/reopen/pdf; `project-parties` CRUD. Per-correspondence **PDF** (details + history + attachments).
+- Frontend: workflow drawer (current party, timeline, handover + inline add-party, note, guarded close, reopen, PDF) from a new row action; existing table/edit flow untouched.
+- 7 feature tests. Suite: 225 passing. Commit `f36de99`. CI + deploy green.
+- ASSUMPTION (R2): party types = client/consultant/main_contractor/subcontractor/supplier/authority/other. (R1) history covers raised/handed_over/noted/status_changed/closed/reopened.
