@@ -400,12 +400,73 @@ class LeaveService
 
     // ── Balances ──
 
+    /**
+     * The balances shown to an employee.
+     *
+     * With the engine on these are computed from the same source the engine
+     * enforces against, rather than read from the stored leave_balances rows.
+     *
+     * Those two used to be able to disagree, and on real data they did: an
+     * employee could be shown 12 days remaining while the system would refuse
+     * anything past 6. There is no explanation the employee can act on when that
+     * happens, so the complaint goes to HR instead of the system (plan 7.3.7).
+     * One source of truth removes the whole class of problem.
+     *
+     * The stored rows are still written by syncBalance() — they remain the audit
+     * record of what was calculated and under which policy (rule_snapshot) — but
+     * they are no longer what the employee is shown.
+     *
+     * With the engine off, the original stored-row behaviour is returned
+     * unchanged, so nothing shifts on production until the engine is enabled.
+     */
     public function balanceFor(int $employeeId, int $year): Collection
     {
-        return LeaveBalance::with('leaveType:id,name,code,is_paid')
-            ->where('employee_id', $employeeId)
+        if (! $this->engine->enabled()) {
+            return LeaveBalance::with('leaveType:id,name,code,is_paid')
+                ->where('employee_id', $employeeId)
+                ->where('year', $year)
+                ->get();
+        }
+
+        $employee = Employee::findOrFail($employeeId);
+
+        $stored = LeaveBalance::where('employee_id', $employeeId)
             ->where('year', $year)
-            ->get();
+            ->get()
+            ->keyBy('leave_type_id');
+
+        return LeaveType::active()
+            ->orderBy('name')
+            ->get()
+            ->map(function (LeaveType $type) use ($employee, $year, $stored) {
+                $summary = $this->engine->summary($employee, $type, $year);
+
+                return [
+                    'id' => $stored[$type->id]->id ?? null,
+                    'employee_id' => $employee->id,
+                    'leave_type_id' => $type->id,
+                    'year' => $year,
+                    'entitled_days' => $summary['entitled'],
+                    'carried_forward' => $summary['carried_forward'],
+                    'adjustment_days' => $summary['adjustment'],
+                    'used_days' => $summary['taken'],
+                    // Awaiting approval, already held against the balance so two
+                    // overlapping requests cannot both be granted (plan 8.4).
+                    'pending_days' => $summary['pending'],
+                    'remaining_days' => $summary['available'],
+                    // Present when this type shares a cap with another, so the UI
+                    // can explain a figure that otherwise appears to move on its
+                    // own (plan 7.3.7).
+                    'pool' => $summary['pool'],
+                    'leave_type' => [
+                        'id' => $type->id,
+                        'name' => $type->name,
+                        'code' => $type->code,
+                        'is_paid' => $type->is_paid,
+                    ],
+                ];
+            })
+            ->values();
     }
 
     // ── Leave Types ──
