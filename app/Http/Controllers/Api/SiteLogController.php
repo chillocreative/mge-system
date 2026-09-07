@@ -22,7 +22,7 @@ class SiteLogController extends Controller
     public function index(int $projectId, Request $request): JsonResponse
     {
         $logs = SiteLog::where('project_id', $projectId)
-            ->with(['logger:id,first_name,last_name', 'machinery', 'weatherEvents'])
+            ->with(['logger:id,first_name,last_name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents'])
             ->when($request->date_from && $request->date_to, fn ($q) => $q->forPeriod($request->date_from, $request->date_to))
             ->orderByDesc('log_date')
             ->paginate($request->integer('per_page', 15));
@@ -46,13 +46,13 @@ class SiteLogController extends Controller
         $this->syncMachinery($log, $machinery);
         $this->syncWeatherEvents($log, $weatherEvents);
 
-        return $this->created($log->load(['logger:id,first_name,last_name', 'machinery', 'weatherEvents']), 'Site log created.');
+        return $this->created($log->load(['logger:id,first_name,last_name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents']), 'Site log created.');
     }
 
     public function show(int $projectId, int $logId): JsonResponse
     {
         $log = SiteLog::where('project_id', $projectId)
-            ->with(['logger:id,first_name,last_name', 'machinery', 'weatherEvents'])
+            ->with(['logger:id,first_name,last_name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents'])
             ->findOrFail($logId);
 
         return $this->success($log);
@@ -113,7 +113,7 @@ class SiteLogController extends Controller
 
         $this->auditLog($request, $log, 'sitelog.updated');
 
-        return $this->success($log->fresh()->load(['logger:id,first_name,last_name', 'machinery', 'weatherEvents']), 'Site log updated.');
+        return $this->success($log->fresh()->load(['logger:id,first_name,last_name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents']), 'Site log updated.');
     }
 
     public function destroy(int $projectId, int $logId, Request $request): JsonResponse
@@ -234,6 +234,7 @@ class SiteLogController extends Controller
             $log->machinery()->create([
                 'machinery_type' => $item['machinery_type'],
                 'quantity' => $item['quantity'] ?? 1,
+                'vehicle_id' => $item['vehicle_id'] ?? null,
             ]);
         }
     }
@@ -273,6 +274,7 @@ class SiteLogController extends Controller
             'machinery' => ['nullable', 'array'],
             'machinery.*.machinery_type' => ['required_with:machinery', 'in:'.$machineryTypes],
             'machinery.*.quantity' => ['nullable', 'integer', 'min:1'],
+            'machinery.*.vehicle_id' => ['nullable', 'exists:vehicles,id'],
             'weather_events' => ['nullable', 'array'],
             'weather_events.*.condition' => ['required_with:weather_events', 'in:'.$weatherConditions],
             'weather_events.*.event_time' => ['required_with:weather_events', 'date_format:H:i'],

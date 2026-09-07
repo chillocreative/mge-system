@@ -11,6 +11,7 @@ class SiteLogMachinery extends Model
 
     protected $fillable = [
         'site_log_id',
+        'vehicle_id',
         'machinery_type',
         'quantity',
     ];
@@ -25,5 +26,10 @@ class SiteLogMachinery extends Model
     public function siteLog(): BelongsTo
     {
         return $this->belongsTo(SiteLog::class);
+    }
+
+    public function vehicle(): BelongsTo
+    {
+        return $this->belongsTo(Vehicle::class);
     }
 }

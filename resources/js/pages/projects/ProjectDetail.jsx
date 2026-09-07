@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import projectService from '@/services/projectService';
+import assetService from '@/services/assetService';
 import taskService from '@/services/taskService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ProjectDiscussions from '@/components/ProjectDiscussions';
@@ -535,6 +536,15 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
     const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
     const [machineryReport, setMachineryReport] = useState(null);
     const [machineryLoading, setMachineryLoading] = useState(false);
+    const [machineryAssets, setMachineryAssets] = useState([]);
+
+    useEffect(() => {
+        // Machinery master lives in Assets (type = machinery) — offered as an
+        // optional link on each machinery row (Ciri 21).
+        assetService.listVehicles({ type: 'machinery', per_page: 200 })
+            .then((r) => setMachineryAssets(r.data?.data || r.data || []))
+            .catch(() => {});
+    }, []);
 
     const openMachineryReport = async () => {
         setMachineryLoading(true);
@@ -666,7 +676,13 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                                         <select value={m.machinery_type} onChange={(e) => updateMachinery(i, 'machinery_type', e.target.value)} className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
                                             {MACHINERY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                                         </select>
-                                        <input type="number" min="1" value={m.quantity} onChange={(e) => updateMachinery(i, 'quantity', e.target.value)} className="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                        <input type="number" min="1" value={m.quantity} onChange={(e) => updateMachinery(i, 'quantity', e.target.value)} className="w-16 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                        {machineryAssets.length > 0 && (
+                                            <select value={m.vehicle_id || ''} onChange={(e) => updateMachinery(i, 'vehicle_id', e.target.value || null)} className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" title="Link to a registered asset (optional)">
+                                                <option value="">Unlinked asset</option>
+                                                {machineryAssets.map((a) => <option key={a.id} value={a.id}>{a.registration_no}{a.make ? ` — ${a.make}` : ''}</option>)}
+                                            </select>
+                                        )}
                                         <button type="button" onClick={() => removeMachinery(i)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"><HiOutlineX className="h-3.5 w-3.5" /></button>
                                     </div>
                                 ))}
