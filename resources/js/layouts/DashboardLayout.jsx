@@ -34,6 +34,7 @@ import {
     HiOutlineKey,
     HiOutlineBell,
     HiOutlineAcademicCap,
+    HiOutlineScale,
 } from 'react-icons/hi';
 import NotificationBell from '@/components/NotificationBell';
 import toast from 'react-hot-toast';
@@ -63,6 +64,7 @@ const navigation = [
             { name: 'My Leave', href: '/leave/my', icon: HiOutlineCalendar, permission: 'leave.request' },
             { name: 'Leave Approvals', href: '/hr/leave/approvals', icon: HiOutlineClipboardCheck, permission: 'leave.approve' },
             { name: 'Leave (All)', href: '/hr/leave', icon: HiOutlineClipboardCheck, permission: 'leave.manage' },
+            { name: 'Leave Balances', href: '/hr/leave/balances', icon: HiOutlineScale, permission: 'leave.manage' },
             { name: 'My Training', href: '/training/my', icon: HiOutlineAcademicCap, permission: 'training.request' },
             { name: 'Training', href: '/hr/training', icon: HiOutlineAcademicCap, permission: 'training.view' },
             { name: 'Payroll', href: '/hr/payroll', icon: HiOutlineCash, permission: 'payroll.view' },

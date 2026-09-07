@@ -3,6 +3,7 @@ import apiClient from '@/services/apiClient';
 import payrollService from '@/services/payrollService';
 import toast from 'react-hot-toast';
 import { HiOutlineDocumentText } from 'react-icons/hi';
+import EmployeeSelect from '@/components/EmployeeSelect';
 
 export default function EaForm() {
     const [employees, setEmployees] = useState([]);
@@ -33,11 +34,7 @@ export default function EaForm() {
                 <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                         <label className="mb-1 block text-sm font-medium text-gray-700">Employee</label>
-                        <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
-                            <option value="">Select employee...</option>
-                            {employees.map((e) => <option key={e.id} value={e.id}>{e.full_name} ({e.employee_no})</option>)}
-                        </select>
+                        <EmployeeSelect employees={employees} value={employeeId} onChange={setEmployeeId} />
                     </div>
                     <div>
                         <label className="mb-1 block text-sm font-medium text-gray-700">Year</label>

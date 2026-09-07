@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import apiClient from '@/services/apiClient';
 import leaveService from '@/services/leaveService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import EmployeeSelect from '@/components/EmployeeSelect';
 import { HiOutlineScale } from 'react-icons/hi';
 
 export default function LeaveBalance() {
@@ -40,16 +41,12 @@ export default function LeaveBalance() {
             </div>
 
             <div className="mb-6 flex flex-col gap-3 sm:flex-row">
-                <select
+                <EmployeeSelect
+                    employees={employees}
                     value={employeeId}
-                    onChange={(e) => setEmployeeId(e.target.value)}
-                    className="rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                >
-                    <option value="">Select employee</option>
-                    {employees.map((emp) => (
-                        <option key={emp.id} value={emp.id}>{emp.full_name || `${emp.first_name} ${emp.last_name}`}</option>
-                    ))}
-                </select>
+                    onChange={setEmployeeId}
+                    className="sm:w-96"
+                />
                 <select
                     value={year}
                     onChange={(e) => setYear(Number(e.target.value))}

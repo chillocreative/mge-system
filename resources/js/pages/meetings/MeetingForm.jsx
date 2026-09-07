@@ -5,6 +5,7 @@ import projectService from '@/services/projectService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlineTrash, HiOutlineUserAdd } from 'react-icons/hi';
+import EmployeeSelect from '@/components/EmployeeSelect';
 
 const emptyAction = { item: '', assigned_to: '', due_date: '', status: 'open' };
 
@@ -254,16 +255,12 @@ export default function MeetingForm() {
                     <h2 className="mb-4 text-sm font-semibold uppercase text-gray-500">Attendees</h2>
                     <div className="flex flex-col gap-3 sm:flex-row">
                         <div className="flex flex-1 gap-2">
-                            <select
+                            <EmployeeSelect
+                                employees={employees}
                                 value={attendeeEmployee}
-                                onChange={(e) => setAttendeeEmployee(e.target.value)}
-                                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                            >
-                                <option value="">Select employee...</option>
-                                {employees.map((e) => (
-                                    <option key={e.id} value={e.id}>{e.first_name} {e.last_name}</option>
-                                ))}
-                            </select>
+                                onChange={setAttendeeEmployee}
+                                className="flex-1"
+                            />
                             <button
                                 type="button"
                                 onClick={addEmployeeAttendee}

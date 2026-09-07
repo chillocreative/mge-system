@@ -7,6 +7,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { HiOutlineArrowLeft } from 'react-icons/hi';
 import LeaveDayBreakdown from './LeaveDayBreakdown';
+import EmployeeSelect from '@/components/EmployeeSelect';
 
 export default function LeaveRequestForm() {
     const navigate = useNavigate();
@@ -164,17 +165,12 @@ export default function LeaveRequestForm() {
                         <div>
                             <label className="mb-1 block text-sm font-medium text-gray-700">Employee *</label>
                             {canManage ? (
-                                <select
+                                <EmployeeSelect
+                                    employees={employees}
                                     value={form.employee_id}
-                                    onChange={(e) => setForm((p) => ({ ...p, employee_id: e.target.value }))}
+                                    onChange={(id) => setForm((p) => ({ ...p, employee_id: id }))}
                                     required
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                                >
-                                    <option value="">Select employee</option>
-                                    {employees.map((emp) => (
-                                        <option key={emp.id} value={emp.id}>{emp.full_name || `${emp.first_name} ${emp.last_name}`}</option>
-                                    ))}
-                                </select>
+                                />
                             ) : (
                                 <input
                                     type="text"
