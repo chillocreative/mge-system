@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\AssertsSiteInProject;
 use App\Http\Controllers\Controller;
 use App\Models\HirarcAssessment;
 use App\Services\Safety\RiskMatrix;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class HirarcController extends Controller
 {
+    use AssertsSiteInProject;
+
     public function index(Request $request): JsonResponse
     {
         $query = HirarcAssessment::with(['project:id,name,code', 'site:id,name', 'preparer:id,first_name,last_name'])
@@ -37,6 +40,7 @@ class HirarcController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $this->validatePayload($request);
+        $this->assertSiteInProject($data['site_id'] ?? null, $data['project_id'] ?? null);
         $items = $data['items'] ?? [];
         unset($data['items']);
 
@@ -55,6 +59,7 @@ class HirarcController extends Controller
     {
         $assessment = HirarcAssessment::findOrFail($id);
         $data = $this->validatePayload($request, true);
+        $this->assertSiteInProject($data['site_id'] ?? null, $data['project_id'] ?? $assessment->project_id);
         $items = $data['items'] ?? null;
         unset($data['items']);
 

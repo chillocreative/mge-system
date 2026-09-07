@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\AssertsSiteInProject;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Project;
@@ -13,6 +14,8 @@ use Illuminate\Http\Request;
 
 class SiteLogController extends Controller
 {
+    use AssertsSiteInProject;
+
     private const MACHINERY_TYPES = [
         'Excavator', 'Bulldozer', 'Crane', 'Compactor', 'Loader', 'Dump Truck', 'Generator', 'Other',
     ];
@@ -257,19 +260,6 @@ class SiteLogController extends Controller
                 'event_time' => $item['event_time'],
             ]);
         }
-    }
-
-    /**
-     * A site chosen for a record must belong to that record's project — never
-     * let a site from another project be attached (cross-project leak).
-     */
-    private function assertSiteInProject(?int $siteId, int $projectId): void
-    {
-        if ($siteId === null) {
-            return;
-        }
-        $ok = \App\Models\ProjectSite::where('id', $siteId)->where('project_id', $projectId)->exists();
-        abort_unless($ok, 422, 'The selected site does not belong to this project.');
     }
 
     private function validatePayload(Request $request, bool $creating): array

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Safety;
 
+use App\Models\Project;
+use App\Models\ProjectSite;
 use App\Models\User;
 use App\Models\WorkPermit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -115,5 +117,15 @@ class WorkPermitTest extends TestCase
 
         $permit = WorkPermit::create($this->payload(['requested_by' => $viewer->id, 'status' => 'pending', 'permit_no' => 'PTW-X-1']));
         $this->actingAs($viewer)->postJson("/api/safety/permits/{$permit->id}/approve")->assertForbidden();
+    }
+
+    public function test_a_site_from_another_project_is_rejected(): void
+    {
+        $project = Project::create(['name' => 'P', 'code' => 'PW'.random_int(1000, 9999), 'status' => 'in_progress']);
+        $foreignSite = ProjectSite::create(['project_id' => Project::create(['name' => 'Q', 'code' => 'QW'.random_int(1000, 9999), 'status' => 'in_progress'])->id, 'name' => 'Foreign']);
+
+        $this->actingAs($this->actor(['safety.create']))
+            ->postJson('/api/safety/permits', $this->payload(['project_id' => $project->id, 'site_id' => $foreignSite->id]))
+            ->assertStatus(422);
     }
 }

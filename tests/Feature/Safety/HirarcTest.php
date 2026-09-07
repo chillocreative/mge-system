@@ -3,6 +3,8 @@
 namespace Tests\Feature\Safety;
 
 use App\Models\HirarcAssessment;
+use App\Models\Project;
+use App\Models\ProjectSite;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -96,5 +98,15 @@ class HirarcTest extends TestCase
         $this->actingAs($this->actor(['safety.view']))
             ->postJson('/api/safety/hirarc', ['title' => 'X'])
             ->assertForbidden();
+    }
+
+    public function test_a_site_from_another_project_is_rejected(): void
+    {
+        $project = Project::create(['name' => 'P', 'code' => 'PH'.random_int(1000, 9999), 'status' => 'in_progress']);
+        $foreignSite = ProjectSite::create(['project_id' => Project::create(['name' => 'Q', 'code' => 'QH'.random_int(1000, 9999), 'status' => 'in_progress'])->id, 'name' => 'Foreign']);
+
+        $this->actingAs($this->actor(['safety.create']))
+            ->postJson('/api/safety/hirarc', ['title' => 'X', 'project_id' => $project->id, 'site_id' => $foreignSite->id, 'items' => []])
+            ->assertStatus(422);
     }
 }

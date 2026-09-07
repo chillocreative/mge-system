@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\AssertsSiteInProject;
 use App\Http\Controllers\Controller;
 use App\Services\SafetyService;
 use Illuminate\Http\JsonResponse;
@@ -9,6 +10,8 @@ use Illuminate\Http\Request;
 
 class SafetyController extends Controller
 {
+    use AssertsSiteInProject;
+
     public function __construct(private SafetyService $safetyService) {}
 
     // ── Overview Stats ──
@@ -54,6 +57,8 @@ class SafetyController extends Controller
         $photos = $request->file('photos', []);
         unset($validated['photos']);
 
+        $this->assertSiteInProject($validated['site_id'] ?? null, $validated['project_id'] ?? null);
+
         $incident = $this->safetyService->createIncident($validated, $request->user()->id, $photos);
 
         return $this->created($incident, 'Incident reported successfully.');
@@ -79,6 +84,8 @@ class SafetyController extends Controller
             'preventive_action' => ['nullable', 'string'],
             'investigated_by' => ['nullable', 'exists:users,id'],
         ]);
+
+        $this->assertSiteInProject($validated['site_id'] ?? null, \App\Models\SafetyIncident::whereKey($id)->value('project_id'));
 
         return $this->success($this->safetyService->updateIncident($id, $validated));
     }
@@ -111,6 +118,8 @@ class SafetyController extends Controller
         $photos = $request->file('photos', []);
         unset($validated['photos']);
 
+        $this->assertSiteInProject($validated['site_id'] ?? null, $validated['project_id'] ?? null);
+
         $hazard = $this->safetyService->createHazard($validated, $request->user()->id, $photos);
 
         return $this->created($hazard, 'Hazard reported successfully.');
@@ -127,6 +136,8 @@ class SafetyController extends Controller
             'corrective_action' => ['nullable', 'string'],
             'assigned_to' => ['nullable', 'exists:users,id'],
         ]);
+
+        $this->assertSiteInProject($validated['site_id'] ?? null, \App\Models\HazardReport::whereKey($id)->value('project_id'));
 
         return $this->success($this->safetyService->updateHazard($id, $validated));
     }
@@ -164,6 +175,8 @@ class SafetyController extends Controller
         $attendeeIds = $validated['attendee_ids'] ?? [];
         $externalNames = $validated['external_names'] ?? [];
         unset($validated['photos'], $validated['attendee_ids'], $validated['external_names']);
+
+        $this->assertSiteInProject($validated['site_id'] ?? null, $validated['project_id'] ?? null);
 
         $meeting = $this->safetyService->createMeeting($validated, $request->user()->id, $attendeeIds, $externalNames, $photos);
 
@@ -204,6 +217,8 @@ class SafetyController extends Controller
         $photos = $request->file('photos', []);
         $items = $validated['items'];
         unset($validated['photos'], $validated['items']);
+
+        $this->assertSiteInProject($validated['site_id'] ?? null, $validated['project_id'] ?? null);
 
         $checklist = $this->safetyService->createChecklist($validated, $request->user()->id, $items, $photos);
 
