@@ -258,7 +258,7 @@ class ContractService
 
     public function downloadDrawing(int $attachmentId)
     {
-        $attachment = Attachment::findOrFail($attachmentId);
+        $attachment = $this->findContractDrawing($attachmentId);
 
         abort_unless(
             \Illuminate\Support\Facades\Storage::disk($attachment->disk)->exists($attachment->stored_path),
@@ -271,7 +271,22 @@ class ContractService
 
     public function deleteDrawing(int $attachmentId): void
     {
-        $this->uploads->remove(Attachment::findOrFail($attachmentId));
+        $this->uploads->remove($this->findContractDrawing($attachmentId));
+    }
+
+    /**
+     * Resolve an attachment, but ONLY if it is a contract drawing.
+     *
+     * attachments is a shared polymorphic table, so looking one up by raw id
+     * would let these contract endpoints reach any attachment in the system —
+     * an HR document, a memo file — an IDOR. Constraining to attachable_type =
+     * ProjectContract keeps them to what they are for; anything else is a 404.
+     */
+    private function findContractDrawing(int $attachmentId): Attachment
+    {
+        return Attachment::where('id', $attachmentId)
+            ->where('attachable_type', (new ProjectContract)->getMorphClass())
+            ->firstOrFail();
     }
 
     private function storeFiles(ProjectContract $contract, array $files): void

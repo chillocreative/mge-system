@@ -139,4 +139,42 @@ class ContractDrawingsTest extends TestCase
 
         $this->assertSame(0, Attachment::count());
     }
+
+    public function test_it_cannot_download_an_attachment_belonging_to_another_model(): void
+    {
+        // An attachment on something that is NOT a contract (here: an Employee)
+        // must not be reachable through the contract drawing endpoints.
+        $employee = \App\Models\Employee::create(['employee_no' => 'IDOR1', 'first_name' => 'X', 'category' => 'office']);
+        $foreign = \App\Models\Attachment::create([
+            'attachable_type' => $employee->getMorphClass(),
+            'attachable_id' => $employee->id,
+            'original_name' => 'secret.pdf',
+            'stored_path' => 'x/secret.pdf',
+            'disk' => 'local',
+            'size_bytes' => 1,
+        ]);
+
+        $this->actingAs($this->actor())
+            ->getJson("/api/project-contracts/drawings/{$foreign->id}/download")
+            ->assertNotFound();
+    }
+
+    public function test_it_cannot_delete_an_attachment_belonging_to_another_model(): void
+    {
+        $employee = \App\Models\Employee::create(['employee_no' => 'IDOR2', 'first_name' => 'X', 'category' => 'office']);
+        $foreign = \App\Models\Attachment::create([
+            'attachable_type' => $employee->getMorphClass(),
+            'attachable_id' => $employee->id,
+            'original_name' => 'secret.pdf',
+            'stored_path' => 'x/secret.pdf',
+            'disk' => 'local',
+            'size_bytes' => 1,
+        ]);
+
+        $this->actingAs($this->actor())
+            ->deleteJson("/api/project-contracts/drawings/{$foreign->id}")
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('attachments', ['id' => $foreign->id]);
+    }
 }
