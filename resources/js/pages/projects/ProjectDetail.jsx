@@ -258,7 +258,7 @@ function TasksTab({ project, canEdit, onRefresh }) {
             )}
         >
             {showForm && (
-                <form onSubmit={handleCreate} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
+                <form onSubmit={handleSubmit} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
                     <div className="grid gap-3 sm:grid-cols-2">
                         <input
                             type="text"
@@ -366,15 +366,15 @@ function MilestonesTab({ project, canEdit, onRefresh }) {
             )}
         >
             {showForm && (
-                <form onSubmit={handleCreate} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
+                <form onSubmit={handleSubmit} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
                     <div className="grid gap-3 sm:grid-cols-2">
                         <input type="text" placeholder="Milestone title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required className="sm:col-span-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                         <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                         <textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="sm:col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                     </div>
                     <div className="mt-3 flex justify-end gap-2">
-                        <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
-                        <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Creating...' : 'Create'}</button>
+                        <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
+                        <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Saving...' : editingId ? 'Update' : 'Create'}</button>
                     </div>
                 </form>
             )}
@@ -536,6 +536,7 @@ const emptySiteLogForm = () => ({
 
 function SiteLogsTab({ project, canEdit, onRefresh }) {
     const [showForm, setShowForm] = useState(false);
+    const [editingId, setEditingId] = useState(null);
     const [form, setForm] = useState(emptySiteLogForm());
     const [saving, setSaving] = useState(false);
     const [sites, setSites] = useState([]);
@@ -578,23 +579,64 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
     const removeWeatherEvent = (idx) => setForm((p) => ({ ...p, weather_events: p.weather_events.filter((_, i) => i !== idx) }));
     const updateWeatherEvent = (idx, field, value) => setForm((p) => ({ ...p, weather_events: p.weather_events.map((w, i) => i === idx ? { ...w, [field]: value } : w) }));
 
-    const handleCreate = async (e) => {
+    const openCreate = () => {
+        setEditingId(null);
+        setForm(emptySiteLogForm());
+        setShowForm(true);
+    };
+
+    const openEdit = (log) => {
+        setEditingId(log.id);
+        setForm({
+            log_date: log.log_date ? String(log.log_date).slice(0, 10) : '',
+            site_id: log.site_id || '',
+            weather: log.weather || '',
+            workers_count: log.workers_count ?? '',
+            work_performed: log.work_performed || '',
+            materials_used: log.materials_used || '',
+            issues: log.issues || '',
+            safety_notes: log.safety_notes || '',
+            machinery: (log.machinery || []).map((m) => ({ machinery_type: m.machinery_type, quantity: m.quantity, vehicle_id: m.vehicle_id || null })),
+            weather_events: (log.weather_events || []).map((w) => ({ condition: w.condition, event_time: (w.event_time || '').slice(0, 5) })),
+        });
+        setShowForm(true);
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
+        const payload = {
+            ...form,
+            site_id: form.site_id || null,
+            workers_count: form.workers_count ? Number(form.workers_count) : 0,
+        };
         try {
-            await projectService.createSiteLog(project.id, {
-                ...form,
-                site_id: form.site_id || null,
-                workers_count: form.workers_count ? Number(form.workers_count) : 0,
-            });
-            toast.success('Site log created');
+            if (editingId) {
+                await projectService.updateSiteLog(project.id, editingId, payload);
+                toast.success('Site log updated');
+            } else {
+                await projectService.createSiteLog(project.id, payload);
+                toast.success('Site log created');
+            }
             setShowForm(false);
+            setEditingId(null);
             setForm(emptySiteLogForm());
             onRefresh();
-        } catch {
-            toast.error('Failed to create site log');
+        } catch (err) {
+            toast.error(err.response?.data?.message || (editingId ? 'Failed to update site log' : 'Failed to create site log'));
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleDelete = async (logId) => {
+        if (!confirm('Delete this site log? This cannot be undone.')) return;
+        try {
+            await projectService.deleteSiteLog(project.id, logId);
+            toast.success('Site log deleted');
+            onRefresh();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to delete site log');
         }
     };
 
@@ -623,7 +665,7 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                         </button>
                     </div>
                     {canEdit && (
-                        <button onClick={() => setShowForm(!showForm)} className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700">
+                        <button onClick={() => (showForm ? (setShowForm(false), setEditingId(null)) : openCreate())} className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700">
                             <HiOutlinePlus className="h-4 w-4" /> New Entry
                         </button>
                     )}
@@ -631,7 +673,7 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
             }
         >
             {showForm && (
-                <form onSubmit={handleCreate} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
+                <form onSubmit={handleSubmit} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
                     <div className="grid gap-3 sm:grid-cols-2">
                         <input type="date" value={form.log_date} onChange={(e) => setForm({ ...form, log_date: e.target.value })} required className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                         <select value={form.weather} onChange={(e) => setForm({ ...form, weather: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
@@ -714,8 +756,8 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                         <textarea placeholder="Safety notes" value={form.safety_notes} onChange={(e) => setForm({ ...form, safety_notes: e.target.value })} rows={2} className="sm:col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                     </div>
                     <div className="mt-3 flex justify-end gap-2">
-                        <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
-                        <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Creating...' : 'Create'}</button>
+                        <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
+                        <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Saving...' : editingId ? 'Update' : 'Create'}</button>
                     </div>
                 </form>
             )}
@@ -730,10 +772,19 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                                     <span className="text-sm font-semibold text-gray-900">{log.log_date}</span>
                                     {log.weather && <span>{weatherIcons[log.weather] || ''} {log.weather}</span>}
                                     {log.workers_count > 0 && <span>{log.workers_count} workers</span>}
+                                    {log.site?.name && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-700">{log.site.name}</span>}
                                 </div>
-                                <span className="text-xs text-gray-400">
-                                    {log.logger?.first_name} {log.logger?.last_name}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-400">
+                                        {log.logger?.first_name} {log.logger?.last_name}
+                                    </span>
+                                    {canEdit && (
+                                        <>
+                                            <button onClick={() => openEdit(log)} className="rounded p-1 text-gray-400 hover:bg-blue-50 hover:text-blue-600" title="Edit"><HiOutlinePencil className="h-4 w-4" /></button>
+                                            <button onClick={() => handleDelete(log.id)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600" title="Delete"><HiOutlineTrash className="h-4 w-4" /></button>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                             {log.weather_events?.length > 0 && (
                                 <div className="mt-2 flex flex-wrap gap-1.5">
