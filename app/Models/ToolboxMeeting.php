@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class ToolboxMeeting extends Model
 {
     protected $fillable = [
-        'project_id', 'conducted_by', 'title', 'topics', 'location',
+        'project_id', 'site_id', 'conducted_by', 'title', 'topics', 'location',
         'meeting_date', 'duration_minutes', 'notes', 'action_items',
     ];
 
@@ -22,6 +22,11 @@ class ToolboxMeeting extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(ProjectSite::class);
     }
 
     public function conductor(): BelongsTo

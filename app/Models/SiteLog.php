@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class SiteLog extends Model
 {
     protected $fillable = [
-        'project_id',
+        'project_id', 'site_id',
         'log_date',
         'title',
         'description',
@@ -34,6 +34,11 @@ class SiteLog extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(ProjectSite::class);
     }
 
     public function logger(): BelongsTo

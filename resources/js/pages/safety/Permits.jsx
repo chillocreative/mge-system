@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import safetyService from '@/services/safetyService';
 import projectService from '@/services/projectService';
+import projectSiteService from '@/services/projectSiteService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlineArrowLeft, HiOutlinePencil } from 'react-icons/hi';
@@ -36,7 +37,7 @@ const TYPES = [
     ['general', 'General'],
 ];
 
-const emptyForm = () => ({ id: null, title: '', type: 'general', project_id: '', location: '', description: '', precautions: '', valid_from: '', valid_to: '' });
+const emptyForm = () => ({ id: null, title: '', type: 'general', project_id: '', site_id: '', location: '', description: '', precautions: '', valid_from: '', valid_to: '' });
 
 export default function Permits() {
     const { can } = useAuth();
@@ -44,6 +45,7 @@ export default function Permits() {
     const canManage = can('safety.manage');
     const [list, setList] = useState([]);
     const [projects, setProjects] = useState([]);
+    const [sites, setSites] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -65,11 +67,15 @@ export default function Permits() {
     useEffect(() => {
         projectService.list({ per_page: 100 }).then((r) => setProjects(r.data?.data || [])).catch(() => {});
     }, []);
+    useEffect(() => {
+        if (!form.project_id) { setSites([]); return; }
+        projectSiteService.list(form.project_id, true).then((r) => setSites(r.data || [])).catch(() => setSites([]));
+    }, [form.project_id]);
 
     const openCreate = () => { setForm(emptyForm()); setShowForm(true); };
     const openEdit = (row) => {
         setForm({
-            id: row.id, title: row.title || '', type: row.type || 'general', project_id: row.project_id || '',
+            id: row.id, title: row.title || '', type: row.type || 'general', project_id: row.project_id || '', site_id: row.site_id || '',
             location: row.location || '', description: row.description || '', precautions: row.precautions || '',
             valid_from: (row.valid_from || '').slice(0, 16), valid_to: (row.valid_to || '').slice(0, 16),
         });
@@ -80,7 +86,7 @@ export default function Permits() {
         e.preventDefault();
         setSaving(true);
         try {
-            const payload = { ...form, project_id: form.project_id || null, submit: submitForApproval };
+            const payload = { ...form, project_id: form.project_id || null, site_id: form.site_id || null, submit: submitForApproval };
             if (form.id) {
                 await safetyService.updatePermit(form.id, payload);
                 toast.success('Permit updated');
@@ -198,9 +204,16 @@ export default function Permits() {
                                 </div>
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Project</label>
-                                    <select value={form.project_id} onChange={(e) => setForm((p) => ({ ...p, project_id: e.target.value }))} className={inputCls}>
+                                    <select value={form.project_id} onChange={(e) => setForm((p) => ({ ...p, project_id: e.target.value, site_id: '' }))} className={inputCls}>
                                         <option value="">None</option>
                                         {projects.map((pr) => <option key={pr.id} value={pr.id}>{pr.name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Site</label>
+                                    <select value={form.site_id} onChange={(e) => setForm((p) => ({ ...p, site_id: e.target.value }))} className={inputCls} disabled={!form.project_id || sites.length === 0}>
+                                        <option value="">{form.project_id ? (sites.length ? 'No specific site' : 'No sites defined') : 'Select a project first'}</option>
+                                        {sites.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
                                     </select>
                                 </div>
                                 <div><label className="mb-1 block text-sm font-medium text-gray-700">Location</label><input type="text" value={form.location} onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))} className={inputCls} /></div>

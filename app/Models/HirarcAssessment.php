@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class HirarcAssessment extends Model
 {
     protected $fillable = [
-        'project_id', 'title', 'process', 'location',
+        'project_id', 'site_id', 'title', 'process', 'location',
         'assessment_date', 'review_date', 'status', 'prepared_by',
     ];
 
@@ -24,6 +24,11 @@ class HirarcAssessment extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(ProjectSite::class);
     }
 
     public function preparer(): BelongsTo

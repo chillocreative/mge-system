@@ -33,6 +33,7 @@ class SafetyController extends Controller
     {
         $validated = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
+            'site_id' => ['nullable', 'exists:project_sites,id'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'incident_date' => ['required', 'date'],
@@ -67,6 +68,7 @@ class SafetyController extends Controller
     {
         $validated = $request->validate([
             'title' => ['sometimes', 'string', 'max:255'],
+            'site_id' => ['nullable', 'exists:project_sites,id'],
             'description' => ['sometimes', 'string'],
             'severity' => ['sometimes', 'in:minor,moderate,serious,critical'],
             'type' => ['sometimes', 'in:injury,near_miss,property_damage,environmental,fire,other'],
@@ -94,6 +96,7 @@ class SafetyController extends Controller
     {
         $validated = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
+            'site_id' => ['nullable', 'exists:project_sites,id'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'location' => ['nullable', 'string', 'max:255'],
@@ -117,6 +120,7 @@ class SafetyController extends Controller
     {
         $validated = $request->validate([
             'title' => ['sometimes', 'string', 'max:255'],
+            'site_id' => ['nullable', 'exists:project_sites,id'],
             'description' => ['sometimes', 'string'],
             'risk_level' => ['sometimes', 'in:low,medium,high,critical'],
             'status' => ['sometimes', 'in:open,mitigated,resolved,closed'],
@@ -140,6 +144,7 @@ class SafetyController extends Controller
     {
         $validated = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
+            'site_id' => ['nullable', 'exists:project_sites,id'],
             'title' => ['required', 'string', 'max:255'],
             'topics' => ['required', 'string'],
             'location' => ['nullable', 'string', 'max:255'],
@@ -183,6 +188,7 @@ class SafetyController extends Controller
     {
         $validated = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
+            'site_id' => ['nullable', 'exists:project_sites,id'],
             'title' => ['required', 'string', 'max:255'],
             'type' => ['required', 'in:osha,fire_safety,ppe,scaffolding,electrical,excavation,general,custom'],
             'checklist_date' => ['required', 'date'],

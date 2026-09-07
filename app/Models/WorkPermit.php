@@ -19,7 +19,7 @@ class WorkPermit extends Model
     use HasFactory;
 
     protected $fillable = [
-        'project_id', 'requested_by', 'permit_no', 'title', 'type', 'location',
+        'project_id', 'site_id', 'requested_by', 'permit_no', 'title', 'type', 'location',
         'description', 'precautions', 'valid_from', 'valid_to', 'status',
         'approved_by', 'approved_at', 'decision_notes', 'closed_by', 'closed_at',
     ];
@@ -36,6 +36,11 @@ class WorkPermit extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(ProjectSite::class);
     }
 
     public function requester(): BelongsTo

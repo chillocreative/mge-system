@@ -22,7 +22,7 @@ class SiteLogController extends Controller
     public function index(int $projectId, Request $request): JsonResponse
     {
         $logs = SiteLog::where('project_id', $projectId)
-            ->with(['logger:id,first_name,last_name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents'])
+            ->with(['logger:id,first_name,last_name', 'site:id,name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents'])
             ->when($request->date_from && $request->date_to, fn ($q) => $q->forPeriod($request->date_from, $request->date_to))
             ->orderByDesc('log_date')
             ->paginate($request->integer('per_page', 15));
@@ -39,6 +39,7 @@ class SiteLogController extends Controller
         $weatherEvents = $validated['weather_events'] ?? [];
         unset($validated['machinery'], $validated['weather_events']);
 
+        $this->assertSiteInProject($validated['site_id'] ?? null, $project->id);
         $validated['project_id'] = $project->id;
         $validated['logged_by'] = $request->user()->id;
 
@@ -52,7 +53,7 @@ class SiteLogController extends Controller
     public function show(int $projectId, int $logId): JsonResponse
     {
         $log = SiteLog::where('project_id', $projectId)
-            ->with(['logger:id,first_name,last_name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents'])
+            ->with(['logger:id,first_name,last_name', 'site:id,name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents'])
             ->findOrFail($logId);
 
         return $this->success($log);
@@ -102,6 +103,10 @@ class SiteLogController extends Controller
         $machinery = $validated['machinery'] ?? null;
         $weatherEvents = $validated['weather_events'] ?? null;
         unset($validated['machinery'], $validated['weather_events']);
+
+        if (array_key_exists('site_id', $validated)) {
+            $this->assertSiteInProject($validated['site_id'], $log->project_id);
+        }
 
         $log->update($validated);
         if ($machinery !== null) {
@@ -254,6 +259,19 @@ class SiteLogController extends Controller
         }
     }
 
+    /**
+     * A site chosen for a record must belong to that record's project — never
+     * let a site from another project be attached (cross-project leak).
+     */
+    private function assertSiteInProject(?int $siteId, int $projectId): void
+    {
+        if ($siteId === null) {
+            return;
+        }
+        $ok = \App\Models\ProjectSite::where('id', $siteId)->where('project_id', $projectId)->exists();
+        abort_unless($ok, 422, 'The selected site does not belong to this project.');
+    }
+
     private function validatePayload(Request $request, bool $creating): array
     {
         $required = $creating ? 'required' : 'sometimes';
@@ -262,6 +280,7 @@ class SiteLogController extends Controller
 
         return $request->validate([
             'log_date' => [$required, 'date'],
+            'site_id' => ['nullable', 'integer'],
             'title' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'weather' => ['nullable', 'in:sunny,cloudy,rainy,stormy,windy,other'],

@@ -19,7 +19,7 @@ class WorkPermitController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = WorkPermit::with(['project:id,name,code', 'requester:id,first_name,last_name', 'approver:id,first_name,last_name'])
+        $query = WorkPermit::with(['project:id,name,code', 'site:id,name', 'requester:id,first_name,last_name', 'approver:id,first_name,last_name'])
             ->orderByDesc('created_at');
 
         if ($request->filled('project_id')) {
@@ -39,7 +39,7 @@ class WorkPermitController extends Controller
     {
         return $this->success(
             WorkPermit::with([
-                'project:id,name,code', 'requester:id,first_name,last_name',
+                'project:id,name,code', 'site:id,name', 'requester:id,first_name,last_name',
                 'approver:id,first_name,last_name', 'closer:id,first_name,last_name', 'attachments',
             ])->findOrFail($id),
         );
@@ -129,6 +129,7 @@ class WorkPermitController extends Controller
             'title' => $rule(['required', 'string', 'max:255']),
             'type' => ['nullable', 'in:hot_work,confined_space,working_at_height,electrical,excavation,lifting,general'],
             'project_id' => ['nullable', 'exists:projects,id'],
+            'site_id' => ['nullable', 'exists:project_sites,id'],
             'location' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'precautions' => ['nullable', 'string'],

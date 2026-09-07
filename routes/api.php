@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectDocumentController;
 use App\Http\Controllers\Api\ProjectInvoiceController;
 use App\Http\Controllers\Api\ProjectPartyController;
+use App\Http\Controllers\Api\ProjectSiteController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SafetyController;
 use App\Http\Controllers\Api\SafetyStatisticsController;
@@ -228,6 +229,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/status', [CorrespondenceController::class, 'changeStatus'])->middleware('permission:projects.edit');
         Route::post('/{id}/close', [CorrespondenceController::class, 'close'])->middleware('permission:projects.edit');
         Route::post('/{id}/reopen', [CorrespondenceController::class, 'reopen'])->middleware('permission:projects.edit');
+    });
+
+    // Project sites (Ciri 25) — multiple sites/zones per project
+    Route::prefix('project-sites')->group(function () {
+        Route::get('/', [ProjectSiteController::class, 'index'])->middleware('permission:projects.view');
+        Route::post('/', [ProjectSiteController::class, 'store'])->middleware('permission:projects.edit');
+        Route::put('/{id}', [ProjectSiteController::class, 'update'])->middleware('permission:projects.edit');
+        Route::delete('/{id}', [ProjectSiteController::class, 'destroy'])->middleware('permission:projects.edit');
     });
 
     // Project parties (Batch 7) — flexible set of parties per project

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class ComplianceChecklist extends Model
 {
     protected $fillable = [
-        'project_id', 'inspector_id', 'title', 'type',
+        'project_id', 'site_id', 'inspector_id', 'title', 'type',
         'checklist_date', 'overall_status', 'notes',
     ];
 
@@ -22,6 +22,11 @@ class ComplianceChecklist extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(ProjectSite::class);
     }
 
     public function inspector(): BelongsTo

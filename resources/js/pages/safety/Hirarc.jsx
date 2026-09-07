@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import safetyService from '@/services/safetyService';
 import projectService from '@/services/projectService';
+import projectSiteService from '@/services/projectSiteService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlineArrowLeft, HiOutlineTrash, HiOutlinePencil } from 'react-icons/hi';
@@ -30,13 +31,14 @@ function previewLevel(l, s) {
 }
 
 const emptyItem = () => ({ hazard: '', risk: '', existing_control: '', likelihood: 1, severity: 1, recommended_control: '', pic: '', due_date: '' });
-const emptyForm = () => ({ id: null, title: '', process: '', location: '', project_id: '', assessment_date: '', review_date: '', items: [emptyItem()] });
+const emptyForm = () => ({ id: null, title: '', process: '', location: '', project_id: '', site_id: '', assessment_date: '', review_date: '', items: [emptyItem()] });
 
 export default function Hirarc() {
     const { can } = useAuth();
     const canManage = can('safety.manage') || can('safety.create');
     const [list, setList] = useState([]);
     const [projects, setProjects] = useState([]);
+    const [sites, setSites] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -58,6 +60,10 @@ export default function Hirarc() {
     useEffect(() => {
         projectService.list({ per_page: 100 }).then((r) => setProjects(r.data?.data || [])).catch(() => {});
     }, []);
+    useEffect(() => {
+        if (!form.project_id) { setSites([]); return; }
+        projectSiteService.list(form.project_id, true).then((r) => setSites(r.data || [])).catch(() => setSites([]));
+    }, [form.project_id]);
 
     const openCreate = () => { setForm(emptyForm()); setShowForm(true); };
 
@@ -67,7 +73,7 @@ export default function Hirarc() {
             const a = res.data;
             setForm({
                 id: a.id, title: a.title || '', process: a.process || '', location: a.location || '',
-                project_id: a.project_id || '', assessment_date: a.assessment_date || '', review_date: a.review_date || '',
+                project_id: a.project_id || '', site_id: a.site_id || '', assessment_date: a.assessment_date || '', review_date: a.review_date || '',
                 items: (a.items || []).map((it) => ({
                     hazard: it.hazard || '', risk: it.risk || '', existing_control: it.existing_control || '',
                     likelihood: it.likelihood || 1, severity: it.severity || 1,
@@ -89,7 +95,7 @@ export default function Hirarc() {
         e.preventDefault();
         setSaving(true);
         try {
-            const payload = { ...form, project_id: form.project_id || null, items: form.items.filter((it) => it.hazard.trim()) };
+            const payload = { ...form, project_id: form.project_id || null, site_id: form.site_id || null, items: form.items.filter((it) => it.hazard.trim()) };
             if (form.id) {
                 await safetyService.updateHirarc(form.id, payload);
                 toast.success('HIRARC updated');
@@ -184,9 +190,16 @@ export default function Hirarc() {
                                 <div><label className="mb-1 block text-sm font-medium text-gray-700">Process / Activity</label><input type="text" value={form.process} onChange={(e) => setForm((p) => ({ ...p, process: e.target.value }))} className={inputCls} /></div>
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Project</label>
-                                    <select value={form.project_id} onChange={(e) => setForm((p) => ({ ...p, project_id: e.target.value }))} className={inputCls}>
+                                    <select value={form.project_id} onChange={(e) => setForm((p) => ({ ...p, project_id: e.target.value, site_id: '' }))} className={inputCls}>
                                         <option value="">None</option>
                                         {projects.map((pr) => <option key={pr.id} value={pr.id}>{pr.name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Site</label>
+                                    <select value={form.site_id} onChange={(e) => setForm((p) => ({ ...p, site_id: e.target.value }))} className={inputCls} disabled={!form.project_id || sites.length === 0}>
+                                        <option value="">{form.project_id ? (sites.length ? 'No specific site' : 'No sites defined') : 'Select a project first'}</option>
+                                        {sites.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
                                     </select>
                                 </div>
                                 <div><label className="mb-1 block text-sm font-medium text-gray-700">Location</label><input type="text" value={form.location} onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))} className={inputCls} /></div>

@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import projectService from '@/services/projectService';
+import projectSiteService from '@/services/projectSiteService';
 import assetService from '@/services/assetService';
 import taskService from '@/services/taskService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ProjectDiscussions from '@/components/ProjectDiscussions';
+import ProjectSitesPanel from '@/components/ProjectSitesPanel';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 import {
@@ -49,6 +51,7 @@ const tabs = [
     { id: 'milestones', label: 'Milestones', icon: HiOutlineFlag },
     { id: 'timeline', label: 'Timeline', icon: HiOutlineClock },
     { id: 'site-logs', label: 'Site Logs', icon: HiOutlineDocumentText },
+    { id: 'sites', label: 'Sites', icon: HiOutlineLocationMarker },
     { id: 'documents', label: 'Documents', icon: HiOutlineDocumentDownload },
     { id: 'calendar', label: 'Calendar', icon: HiOutlineCalendar },
     { id: 'discussions', label: 'Discussions', icon: HiOutlineChatAlt2 },
@@ -142,6 +145,7 @@ export default function ProjectDetail() {
             {activeTab === 'milestones' && <MilestonesTab project={project} canEdit={canEdit} onRefresh={fetchProject} />}
             {activeTab === 'timeline' && <TimelineTab project={project} />}
             {activeTab === 'site-logs' && <SiteLogsTab project={project} canEdit={canEdit} onRefresh={fetchProject} />}
+            {activeTab === 'sites' && <ProjectSitesPanel project={project} canEdit={canEdit} />}
             {activeTab === 'documents' && <DocumentsTab project={project} canEdit={canEdit} onRefresh={fetchProject} />}
             {activeTab === 'calendar' && <CalendarTab project={project} canEdit={canEdit} onRefresh={fetchProject} />}
             {activeTab === 'discussions' && <ProjectDiscussions projectId={project.id} />}
@@ -523,6 +527,7 @@ const WEATHER_CONDITIONS = [
 const weatherConditionLabel = (v) => WEATHER_CONDITIONS.find((c) => c.value === v)?.label || v;
 const emptySiteLogForm = () => ({
     log_date: new Date().toISOString().split('T')[0],
+    site_id: '',
     weather: '',
     workers_count: '', work_performed: '', materials_used: '', issues: '', safety_notes: '',
     machinery: [],
@@ -533,7 +538,12 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
     const [showForm, setShowForm] = useState(false);
     const [form, setForm] = useState(emptySiteLogForm());
     const [saving, setSaving] = useState(false);
+    const [sites, setSites] = useState([]);
     const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
+
+    useEffect(() => {
+        projectSiteService.list(project.id, true).then((r) => setSites(r.data || [])).catch(() => setSites([]));
+    }, [project.id]);
     const [machineryReport, setMachineryReport] = useState(null);
     const [machineryLoading, setMachineryLoading] = useState(false);
     const [machineryAssets, setMachineryAssets] = useState([]);
@@ -574,6 +584,7 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
         try {
             await projectService.createSiteLog(project.id, {
                 ...form,
+                site_id: form.site_id || null,
                 workers_count: form.workers_count ? Number(form.workers_count) : 0,
             });
             toast.success('Site log created');
@@ -632,6 +643,12 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                             <option value="windy">Windy</option>
                             <option value="other">Other</option>
                         </select>
+                        {sites.length > 0 && (
+                            <select value={form.site_id} onChange={(e) => setForm({ ...form, site_id: e.target.value })} className="sm:col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                                <option value="">No specific site</option>
+                                {sites.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
+                            </select>
+                        )}
                         <input type="number" placeholder="Workers on site" value={form.workers_count} onChange={(e) => setForm({ ...form, workers_count: e.target.value })} min="0" className="sm:col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                     </div>
 

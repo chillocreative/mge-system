@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class HazardReport extends Model
 {
     protected $fillable = [
-        'project_id', 'reported_by', 'title', 'description', 'location',
+        'project_id', 'site_id', 'reported_by', 'title', 'description', 'location',
         'hazard_type', 'risk_level', 'recommended_action', 'corrective_action',
         'status', 'assigned_to', 'resolved_at',
     ];
@@ -22,6 +22,11 @@ class HazardReport extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(ProjectSite::class);
     }
 
     public function reporter(): BelongsTo

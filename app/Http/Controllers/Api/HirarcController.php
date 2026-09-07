@@ -13,7 +13,7 @@ class HirarcController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = HirarcAssessment::with(['project:id,name,code', 'preparer:id,first_name,last_name'])
+        $query = HirarcAssessment::with(['project:id,name,code', 'site:id,name', 'preparer:id,first_name,last_name'])
             ->withCount('items')
             ->orderByDesc('created_at');
 
@@ -30,7 +30,7 @@ class HirarcController extends Controller
     public function show(int $id): JsonResponse
     {
         return $this->success(
-            HirarcAssessment::with(['items', 'project:id,name,code', 'preparer:id,first_name,last_name'])->findOrFail($id),
+            HirarcAssessment::with(['items', 'project:id,name,code', 'site:id,name', 'preparer:id,first_name,last_name'])->findOrFail($id),
         );
     }
 
@@ -117,6 +117,7 @@ class HirarcController extends Controller
             'process' => ['nullable', 'string', 'max:255'],
             'location' => ['nullable', 'string', 'max:255'],
             'project_id' => ['nullable', 'exists:projects,id'],
+            'site_id' => ['nullable', 'exists:project_sites,id'],
             'assessment_date' => ['nullable', 'date'],
             'review_date' => ['nullable', 'date'],
             'status' => ['nullable', 'in:active,archived'],
