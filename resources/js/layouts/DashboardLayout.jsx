@@ -90,7 +90,6 @@ const navigation = [
     },
     { name: 'Safety', href: '/safety', icon: HiOutlineShieldCheck, permission: 'safety.view' },
     { name: 'Environmental', href: '/environmental', icon: HiOutlineGlobe, permission: 'environmental.view' },
-    { name: 'Email', href: '/email', icon: HiOutlineMail, permission: null },
     { name: 'Users', href: '/users', icon: HiOutlineUserGroup, permission: 'users.view' },
     { name: 'User Access', href: '/roles', icon: HiOutlineKey, permission: 'roles.view' },
     { name: 'Settings', href: '/settings', icon: HiOutlineCog, permission: 'departments.view' },

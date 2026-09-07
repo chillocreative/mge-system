@@ -34,7 +34,6 @@ import MonthlySummary from '@/pages/finance/MonthlySummary';
 import Safety from '@/pages/safety/Safety';
 import Environmental from '@/pages/environmental/Environmental';
 import Chat from '@/pages/chat/Chat';
-import Email from '@/pages/email/Email';
 import StaffList from '@/pages/staff/StaffList';
 import StaffForm from '@/pages/staff/StaffForm';
 import StaffDetail from '@/pages/staff/StaffDetail';
@@ -227,9 +226,8 @@ function AppRoutes() {
                         <Route path="/documents/company" element={<CompanyDocuments />} />
                     </Route>
 
-                    {/* Chat & Email — all authenticated users */}
+                    {/* Chat — all authenticated users */}
                     <Route path="/chat" element={<Chat />} />
-                    <Route path="/email" element={<Email />} />
 
                     {/* Unauthorized — accessible to all authenticated users */}
                     <Route path="/unauthorized" element={<Unauthorized />} />

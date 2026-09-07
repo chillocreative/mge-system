@@ -19,7 +19,6 @@ use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\EnvironmentalController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\FinanceController;
-use App\Http\Controllers\Api\InternalEmailController;
 use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\LeaveController;
@@ -609,22 +608,19 @@ Route::middleware('auth:sanctum')->group(function () {
 
     /*
     |----------------------------------------------------------------------
-    | Internal Email — threaded email with attachments
+    | Internal Email — REMOVED 7 Sep 2026 (plan Ciri 10)
     |----------------------------------------------------------------------
+    |
+    | The module was never used: internal_emails, email_recipients and
+    | email_attachments were all empty in production when it was withdrawn.
+    |
+    | Routes and the UI are gone. The controller, service, models and database
+    | tables are deliberately left in place for now — plan 10.3 stages this
+    | removal so it stays reversible through an observation period, and 26.3's
+    | "use status, never delete" applies to schema too. Dropping the tables is a
+    | separate, backed-up step.
+    |
     */
-    Route::prefix('emails')->group(function () {
-        Route::get('/', [InternalEmailController::class, 'index']);
-        Route::get('/unread-count', [InternalEmailController::class, 'unreadCount']);
-        Route::get('/{email}', [InternalEmailController::class, 'show']);
-        Route::post('/send', [InternalEmailController::class, 'send']);
-        Route::post('/{email}/reply', [InternalEmailController::class, 'reply']);
-        Route::post('/drafts', [InternalEmailController::class, 'saveDraft']);
-        Route::delete('/drafts/{draft}', [InternalEmailController::class, 'deleteDraft']);
-        Route::patch('/{email}/star', [InternalEmailController::class, 'toggleStar']);
-        Route::patch('/{email}/trash', [InternalEmailController::class, 'trash']);
-        Route::patch('/{email}/restore', [InternalEmailController::class, 'restore']);
-        Route::get('/attachments/{attachment}/download', [InternalEmailController::class, 'downloadAttachment']);
-    });
 
     /*
     |----------------------------------------------------------------------
