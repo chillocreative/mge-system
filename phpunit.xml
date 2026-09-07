@@ -27,6 +27,10 @@
         <env name="DB_DATABASE" value=":memory:"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <!-- Pinned off so the suite has a deterministic baseline. Tests that
+             exercise the engine turn it on themselves; without this, whether
+             the suite passes depends on the developer's .env. -->
+        <env name="LEAVE_ENGINE_ENABLED" value="false"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>

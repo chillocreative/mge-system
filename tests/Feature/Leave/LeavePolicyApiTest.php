@@ -253,6 +253,10 @@ class LeavePolicyApiTest extends TestCase
 
     public function test_settings_are_returned_with_the_engine_fallback_defaults(): void
     {
+        // Set explicitly: this asserts the flag is reported, not what a
+        // developer happens to have in their .env.
+        config(['leave.engine_enabled' => false]);
+
         $response = $this->actingAs($this->user(['leave.manage']))
             ->getJson('/api/leave-policy/settings')
             ->assertOk();
