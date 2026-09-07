@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Project;
 use App\Models\SiteLog;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -56,9 +57,45 @@ class SiteLogController extends Controller
         return $this->success($log);
     }
 
+    /**
+     * A site log locks for editing a set number of days after its date
+     * (plan 20.3), so a dated field record cannot be silently rewritten later.
+     * Users with the elevated projects.delete permission may still edit a locked
+     * log — for genuine corrections — and every such change is audited.
+     */
+    private function assertEditable(Request $request, SiteLog $log): void
+    {
+        $windowDays = (int) config('sitelogs.edit_window_days', 7);
+
+        if ($windowDays <= 0 || $request->user()?->can('projects.delete')) {
+            return;
+        }
+
+        $lockedAfter = \Illuminate\Support\Carbon::parse($log->log_date)->addDays($windowDays)->endOfDay();
+
+        abort_if(
+            now()->greaterThan($lockedAfter),
+            422,
+            "This site log is older than {$windowDays} days and is locked. Ask a project manager to make corrections.",
+        );
+    }
+
+    private function auditLog(Request $request, SiteLog $log, string $action): void
+    {
+        ActivityLog::create([
+            'user_id' => $request->user()?->id,
+            'action' => $action,
+            'subject_type' => SiteLog::class,
+            'subject_id' => $log->id,
+            'properties' => ['project_id' => $log->project_id, 'log_date' => (string) $log->log_date],
+        ]);
+    }
+
     public function update(int $projectId, int $logId, Request $request): JsonResponse
     {
         $log = SiteLog::where('project_id', $projectId)->findOrFail($logId);
+
+        $this->assertEditable($request, $log);
 
         $validated = $this->validatePayload($request, false);
         $machinery = $validated['machinery'] ?? null;
@@ -73,12 +110,17 @@ class SiteLogController extends Controller
             $this->syncWeatherEvents($log, $weatherEvents);
         }
 
+        $this->auditLog($request, $log, 'sitelog.updated');
+
         return $this->success($log->fresh()->load(['logger:id,first_name,last_name', 'machinery', 'weatherEvents']), 'Site log updated.');
     }
 
-    public function destroy(int $projectId, int $logId): JsonResponse
+    public function destroy(int $projectId, int $logId, Request $request): JsonResponse
     {
         $log = SiteLog::where('project_id', $projectId)->findOrFail($logId);
+
+        $this->assertEditable($request, $log);
+        $this->auditLog($request, $log, 'sitelog.deleted');
         $log->delete();
 
         return $this->success(null, 'Site log deleted.');

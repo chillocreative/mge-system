@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import staffService from '@/services/staffService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import StaffLeaveBalanceCard from './StaffLeaveBalanceCard';
+import StaffProjectsCard from './StaffProjectsCard';
 import toast from 'react-hot-toast';
 import { HiOutlinePencil, HiOutlineArrowLeft } from 'react-icons/hi';
 
@@ -177,6 +178,8 @@ export default function StaffDetail() {
                 {(can('leave.view') || can('leave.manage')) && (
                     <StaffLeaveBalanceCard employeeId={emp.id} />
                 )}
+
+                <StaffProjectsCard employeeId={emp.id} />
             </div>
         </div>
     );

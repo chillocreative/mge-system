@@ -138,4 +138,9 @@ class EmployeeController extends Controller
 
         return Storage::disk('local')->response($employee->photo_path);
     }
+
+    public function projects(int $id): JsonResponse
+    {
+        return $this->success($this->employeeService->projectsFor($id));
+    }
 }

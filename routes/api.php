@@ -660,6 +660,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [EmployeeController::class, 'store'])->middleware('permission:staff.create');
         Route::get('/{id}', [EmployeeController::class, 'show'])->middleware('permission:staff.view');
         Route::get('/{id}/photo', [EmployeeController::class, 'photo'])->middleware('permission:staff.view');
+        Route::get('/{id}/projects', [EmployeeController::class, 'projects'])->middleware('permission:staff.view');
         Route::put('/{id}', [EmployeeController::class, 'update'])->middleware('permission:staff.edit');
         Route::delete('/{id}', [EmployeeController::class, 'destroy'])->middleware('permission:staff.delete');
     });

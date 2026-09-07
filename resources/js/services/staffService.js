@@ -30,6 +30,10 @@ const staffService = {
     getPhotoUrl(id) {
         return `/api/employees/${id}/photo`;
     },
+    async projects(id) {
+        const response = await apiClient.get(`/employees/${id}/projects`);
+        return response.data;
+    },
 };
 
 export default staffService;

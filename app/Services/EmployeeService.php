@@ -137,6 +137,41 @@ class EmployeeService
         }
     }
 
+    /**
+     * Projects an employee is involved in.
+     *
+     * "Involved" is defined narrowly as membership in project_members (via the
+     * employee's linked login). This is the safe, unambiguous reading of plan
+     * P2; if MGE later wants it to also count anyone who filed a site log or
+     * correspondence, that widens this one query without a schema change.
+     *
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    public function projectsFor(int $employeeId): \Illuminate\Support\Collection
+    {
+        $employee = Employee::findOrFail($employeeId);
+
+        if (! $employee->user_id) {
+            return collect();
+        }
+
+        return \App\Models\ProjectMember::where('user_id', $employee->user_id)
+            ->with('project:id,name,code,status')
+            ->get()
+            ->filter(fn ($m) => $m->project !== null)
+            ->map(fn ($m) => [
+                'project_id' => $m->project->id,
+                'name' => $m->project->name,
+                'code' => $m->project->code,
+                'status' => $m->project->status,
+                'role' => $m->role,
+                'joined_at' => optional($m->joined_at)->format('Y-m-d'),
+                'left_at' => optional($m->left_at)->format('Y-m-d'),
+                'active' => $m->left_at === null,
+            ])
+            ->values();
+    }
+
     public function delete(int $id): void
     {
         $employee = Employee::findOrFail($id);
