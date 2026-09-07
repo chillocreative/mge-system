@@ -352,3 +352,28 @@ Until that line exists, none of this affects anyone.
 | Ciri 1–6, 10–25 | Deferred by the plan's own §27 reprioritisation |
 | `staff_leave_entitlement_overrides` | Plan §27.3 lists it under "can follow later" (H11) |
 | Admin UI screens for policy settings | API is done and tested; the React screens are the natural next session |
+
+---
+
+## Addendum — local login fixed (7 Sep, afternoon)
+
+**Symptom:** `http://mge-system.test` login returned `Session store not set on request.` (HTTP 500).
+
+**Not caused by the overnight run** — none of the 15 commits touch auth, session, middleware or `bootstrap/app.php`. This was config drift from the Herd relink at ~04:36, when the site moved from `mge-pms.test` to `mge-system.test`.
+
+**Root cause:** Sanctum's `EnsureFrontendRequestsAreStateful::fromFrontend()` matches the request's `referer`/`origin` host against `config('sanctum.stateful')`. `mge-system.test` was not in that list, so the session middleware was never applied to the `api` group — and `AuthController@login:34` then called `$request->session()` on a request that had none.
+
+**Fixed in `.env`** (gitignored, local only):
+
+```diff
+-SANCTUM_STATEFUL_DOMAINS=mge-pms.test,localhost,…
++SANCTUM_STATEFUL_DOMAINS=mge-system.test,mge-pms.test,localhost,…
+-FRONTEND_URL=http://mge-pms.test
++FRONTEND_URL=http://mge-system.test
+```
+
+The second one was the same drift: `FRONTEND_URL` is the sole entry in `config/cors.php` `allowed_origins`, and it pointed at `mge-pms.test`, which Herd no longer serves (404 — only `mge-system` and `penangagrotech` are linked).
+
+**Verified:** `/sanctum/csrf-cookie` 204 → `POST /api/login` 200 → `GET /api/user` 200, and a real browser login reaching the Dashboard with data. The single console 401 is the pre-login `/api/user` bootstrap check — expected.
+
+⚠️ **`.env.example` still carries the old domain.** I left it alone because it was already modified before this session and the brief said not to sweep pre-existing changes. Worth updating separately so the next clone does not hit this.
