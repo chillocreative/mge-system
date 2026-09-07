@@ -42,10 +42,33 @@ class EntitlementResolver
      */
     public function entitlementFor(Employee $employee, LeaveType $leaveType, int $year): float
     {
-        $base = $this->baseEntitlement($employee, $leaveType, $year);
+        // A per-employee override replaces the tier entirely — this is the
+        // mechanism for a contract that grants more than the standard policy
+        // (plan 7.2). Proration still applies on top, so an override for a
+        // mid-year joiner or leaver is scaled to their period of service just
+        // like a tier value would be.
+        $base = $this->overrideDays($employee, $leaveType, $year)
+            ?? $this->baseEntitlement($employee, $leaveType, $year);
+
         $prorated = $this->applyProration($employee, $leaveType, $year, $base);
 
         return $this->round($prorated, $this->policy->get('proration_rounding', $leaveType->id));
+    }
+
+    /**
+     * A per-employee entitlement override, if one applies. A row scoped to the
+     * specific year wins over a year-agnostic (null-year) standing override.
+     */
+    private function overrideDays(Employee $employee, LeaveType $leaveType, int $year): ?float
+    {
+        $override = \App\Models\StaffLeaveEntitlementOverride::query()
+            ->where('employee_id', $employee->id)
+            ->where('leave_type_id', $leaveType->id)
+            ->where(fn ($q) => $q->where('year', $year)->orWhereNull('year'))
+            ->orderByRaw('year IS NULL') // a concrete year sorts before null
+            ->first();
+
+        return $override ? (float) $override->days : null;
     }
 
     /**

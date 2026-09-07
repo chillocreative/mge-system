@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Employee;
 
+use App\Models\ActivityLog;
 use App\Models\Employee;
 use App\Models\User;
 use App\Services\EmployeeService;
@@ -105,5 +106,27 @@ class EmploymentStatusTest extends TestCase
         $fresh = $employee->fresh();
         $this->assertSame('2026-08-31', $fresh->last_working_date->format('Y-m-d'));
         $this->assertSame('Migrating overseas', $fresh->resignation_reason);
+    }
+
+    public function test_changing_employee_number_is_audited(): void
+    {
+        [$employee] = $this->employeeWithLogin();
+        $old = $employee->employee_no;
+        $actor = User::create(['first_name' => 'HR', 'last_name' => 'X', 'email' => 'hr-'.uniqid().'@mge-eng.com', 'password' => bcrypt('x')]);
+        $this->actingAs($actor);
+
+        $this->service()->update($employee->id, ['employee_no' => 'NEW-001']);
+
+        $log = ActivityLog::where('action', 'employee.employee_no_changed')->sole();
+        $this->assertSame($old, $log->properties['from']);
+        $this->assertSame('NEW-001', $log->properties['to']);
+        $this->assertSame($actor->id, $log->user_id);
+    }
+
+    public function test_an_edit_that_keeps_the_same_employee_number_is_not_audited(): void
+    {
+        [$employee] = $this->employeeWithLogin();
+        $this->service()->update($employee->id, ['employee_no' => $employee->employee_no, 'phone' => '011']);
+        $this->assertSame(0, ActivityLog::where('action', 'employee.employee_no_changed')->count());
     }
 }

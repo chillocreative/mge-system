@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ActivityLog;
 use App\Models\Employee;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
@@ -80,11 +81,27 @@ class EmployeeService
             $data['status_changed_by'] = auth()->id();
         }
 
-        DB::transaction(function () use ($employee, $data, $statusChanged) {
+        // Employee number is editable and nothing keys on its value (every
+        // relation uses employee_id), so changing it is safe — but it appears on
+        // issued documents, so the change is worth an audit trail (Ciri 6).
+        $oldEmployeeNo = $employee->employee_no;
+        $employeeNoChanged = array_key_exists('employee_no', $data) && $data['employee_no'] !== $oldEmployeeNo;
+
+        DB::transaction(function () use ($employee, $data, $statusChanged, $employeeNoChanged, $oldEmployeeNo) {
             $employee->update($data);
 
             if ($statusChanged) {
                 $this->syncLoginAccess($employee);
+            }
+
+            if ($employeeNoChanged) {
+                ActivityLog::create([
+                    'user_id' => auth()->id(),
+                    'action' => 'employee.employee_no_changed',
+                    'subject_type' => Employee::class,
+                    'subject_id' => $employee->id,
+                    'properties' => ['from' => $oldEmployeeNo, 'to' => $employee->employee_no],
+                ]);
             }
         });
 
