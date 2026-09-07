@@ -58,7 +58,7 @@ class LeaveSeederTest extends TestCase
         $this->assertTrue(LeaveType::where('code', 'HL')->sole()->requires_attachment);
     }
 
-    public function test_it_seeds_entitlement_tiers_flagged_as_unverified(): void
+    public function test_annual_leave_uses_mge_confirmed_tiers(): void
     {
         $this->seed(LeavePolicySeeder::class);
 
@@ -67,13 +67,32 @@ class LeaveSeederTest extends TestCase
             ->orderBy('min_years')->get();
 
         $this->assertCount(3, $rules);
-        $this->assertSame([8.0, 12.0, 16.0], $rules->pluck('days')->map(fn ($d) => (float) $d)->all());
+
+        // MGE policy confirmed 7 Sep 2026 — more generous than the Employment
+        // Act minimum of 8/12/16, and consistent with the 14 days that
+        // leave_types.default_days_per_year has always used.
+        $this->assertSame([14.0, 16.0, 18.0], $rules->pluck('days')->map(fn ($d) => (float) $d)->all());
 
         // The top tier is open-ended: 5 years or more.
         $this->assertNull($rules->last()->max_years);
 
-        // Every seeded tier must be flagged unverified, so the settings screen can
-        // warn HR that these are statutory minimums and not confirmed MGE policy.
+        // Confirmed policy, so no "unreviewed default" warning for Annual Leave.
+        $this->assertTrue($rules->every(fn ($r) => ! $r->is_seed_default));
+    }
+
+    public function test_sick_leave_is_still_the_unconfirmed_statutory_minimum(): void
+    {
+        $this->seed(LeavePolicySeeder::class);
+
+        $mc = LeaveType::where('code', 'MC')->sole();
+        $rules = LeaveEntitlementRule::where('leave_type_id', $mc->id)
+            ->orderBy('min_years')->get();
+
+        $this->assertSame([14.0, 18.0, 22.0], $rules->pluck('days')->map(fn ($d) => (float) $d)->all());
+
+        // Only Annual Leave was confirmed. MC must keep warning until HR reviews
+        // it, otherwise an unexamined statutory default becomes policy silently
+        // (plan 7.3.10).
         $this->assertTrue($rules->every(fn ($r) => $r->is_seed_default));
     }
 

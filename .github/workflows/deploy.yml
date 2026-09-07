@@ -54,6 +54,14 @@ jobs:
                 # 5. Run Migrations
                 php artisan migrate --force --no-interaction
 
+                # 5b. Provision leave policy reference data.
+                #     Both seeders are idempotent (firstOrCreate), so re-running
+                #     on every deploy is safe and will never overwrite a value HR
+                #     has tuned. Without this the policy tables stay empty on the
+                #     server, because migrations alone do not populate them.
+                php artisan db:seed --class=LeavePolicySeeder --force --no-interaction
+                php artisan db:seed --class=PublicHolidaySeeder --force --no-interaction
+
                 # 6. Storage link (idempotent)
                 php artisan storage:link --force 2>/dev/null || true
 

@@ -111,28 +111,47 @@ class LeavePolicySeeder extends Seeder
     }
 
     /**
-     * Employment Act 1955 minimums (plan 7.1 / 7.3.9).
+     * Service-year entitlement tiers.
      *
      * Boundary convention is min_years <= service < max_years (plan 7.3.8), which
-     * matches how the Act itself is worded: "less than 2 years", "2 but less than
-     * 5 years", "5 years or more". An employee at exactly 5.00 years falls into
-     * the top tier.
+     * matches how the Employment Act itself is worded: "less than 2 years",
+     * "2 but less than 5 years", "5 years or more". An employee at exactly 5.00
+     * years falls into the top tier.
+     *
+     * ANNUAL LEAVE — MGE company policy, confirmed by Rahim on 7 Sep 2026:
+     * 14 / 16 / 18 days. This is more generous than the Act minimum of 8/12/16,
+     * and it matches the 14 days that leave_types.default_days_per_year has been
+     * seeding all along. Flagged is_seed_default = false because it is a
+     * confirmed business decision, not an unreviewed statutory fallback.
+     *
+     * SICK LEAVE — still the Employment Act 1955 minimum (14/18/22) and still
+     * flagged is_seed_default = true, because nobody has confirmed it. The
+     * settings screen will keep warning about MC until HR reviews it
+     * (plan 7.3.10a).
      */
     private function seedEntitlementRules(): void
     {
         $tiers = [
-            'AL' => [[0, 2, 8], [2, 5, 12], [5, null, 16]],
-            'MC' => [[0, 2, 14], [2, 5, 18], [5, null, 22]],
+            'AL' => [
+                'confirmed' => true,
+                'note' => 'MGE company policy, confirmed 7 Sep 2026. More generous than the Employment Act minimum (8/12/16).',
+                'rows' => [[0, 2, 14], [2, 5, 16], [5, null, 18]],
+            ],
+            'MC' => [
+                'confirmed' => false,
+                'note' => 'Employment Act 1955 minimum. NOT YET CONFIRMED BY HR — review before relying on it.',
+                'rows' => [[0, 2, 14], [2, 5, 18], [5, null, 22]],
+            ],
         ];
 
-        foreach ($tiers as $code => $rows) {
+        foreach ($tiers as $code => $tier) {
             $type = LeaveType::where('code', $code)->first();
 
             if (! $type) {
                 continue;
             }
 
-            foreach ($rows as [$min, $max, $days]) {
+            foreach ($tier['rows'] as [$min, $max, $days]) {
                 LeaveEntitlementRule::firstOrCreate(
                     [
                         'leave_type_id' => $type->id,
@@ -143,9 +162,9 @@ class LeavePolicySeeder extends Seeder
                     ],
                     [
                         'days' => $days,
-                        'is_seed_default' => true,
+                        'is_seed_default' => ! $tier['confirmed'],
                         'is_active' => true,
-                        'notes' => 'Employment Act 1955 minimum. NOT VERIFIED BY HR — confirm before enabling the leave engine.',
+                        'notes' => $tier['note'],
                     ],
                 );
             }

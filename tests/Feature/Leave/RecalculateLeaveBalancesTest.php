@@ -52,24 +52,24 @@ class RecalculateLeaveBalancesTest extends TestCase
 
     public function test_it_reports_a_difference_against_a_stored_balance(): void
     {
-        $employee = $this->employee('E002', '2015-01-01'); // top tier: 16 days
+        $employee = $this->employee('E002', '2015-01-01'); // top tier: 18 days
         $annual = LeaveType::where('code', 'AL')->sole();
 
         LeaveBalance::create([
             'employee_id' => $employee->id,
             'leave_type_id' => $annual->id,
             'year' => 2026,
-            'entitled_days' => 14, // the old flat default
+            'entitled_days' => 12, // a stale value, to force a reported difference
             'used_days' => 0,
-            'remaining_days' => 14,
+            'remaining_days' => 12,
         ]);
 
         $this->artisan('leave:recalculate --year=2026 --employee='.$employee->id)
             ->expectsOutputToContain('difference')
             ->assertSuccessful();
 
-        // Still untouched.
-        $this->assertSame(14.0, (float) LeaveBalance::sole()->entitled_days);
+        // Still untouched: the engine says 18, the stored row still says 12.
+        $this->assertSame(12.0, (float) LeaveBalance::sole()->entitled_days);
     }
 
     public function test_commit_writes_the_balances(): void
@@ -85,7 +85,7 @@ class RecalculateLeaveBalancesTest extends TestCase
             ->where('leave_type_id', $annual->id)
             ->sole();
 
-        $this->assertSame(16.0, (float) $balance->entitled_days);
+        $this->assertSame(18.0, (float) $balance->entitled_days);
         $this->assertNotNull($balance->calculated_at);
         $this->assertIsArray($balance->rule_snapshot);
     }

@@ -64,13 +64,13 @@ class EntitlementResolverTest extends TestCase
         $resolver = $this->resolver();
         $employee = $this->employee('2015-01-01');
 
-        // Seeded Employment Act tiers: <2y = 8, 2-5y = 12, 5y+ = 16.
-        $this->assertSame(8.0, $resolver->resolveTier($employee, $al, 0.0));
-        $this->assertSame(8.0, $resolver->resolveTier($employee, $al, 1.99));
-        $this->assertSame(12.0, $resolver->resolveTier($employee, $al, 2.0));
-        $this->assertSame(12.0, $resolver->resolveTier($employee, $al, 4.99));
-        $this->assertSame(16.0, $resolver->resolveTier($employee, $al, 5.0));
-        $this->assertSame(16.0, $resolver->resolveTier($employee, $al, 30.0));
+        // MGE Annual Leave policy: <2y = 14, 2-5y = 16, 5y+ = 18.
+        $this->assertSame(14.0, $resolver->resolveTier($employee, $al, 0.0));
+        $this->assertSame(14.0, $resolver->resolveTier($employee, $al, 1.99));
+        $this->assertSame(16.0, $resolver->resolveTier($employee, $al, 2.0));
+        $this->assertSame(16.0, $resolver->resolveTier($employee, $al, 4.99));
+        $this->assertSame(18.0, $resolver->resolveTier($employee, $al, 5.0));
+        $this->assertSame(18.0, $resolver->resolveTier($employee, $al, 30.0));
     }
 
     public function test_the_tier_boundary_is_inclusive_below_and_exclusive_above(): void
@@ -81,15 +81,15 @@ class EntitlementResolverTest extends TestCase
 
         // ⭐ min <= service < max, applied in exactly one place. An employee at
         // exactly 2.00 years is in the 2-5 tier, not the under-2 tier.
-        $this->assertSame(8.0, $resolver->resolveTier($employee, $al, 1.999999));
-        $this->assertSame(12.0, $resolver->resolveTier($employee, $al, 2.000000));
+        $this->assertSame(14.0, $resolver->resolveTier($employee, $al, 1.999999));
+        $this->assertSame(16.0, $resolver->resolveTier($employee, $al, 2.000000));
     }
 
     public function test_the_top_tier_is_open_ended(): void
     {
         $employee = $this->employee('1990-01-01');
 
-        $this->assertSame(16.0, $this->resolver()->resolveTier($employee, $this->annual(), 40.0));
+        $this->assertSame(18.0, $this->resolver()->resolveTier($employee, $this->annual(), 40.0));
     }
 
     public function test_it_falls_back_to_the_leave_type_default_when_no_tier_matches(): void
@@ -123,7 +123,7 @@ class EntitlementResolverTest extends TestCase
         $site = $this->employee('2025-06-01', 'SITE-1', ['category' => 'site']);
 
         $resolver = $this->resolver();
-        $this->assertSame(8.0, $resolver->resolveTier($office, $al, 1.0));
+        $this->assertSame(14.0, $resolver->resolveTier($office, $al, 1.0));
         $this->assertSame(10.0, $resolver->resolveTier($site, $al, 1.0));
     }
 
@@ -156,7 +156,7 @@ class EntitlementResolverTest extends TestCase
 
         // Guessing here would silently award the most generous tier.
         $this->assertSame(0.0, $this->resolver()->serviceYearsAt($employee, Carbon::parse('2026-01-01')));
-        $this->assertSame(8.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2026));
+        $this->assertSame(14.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2026));
     }
 
     public function test_service_is_never_negative_before_the_hire_date(): void
@@ -173,11 +173,11 @@ class EntitlementResolverTest extends TestCase
         // Hired 1 Jun 2024, so hits 2 years on 1 Jun 2026 — mid-year.
         $employee = $this->employee('2024-06-01');
 
-        // Default policy is next_year: stays on 8 days for 2026.
-        $this->assertSame(8.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2026));
+        // Default policy is next_year: stays on 14 days for 2026.
+        $this->assertSame(14.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2026));
 
-        // And moves to 12 from 2027.
-        $this->assertSame(12.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2027));
+        // And moves to 16 from 2027.
+        $this->assertSame(16.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2027));
     }
 
     public function test_tier_crossing_immediate_grants_the_higher_tier_for_the_whole_year(): void
@@ -186,7 +186,7 @@ class EntitlementResolverTest extends TestCase
 
         $employee = $this->employee('2024-06-01');
 
-        $this->assertSame(12.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2026));
+        $this->assertSame(16.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2026));
     }
 
     public function test_tier_crossing_prorate_blends_the_two_tiers_by_month(): void
@@ -196,10 +196,10 @@ class EntitlementResolverTest extends TestCase
 
         $employee = $this->employee('2024-06-01');
 
-        // 5 months at 8 days + 7 months at 12 days
-        //   = (8 * 5/12) + (12 * 7/12) = 3.333 + 7.0 = 10.33
+        // 5 months at 14 days + 7 months at 16 days
+        //   = (14 * 5/12) + (16 * 7/12) = 5.833 + 9.333 = 15.17
         $this->assertEqualsWithDelta(
-            10.33,
+            15.17,
             $this->resolver()->entitlementFor($employee, $this->annual(), 2026),
             0.01,
         );
@@ -214,15 +214,15 @@ class EntitlementResolverTest extends TestCase
         // Joined 1 Jul 2026 — six months of the year.
         $employee = $this->employee('2026-07-01');
 
-        // 8 days * 6/12 = 4.0
-        $this->assertEqualsWithDelta(4.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2026), 0.01);
+        // 14 days * 6/12 = 7.0
+        $this->assertEqualsWithDelta(7.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2026), 0.01);
     }
 
     public function test_a_full_year_employee_is_not_prorated(): void
     {
         $employee = $this->employee('2015-01-01');
 
-        $this->assertSame(16.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2026));
+        $this->assertSame(18.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2026));
     }
 
     public function test_proration_can_be_switched_off(): void
@@ -231,7 +231,7 @@ class EntitlementResolverTest extends TestCase
 
         $employee = $this->employee('2026-07-01');
 
-        $this->assertSame(8.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2026));
+        $this->assertSame(14.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2026));
     }
 
     public function test_a_leaver_is_prorated_to_their_resignation_date(): void
@@ -240,10 +240,10 @@ class EntitlementResolverTest extends TestCase
 
         $employee = $this->employee('2015-01-01', 'LEAVER-1', ['resign_date' => '2026-06-30']);
 
-        // Top tier 16 days, served roughly half the year.
+        // Top tier 18 days, served roughly half the year.
         $entitlement = $this->resolver()->entitlementFor($employee, $this->annual(), 2026);
-        $this->assertGreaterThan(7.0, $entitlement);
-        $this->assertLessThan(8.5, $entitlement);
+        $this->assertGreaterThan(8.0, $entitlement);
+        $this->assertLessThan(9.5, $entitlement);
     }
 
     public function test_exit_proration_can_be_switched_off(): void
@@ -252,7 +252,7 @@ class EntitlementResolverTest extends TestCase
 
         $employee = $this->employee('2015-01-01', 'LEAVER-2', ['resign_date' => '2026-06-30']);
 
-        $this->assertSame(16.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2026));
+        $this->assertSame(18.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2026));
     }
 
     public function test_someone_hired_after_the_year_ends_has_no_entitlement(): void
@@ -290,9 +290,9 @@ class EntitlementResolverTest extends TestCase
     public function test_rounding_is_applied_to_the_final_entitlement(): void
     {
         // Default rounding is nearest_half.
-        $employee = $this->employee('2026-08-01'); // 5 months of 8 days = 3.33
+        $employee = $this->employee('2026-08-01'); // 5 months of 14 days = 5.83
 
-        $this->assertSame(3.5, $this->resolver()->entitlementFor($employee, $this->annual(), 2026));
+        $this->assertSame(6.0, $this->resolver()->entitlementFor($employee, $this->annual(), 2026));
     }
 
     // ── Policy scoping ─────────────────────────────────────────────────────
@@ -311,7 +311,7 @@ class EntitlementResolverTest extends TestCase
         $resolver = $this->resolver();
 
         // Annual Leave uses the override...
-        $this->assertSame(12.0, $resolver->entitlementFor($employee, $al, 2026));
+        $this->assertSame(16.0, $resolver->entitlementFor($employee, $al, 2026));
 
         // ...while Sick Leave still follows the global next_year default.
         $mc = LeaveType::where('code', 'MC')->sole();

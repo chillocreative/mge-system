@@ -48,7 +48,7 @@ class LeaveEngineIntegrationTest extends TestCase
             'employee_no' => 'E-'.uniqid(),
             'first_name' => 'Test',
             'category' => 'office',
-            'hire_date' => '2015-01-01', // top tier: 16 days AL
+            'hire_date' => '2015-01-01', // top tier: 18 days AL
         ], $extra));
     }
 
@@ -138,12 +138,12 @@ class LeaveEngineIntegrationTest extends TestCase
     {
         config(['leave.engine_enabled' => true]);
 
-        $employee = $this->employee(['hire_date' => '2026-01-01']); // <2y tier: 8 days
+        $employee = $this->employee(['hire_date' => '2026-01-01']); // <2y tier: 14 days
 
         $this->expectException(HttpException::class);
         $this->expectExceptionMessage('only');
 
-        // Far more working days than the 8-day entitlement.
+        // Far more working days than the 14-day entitlement.
         $this->service()->apply([
             'employee_id' => $employee->id,
             'leave_type_id' => $this->annual()->id,
@@ -156,26 +156,26 @@ class LeaveEngineIntegrationTest extends TestCase
     {
         config(['leave.engine_enabled' => true]);
 
-        $employee = $this->employee(['hire_date' => '2026-01-01']); // 8 days
+        $employee = $this->employee(['hire_date' => '2026-01-01']); // 14 days
         $actor = $this->actor();
 
-        // 5 working days, leaving 3.
+        // Two full working weeks = 10 days, leaving 4.
         $this->service()->apply([
             'employee_id' => $employee->id,
             'leave_type_id' => $this->annual()->id,
             'start_date' => '2026-03-02',
-            'end_date' => '2026-03-06',
+            'end_date' => '2026-03-13',
         ], $actor->id);
 
-        // Another 5 working days would need 5 but only 3 remain. Without pending
+        // Another 5 working days would need 5 but only 4 remain. Without pending
         // being counted, both would be approved and the employee would overdraw
         // (plan 8.4).
         $this->expectException(HttpException::class);
         $this->service()->apply([
             'employee_id' => $employee->id,
             'leave_type_id' => $this->annual()->id,
-            'start_date' => '2026-03-09',
-            'end_date' => '2026-03-13',
+            'start_date' => '2026-03-16',
+            'end_date' => '2026-03-20',
         ], $actor->id);
     }
 
@@ -294,7 +294,7 @@ class LeaveEngineIntegrationTest extends TestCase
     {
         config(['leave.engine_enabled' => true]);
 
-        $employee = $this->employee(['hire_date' => '2026-01-01']); // 8 days
+        $employee = $this->employee(['hire_date' => '2026-01-01']); // 14 days
         $actor = $this->actor();
 
         $first = $this->service()->apply([
@@ -325,7 +325,7 @@ class LeaveEngineIntegrationTest extends TestCase
             ->where('key', 'allow_negative_balance')
             ->update(['value' => '1']);
 
-        $employee = $this->employee(['hire_date' => '2026-01-01']); // 8 days
+        $employee = $this->employee(['hire_date' => '2026-01-01']); // 14 days
 
         $request = $this->service()->apply([
             'employee_id' => $employee->id,
@@ -374,7 +374,7 @@ class LeaveEngineIntegrationTest extends TestCase
     {
         config(['leave.engine_enabled' => true]);
 
-        $employee = $this->employee(['hire_date' => '2026-01-01']); // 8 days
+        $employee = $this->employee(['hire_date' => '2026-01-01']); // 14 days
 
         // A request as it would exist in production today: days_count, no
         // leave_days rows.
@@ -392,6 +392,6 @@ class LeaveEngineIntegrationTest extends TestCase
         // Legacy rows must not be invisible to the new balance calculation, or
         // every employee would appear to have their full entitlement again.
         $this->assertSame(5.0, (float) $summary['taken']);
-        $this->assertSame(3.0, (float) $summary['available']);
+        $this->assertSame(9.0, (float) $summary['available']);
     }
 }

@@ -12,7 +12,17 @@
 
 Ordered by how much damage a wrong answer causes.
 
-### 1. 🔴 Annual Leave: 14 days or 8 days? — **the numbers currently disagree**
+### 1. ✅ RESOLVED — Annual Leave is 14 / 16 / 18
+
+**Rahim confirmed on 7 Sep 2026:** AL is 14 days, tiers 14 / 16 / 18. Applied, flagged as confirmed policy (`is_seed_default = false`), so the settings screen no longer warns about Annual Leave.
+
+This is more generous than the Employment Act minimum of 8/12/16, and consistent with the 14 days `leave_types.default_days_per_year` had been using all along — so seeding the Act figures would have quietly cut junior staff by 6 days.
+
+**Sick Leave is still unconfirmed.** It remains at the Act minimum (14/18/22), still flagged `is_seed_default = true`, and the settings screen keeps warning about it. Confirm MC when you get a chance.
+
+<details><summary>Original conflict, for the record</summary>
+
+### 🔴 Annual Leave: 14 days or 8 days? — **the numbers disagreed**
 
 The live system already seeds `leave_types.default_days_per_year`:
 
@@ -34,7 +44,9 @@ The plan (§7.3.9) tells me to seed Employment Act 1955 minimums instead:
 
 **What I did:** seeded the Act tiers as specified, but flagged **every row `is_seed_default = true`**, and the engine is behind a config flag that is **off**. Nothing is live. Nobody's balance changed.
 
-**What I need:** the actual MGE policy. My read is that 14 flat is closer to your real policy than the Act minimum, and the Act tiers were the plan author's placeholder. If MGE genuinely gives 14/16/18 or similar, tell me the tiers and I will re-seed in minutes.
+**What I need:** the actual MGE policy.
+
+</details>
 
 ### 2. 🔴 Production database dump
 
