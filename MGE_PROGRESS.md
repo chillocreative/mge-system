@@ -56,7 +56,31 @@ The plan (§7.3.9) tells me to seed Employment Act 1955 minimums instead:
 
 </details>
 
-### 2. 🔴 Production database dump
+### 2. ✅ RESOLVED — production dump received and analysed (7 Sep, 15:21)
+
+Imported to a separate local database (`mge_prod_snapshot`); the dev and production databases were not touched.
+
+**Orphan leave record — cause confirmed.** Leave #2 (2026-06-26, 1.0 day, Annual, approved) belongs to **MGE02 HASLINDA**, soft-deleted on 2026-06-26. Exactly the code-level hypothesis: `employees` soft-deletes, so the FK cascade never fires and the relation resolves to null, rendering as a blank Employee column. **It is a display bug, not data loss** — the record is intact. Go-live blocker #1 of plan 27.2 can be struck off; it is not data repair.
+
+**Shadow run: 69 differences, all understood.**
+
+| Category | Count |
+|---|---|
+| No stored balance existed yet — not errors | 64 |
+| Stored number was wrong, engine right | 4 |
+| Already matched | 1 |
+
+The four real ones: MGE01 and PTG01 Annual 8 → 14 (the newly confirmed policy), and TST123 Leman 14 → 8 (joined 22 Jun, so correctly prorated to 7/12 of the year). Proration verified correct across all his leave types.
+
+**Data gap found: 5 of 10 active staff have no `hire_date`** — BM02, MGE01, PTG03, PTG04, PTG05. Without it, service length is unknown, so they land in the lowest tier with no proration. Someone six years in would get 14 days instead of 18, silently.
+
+Rahim's decision: HR fills these in manually. Accepted — it is data entry, not code. To stop it being missed, `leave:recalculate` now **names the affected employees** every run, since that is the command you run before deciding the engine is safe to enable.
+
+**Minor observations for review:** Emergency Leave is set to 0 days; `leave_types.default_days_per_year` for Annual is still 8 and now disagrees with the confirmed tiers (fallback only, no impact, but worth aligning); Maternity 98 and Paternity 7 are both correct per the 2023 amendment; 9 of 10 staff have no reporting manager, which does **not** block anything because approval routes by leave type.
+
+<details><summary>Original request, for the record</summary>
+
+### 🔴 Production database dump
 
 I cannot do any of the data work without it. The local DB has **1 employee and 1 leave request** — it is not a copy of production.
 
@@ -67,6 +91,8 @@ Blocked on this:
 - running the shadow-mode comparison, which is the whole point of stage P3
 
 A sanitised dump (or just `employees`, `leave_requests`, `leave_balances`, `leave_types`) is enough.
+
+</details>
 
 ### 3. Orphan leave record (plan 0.3 #13) — I think I found the cause, from code alone
 

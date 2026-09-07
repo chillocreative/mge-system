@@ -127,6 +127,34 @@ class RecalculateLeaveBalancesTest extends TestCase
             ->assertSuccessful();
     }
 
+    public function test_it_warns_about_employees_with_no_hire_date(): void
+    {
+        $this->employee('E100', '2015-01-01');
+        $withoutDate = Employee::create([
+            'employee_no' => 'E101',
+            'first_name' => 'Nohire',
+            'category' => 'office',
+            'hire_date' => null,
+        ]);
+
+        // Without a hire date the resolver assumes zero service, so the employee
+        // silently lands in the lowest tier. The warning is what stops that
+        // going unnoticed before the engine is switched on.
+        $this->artisan('leave:recalculate --year=2026')
+            ->expectsOutputToContain('no hire date')
+            ->expectsOutputToContain($withoutDate->employee_no)
+            ->assertSuccessful();
+    }
+
+    public function test_it_does_not_warn_when_every_employee_has_a_hire_date(): void
+    {
+        $this->employee('E102', '2015-01-01');
+
+        $this->artisan('leave:recalculate --year=2026')
+            ->doesntExpectOutputToContain('no hire date')
+            ->assertSuccessful();
+    }
+
     public function test_it_fails_cleanly_when_there_are_no_employees(): void
     {
         $this->artisan('leave:recalculate --year=2026')

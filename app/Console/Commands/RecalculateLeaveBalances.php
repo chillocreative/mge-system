@@ -126,8 +126,50 @@ class RecalculateLeaveBalances extends Command
         }
 
         $this->renderReport($differences, $unchanged, $locked, $commit);
+        $this->warnAboutMissingServiceDates($employees);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Warn about employees whose length of service cannot be determined.
+     *
+     * Without a hire date the resolver returns zero years, which puts the
+     * employee in the lowest tier with no proration. That is the safe default —
+     * it never awards the most generous tier by accident — but it is silently
+     * wrong for anyone with real service behind them: someone six years in gets
+     * the under-two-years entitlement and nothing anywhere says so.
+     *
+     * It is a data-entry gap, fixed by HR on the staff screen rather than in
+     * code. Printing it here means it cannot be missed, because this is the
+     * command you run before deciding whether the engine is safe to switch on.
+     *
+     * @param  \Illuminate\Support\Collection<int, Employee>  $employees
+     */
+    private function warnAboutMissingServiceDates($employees): void
+    {
+        $missing = $employees->filter(fn (Employee $e) => $e->hire_date === null);
+
+        if ($missing->isEmpty()) {
+            return;
+        }
+
+        $this->newLine();
+        $this->warn(sprintf(
+            '⚠  %d of %d employee(s) have no hire date, so their length of service is unknown.',
+            $missing->count(),
+            $employees->count(),
+        ));
+        $this->line('   They fall into the lowest entitlement tier with no proration. Anyone with');
+        $this->line('   real service is therefore under-granted, and nothing on screen says so.');
+        $this->newLine();
+
+        foreach ($missing as $employee) {
+            $this->line('   • '.$employee->employee_no.' — '.trim($employee->first_name.' '.$employee->last_name));
+        }
+
+        $this->newLine();
+        $this->comment('   Fix in HR > Staff > Edit before enabling the engine.');
     }
 
     /**
