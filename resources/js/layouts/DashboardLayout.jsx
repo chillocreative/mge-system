@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Logo from '@/components/Logo';
 import {
@@ -108,7 +108,20 @@ export default function DashboardLayout() {
 
     const centerInSidebar = (e) => e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    const toggleGroup = (name) => setOpenGroups((p) => ({ ...p, [name]: !p[name] }));
+    // Open the submenu containing the current route (and only that one). Runs on
+    // navigation, so moving between sections keeps exactly one group open and
+    // never leaves the active page inside a collapsed menu.
+    const { pathname } = useLocation();
+    useEffect(() => {
+        const owner = navigation.find(
+            (item) => item.children?.some((c) => pathname === c.href || pathname.startsWith(c.href + '/')),
+        );
+        if (owner) setOpenGroups({ [owner.name]: true });
+    }, [pathname]);
+
+    // Accordion: only one submenu open at a time (plan Ciri 12). Replacing the
+    // whole map — rather than spreading it — is what closes the others.
+    const toggleGroup = (name) => setOpenGroups((p) => (p[name] ? {} : { [name]: true }));
     const toggleCollapsed = () => setCollapsed((c) => {
         const next = !c;
         try { localStorage.setItem('sidebarCollapsed', next ? '1' : '0'); } catch { /* ignore */ }
