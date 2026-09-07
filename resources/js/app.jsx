@@ -42,6 +42,7 @@ import LeaveList from '@/pages/hr/leave/LeaveList';
 import LeaveRequestForm from '@/pages/hr/leave/LeaveRequestForm';
 import LeaveApproval from '@/pages/hr/leave/LeaveApproval';
 import LeaveBalance from '@/pages/hr/leave/LeaveBalance';
+import PublicHolidays from '@/pages/hr/leave/PublicHolidays';
 import MyLeave from '@/pages/hr/leave/MyLeave';
 import Training from '@/pages/hr/training/Training';
 import MyTraining from '@/pages/hr/training/MyTraining';
@@ -168,6 +169,7 @@ function AppRoutes() {
                     <Route element={<PermissionGate permission="leave.manage" />}>
                         <Route path="/hr/leave" element={<LeaveList />} />
                         <Route path="/hr/leave/balances" element={<LeaveBalance />} />
+                        <Route path="/hr/leave/holidays" element={<PublicHolidays />} />
                     </Route>
 
                     {/* HR — Memos */}

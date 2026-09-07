@@ -64,6 +64,24 @@ const leaveService = {
         const response = await apiClient.delete(`/leave-types/${id}`);
         return response.data;
     },
+
+    // ── Leave Policy — Public Holidays ──
+    async holidays(params = {}) {
+        const response = await apiClient.get('/leave-policy/holidays', { params });
+        return response.data;
+    },
+    async createHoliday(data) {
+        const response = await apiClient.post('/leave-policy/holidays', data);
+        return response.data;
+    },
+    async updateHoliday(id, data) {
+        const response = await apiClient.put(`/leave-policy/holidays/${id}`, data);
+        return response.data;
+    },
+    async deactivateHoliday(id) {
+        const response = await apiClient.delete(`/leave-policy/holidays/${id}`);
+        return response.data;
+    },
 };
 
 export default leaveService;

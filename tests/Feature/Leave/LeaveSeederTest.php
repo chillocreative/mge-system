@@ -156,24 +156,29 @@ class LeaveSeederTest extends TestCase
         );
     }
 
-    public function test_it_seeds_only_fixed_date_holidays_and_never_guesses_lunar_ones(): void
+    public function test_it_seeds_the_national_2026_calendar(): void
     {
         $this->seed(PublicHolidaySeeder::class);
 
         $names = PublicHoliday::forYear(2026)->pluck('name');
 
+        // Fixed-date national days.
         $this->assertContains('Labour Day', $names);
         $this->assertContains('National Day (Hari Merdeka)', $names);
         $this->assertContains('Malaysia Day', $names);
 
-        // Moving holidays must be entered by HR from the gazette, never guessed —
-        // a wrong date silently mis-deducts leave for everyone it spans.
-        foreach (['Chinese New Year', 'Hari Raya', 'Deepavali', 'Wesak', 'Thaipusam', 'Awal Muharram'] as $moving) {
-            $this->assertFalse(
-                $names->contains(fn ($n) => str_contains($n, $moving)),
-                "Seeder must not guess the date of a moving holiday: {$moving}",
-            );
-        }
+        // The gazetted moving holidays are now seeded from a cross-checked source.
+        $this->assertContains('Chinese New Year', $names);
+        $this->assertContains('Deepavali', $names);
+        $this->assertContains('Awal Muharram', $names);
+        $this->assertTrue($names->contains(fn ($n) => str_contains($n, 'Hari Raya Aidilfitri')));
+
+        // State holidays are excluded by decision — everything seeded is national.
+        $this->assertSame(
+            0,
+            PublicHoliday::forYear(2026)->where('scope', 'state')->count(),
+            'The seeder must not add state holidays.',
+        );
     }
 
     public function test_holiday_seeder_is_idempotent(): void

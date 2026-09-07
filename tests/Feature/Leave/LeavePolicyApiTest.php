@@ -121,16 +121,37 @@ class LeavePolicyApiTest extends TestCase
     {
         $this->actingAs($this->user(['leave.manage']))
             ->postJson('/api/leave-policy/holidays', [
-                'name' => 'Hari Raya Aidilfitri',
-                'date' => '2026-03-21',
+                'name' => 'Company Foundation Day',
+                'date' => '2026-10-15',
                 'scope' => 'national',
             ])
             ->assertCreated();
 
-        $holiday = PublicHoliday::where('name', 'Hari Raya Aidilfitri')->sole();
+        $holiday = PublicHoliday::where('name', 'Company Foundation Day')->sole();
 
         // year is derived, not supplied — it backs the query index.
         $this->assertSame(2026, $holiday->year);
+    }
+
+    public function test_adding_a_duplicate_holiday_returns_a_clear_error_not_a_500(): void
+    {
+        $this->actingAs($this->user(['leave.manage']))
+            ->postJson('/api/leave-policy/holidays', ['name' => 'Malaysia Day', 'date' => '2026-09-16'])
+            ->assertStatus(422);
+    }
+
+    public function test_re_adding_a_deactivated_holiday_reactivates_it(): void
+    {
+        $h = PublicHoliday::create([
+            'name' => 'Some Day', 'date' => '2026-10-20', 'year' => 2026,
+            'scope' => 'national', 'is_active' => false,
+        ]);
+
+        $this->actingAs($this->user(['leave.manage']))
+            ->postJson('/api/leave-policy/holidays', ['name' => 'Some Day', 'date' => '2026-10-20'])
+            ->assertOk();
+
+        $this->assertTrue($h->fresh()->is_active);
     }
 
     public function test_deleting_a_holiday_deactivates_rather_than_destroys_it(): void

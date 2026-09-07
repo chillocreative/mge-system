@@ -41,6 +41,24 @@ class LeavePolicyController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
+        // A holiday on the same date with the same name already exists. HR will
+        // hit this often (re-adding a gazetted day), so answer with a clear 422
+        // rather than letting the unique index throw a 500. If it was previously
+        // deactivated, reactivate it instead of refusing outright.
+        $existing = PublicHoliday::whereDate('date', $validated['date'])
+            ->where('name', $validated['name'])
+            ->first();
+
+        if ($existing) {
+            if (! $existing->is_active) {
+                $existing->update(['is_active' => true] + $validated);
+
+                return $this->success($existing, 'Public holiday reactivated.');
+            }
+
+            return $this->error('That holiday already exists on that date.', 422);
+        }
+
         $holiday = PublicHoliday::create(array_merge($validated, [
             'year' => (int) substr($validated['date'], 0, 4),
             'is_active' => true,
