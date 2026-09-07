@@ -502,3 +502,38 @@ Building these on a live system and pushing them means baking those decisions in
 3. Ciri 15 (staff↔project pivot + cards), Ciri 20 (site-log edit window)
 4. Shared upload engine → Ciri 4 (Drawings folder), Ciri 5 (BQ import)
 5. Assets block (Ciri 21–24), Ciri 2 (machinery report), Safety block (Ciri 25)
+
+---
+
+## Session 2 continued — Batches 1–5 shipped (7 Sep evening)
+
+All live on production, each pushed + CI + deploy verified. **182 tests.**
+
+| Batch | Features |
+|---|---|
+| 1 | Shared notification engine (preferences, logs, email gate, throttle) |
+| 2 | Per-staff entitlement overrides · opening-balance import (`leave:opening-balance`) · employee-no audit |
+| 3 | Staff project-involvement card (Ciri 15) · site-log edit window (Ciri 20) · Penang holiday removed |
+| 4 | Shared upload engine · Drawings bulk/folder upload (Ciri 4) · BQ template + importer (Ciri 5) |
+| 5 | Project-change notification (Ciri 3) · memo→notification category (Ciri 11) |
+| — | Security: fixed an IDOR in the contract drawing endpoints (found by commit review) |
+
+Plus earlier this session: Leave engine live, holidays admin, sidebar accordion (Ciri 12), Ciri 9 status→login, balance-display fix, employee search, staff leave card, deploy hardening.
+
+### Remaining plan features (not yet built)
+
+**Decision-free — buildable when reached:**
+- Ciri 21–24 Assets block (machinery→assets sync, serial/chassis no, pencil icon, project assignment)
+- Ciri 2 machinery monthly report (endpoint C8 exists; report needs building)
+- Ciri 25 Safety block (large)
+- Ciri 13 HR Calendar aggregate · Ciri 14 multi-staff events (Ciri 14 carries the recurring-event decision O5; 13 carries the leave-privacy decision N1)
+
+**Gated on an irreversible decision (must be settled first):**
+- Ciri 1+16+17+19 Correspondence block — needs "timeline as source of truth" (R1) and `project_parties` vs three fixed parties (R2) decided before building (plan §32)
+- Ciri 18 Correspondence PDF — follows the Correspondence block
+
+### Still open for HR/ops (not code)
+- Run `leave:opening-balance` with HR's Jan–Aug figures
+- Fill `hire_date` for the 5 staff missing it
+- Confirm Islamic 2026 holiday dates against the federal warta
+- Email channel stays off until SMTP verified (then flip `NOTIFICATIONS_EMAIL_ENABLED`)
