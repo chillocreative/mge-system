@@ -556,3 +556,17 @@ Plus earlier this session: Leave engine live, holidays admin, sidebar accordion 
 - **Ciri 14** (multi-staff events): needs the **recurring-events decision (O5)**. The multi-staff pivot + notifications are decision-free and I can build those; recurrence is the fork.
 - **Ciri 25** (Safety block): plan-sized "Besar", 10 sub-features (Z1–Z12) with their own sub-decisions (PTW approval flow, man-hours source, toolbox-vs-safety-meeting overlap). A multi-batch effort in itself.
 - **Correspondence block (Ciri 1/16/17/19 + 18)**: you said proceed; I'll build it additively with the plan's recommended defaults for R1 (timeline as source of truth) and R2 (project_parties) logged as assumptions — but it is the largest single block and reshapes a live module, so it warrants being its own focused session.
+
+---
+
+## Batch 6 COMPLETE (7 Sep) + remaining
+
+6a Ciri 2 machinery days-report · 6b Ciri 22/23/24 vehicle serials + project assignment + pencil · 6c Ciri 13 HR-calendar aggregate (leave privacy: applicant + HR only) + Ciri 14 multi-staff events + recurrence · 6d Ciri 21 site-log machinery → Assets link. **All live. 199 tests.**
+
+### The two remaining blocks — each its own focused session
+
+**Ciri 25 — Safety block ("Besar", ~8 features).** project_sites + site_id across modules · Safety PIC via project_members · Safety Inspection + multi-file (on the shared upload engine) · HIRARC + risk matrix · Safety Meetings + attendance · Safety Activity · Safety Statistics (LTIFR/severity from man-hours) · PTW with approval flow + expiry. Sub-decisions to default+log: toolbox-vs-safety-meeting overlap (Z1), man-hours source (Z6), PTW approver chain (Z5).
+
+**Correspondence block (Ciri 1/16/17/19 + 18).** Build additively with plan defaults logged: R1 = timeline/events as the record (correspondence_events), R2 = project_parties (flexible, not three hardcoded). Adds status master-data, dual close dates, "currently at" party, closing conditions (ref + attachment), and per-correspondence PDF. Reshapes a live module, so: new tables alongside existing project_correspondences, never rewriting existing rows.
+
+Both are ready to start; each is multiple ships.
