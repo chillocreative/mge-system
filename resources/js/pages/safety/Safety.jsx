@@ -92,9 +92,14 @@ export default function Safety() {
                     <h1 className="text-2xl font-bold text-gray-900">Safety & OSHA</h1>
                     <p className="mt-1 text-sm text-gray-500">Incidents, hazards, toolbox meetings & compliance</p>
                 </div>
-                <Link to="/safety/hirarc" className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    <HiOutlineScale className="h-4 w-4" /> HIRARC
-                </Link>
+                <div className="flex flex-wrap gap-2">
+                    <Link to="/safety/hirarc" className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <HiOutlineScale className="h-4 w-4" /> HIRARC
+                    </Link>
+                    <Link to="/safety/permits" className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <HiOutlineClipboardCheck className="h-4 w-4" /> Permits
+                    </Link>
+                </div>
             </div>
 
             {/* Tabs */}

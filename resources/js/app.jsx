@@ -33,6 +33,7 @@ import BudgetVsActual from '@/pages/finance/BudgetVsActual';
 import MonthlySummary from '@/pages/finance/MonthlySummary';
 import Safety from '@/pages/safety/Safety';
 import Hirarc from '@/pages/safety/Hirarc';
+import Permits from '@/pages/safety/Permits';
 import Environmental from '@/pages/environmental/Environmental';
 import Chat from '@/pages/chat/Chat';
 import StaffList from '@/pages/staff/StaffList';
@@ -136,6 +137,7 @@ function AppRoutes() {
                     <Route element={<PermissionGate permission="safety.view" />}>
                         <Route path="/safety" element={<Safety />} />
                         <Route path="/safety/hirarc" element={<Hirarc />} />
+                        <Route path="/safety/permits" element={<Permits />} />
                     </Route>
 
                     {/* Environmental — requires environmental.view */}

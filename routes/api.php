@@ -41,6 +41,7 @@ use App\Http\Controllers\Api\TrainingController;
 use App\Http\Controllers\Api\UserAccessController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VehicleController;
+use App\Http\Controllers\Api\WorkPermitController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -498,6 +499,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{id}', [HirarcController::class, 'show'])->middleware('permission:safety.view');
         Route::put('/{id}', [HirarcController::class, 'update'])->middleware('permission:safety.manage');
         Route::delete('/{id}', [HirarcController::class, 'destroy'])->middleware('permission:safety.manage');
+    });
+
+    // ── Permit To Work (PTW) ──
+    Route::prefix('safety/permits')->group(function () {
+        Route::get('/', [WorkPermitController::class, 'index'])->middleware('permission:safety.view');
+        Route::post('/', [WorkPermitController::class, 'store'])->middleware('permission:safety.create');
+        Route::get('/{id}', [WorkPermitController::class, 'show'])->middleware('permission:safety.view');
+        Route::put('/{id}', [WorkPermitController::class, 'update'])->middleware('permission:safety.create');
+        Route::post('/{id}/submit', [WorkPermitController::class, 'submit'])->middleware('permission:safety.create');
+        Route::post('/{id}/approve', [WorkPermitController::class, 'approve'])->middleware('permission:safety.manage');
+        Route::post('/{id}/reject', [WorkPermitController::class, 'reject'])->middleware('permission:safety.manage');
+        Route::post('/{id}/close', [WorkPermitController::class, 'close'])->middleware('permission:safety.manage');
+        Route::post('/{id}/files', [WorkPermitController::class, 'upload'])->middleware('permission:safety.create');
     });
 
     Route::prefix('safety/incidents')->group(function () {

@@ -64,6 +64,40 @@ const safetyService = {
         const response = await apiClient.delete(`/safety/hirarc/${id}`);
         return response.data;
     },
+
+    // ── Permit To Work (PTW) ──
+    async listPermits(params = {}) {
+        const response = await apiClient.get('/safety/permits', { params });
+        return response.data;
+    },
+    async getPermit(id) {
+        const response = await apiClient.get(`/safety/permits/${id}`);
+        return response.data;
+    },
+    async createPermit(data) {
+        const response = await apiClient.post('/safety/permits', data);
+        return response.data;
+    },
+    async updatePermit(id, data) {
+        const response = await apiClient.put(`/safety/permits/${id}`, data);
+        return response.data;
+    },
+    async submitPermit(id) {
+        const response = await apiClient.post(`/safety/permits/${id}/submit`);
+        return response.data;
+    },
+    async approvePermit(id, decision_notes = null) {
+        const response = await apiClient.post(`/safety/permits/${id}/approve`, { decision_notes });
+        return response.data;
+    },
+    async rejectPermit(id, decision_notes = null) {
+        const response = await apiClient.post(`/safety/permits/${id}/reject`, { decision_notes });
+        return response.data;
+    },
+    async closePermit(id) {
+        const response = await apiClient.post(`/safety/permits/${id}/close`);
+        return response.data;
+    },
 };
 
 export default safetyService;
