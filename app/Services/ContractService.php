@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Imports\BoqImport;
 use App\Models\Attachment;
 use App\Models\ContractBoqItem;
 use App\Models\ProjectContract;
@@ -149,6 +150,41 @@ class ContractService
         $data['sort_order'] = ((int) $contract->boqItems()->max('sort_order')) + 1;
 
         return $contract->boqItems()->create($data);
+    }
+
+    /**
+     * Import BQ items from an uploaded copy of the official template.
+     *
+     * Replaces nothing implicitly — items are appended after any existing rows,
+     * continuing the sort order, so an import never silently wipes manual entry.
+     *
+     * @return array{imported: int, skipped: int}
+     */
+    public function importBoq(int $contractId, \Illuminate\Http\UploadedFile $file, int $userId): array
+    {
+        $contract = ProjectContract::findOrFail($contractId);
+
+        $import = new BoqImport;
+        \Maatwebsite\Excel\Facades\Excel::import($import, $file);
+
+        if ($import->rows === []) {
+            return ['imported' => 0, 'skipped' => $import->skipped];
+        }
+
+        $offset = (int) ContractBoqItem::where('project_contract_id', $contract->id)->max('sort_order');
+        $now = now();
+
+        $payload = array_map(fn (array $r, int $i) => $r + [
+            'project_contract_id' => $contract->id,
+            'sort_order' => $offset + 1 + $i,
+            'created_by' => $userId,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ], $import->rows, array_keys($import->rows));
+
+        ContractBoqItem::insert($payload);
+
+        return ['imported' => count($payload), 'skipped' => $import->skipped];
     }
 
     public function deleteBoqItem(int $itemId): void

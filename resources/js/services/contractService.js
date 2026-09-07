@@ -65,6 +65,15 @@ const contractService = {
         const response = await apiClient.delete(`/project-contracts/drawings/${attachmentId}`);
         return response.data;
     },
+    getBoqTemplateUrl() {
+        return '/api/project-contracts/boq-template';
+    },
+    async importBoq(contractId, formData) {
+        const response = await apiClient.post(`/project-contracts/${contractId}/boq-items/import`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
     async removeBoqItem(itemId) {
         const response = await apiClient.delete(`/project-contracts/boq-items/${itemId}`);
         return response.data;

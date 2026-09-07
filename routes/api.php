@@ -239,7 +239,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/drawings', [ContractController::class, 'storeDrawings'])->middleware('permission:projects.edit');
         Route::get('/drawings/{attachmentId}/download', [ContractController::class, 'downloadDrawing'])->middleware('permission:projects.view');
         Route::delete('/drawings/{attachmentId}', [ContractController::class, 'destroyDrawing'])->middleware('permission:projects.edit');
+        Route::get('/boq-template', [ContractController::class, 'downloadBoqTemplate'])->middleware('permission:projects.view');
         Route::get('/{id}/boq-items', [ContractController::class, 'indexBoqItems'])->middleware('permission:projects.view');
+        Route::post('/{id}/boq-items/import', [ContractController::class, 'importBoq'])->middleware('permission:projects.edit');
         Route::post('/{id}/boq-items', [ContractController::class, 'storeBoqItem'])->middleware('permission:projects.edit');
     });
 

@@ -449,6 +449,8 @@ function DrawingsTab({ contract, canEdit }) {
 const emptyBoqForm = () => ({ item_no: '', description: '', unit: '', quantity: '', rate: '' });
 
 function BoqTab({ contract, canEdit }) {
+    const boqFileInput = useRef(null);
+    const [importing, setImporting] = useState(false);
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [form, setForm] = useState(emptyBoqForm());
@@ -465,6 +467,24 @@ function BoqTab({ contract, canEdit }) {
             setLoading(false);
         }
     }, [contract.id]);
+
+    const importBoqFile = async (file) => {
+        if (!file) return;
+        setImporting(true);
+        try {
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await contractService.importBoq(contract.id, fd);
+            const skipped = res.data?.skipped ? `, skipped ${res.data.skipped} blank row(s)` : '';
+            toast.success(`Imported ${res.data?.imported ?? 0} BQ item(s)${skipped}`);
+            fetchItems();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Import failed');
+        } finally {
+            setImporting(false);
+            if (boqFileInput.current) boqFileInput.current.value = '';
+        }
+    };
 
     useEffect(() => { fetchItems(); }, [fetchItems]);
 
@@ -496,7 +516,35 @@ function BoqTab({ contract, canEdit }) {
 
     return (
         <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-            <h2 className="mb-4 text-lg font-semibold text-gray-900">Bill of Quantity (BQ)</h2>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-lg font-semibold text-gray-900">Bill of Quantity (BQ)</h2>
+                <div className="flex items-center gap-2">
+                    <a
+                        href={contractService.getBoqTemplateUrl()}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                    >
+                        <HiOutlineDownload className="h-4 w-4" /> Template
+                    </a>
+                    {canEdit && (
+                        <>
+                            <input
+                                ref={boqFileInput}
+                                type="file"
+                                accept=".xlsx,.xls,.csv"
+                                hidden
+                                onChange={(e) => importBoqFile(e.target.files?.[0])}
+                            />
+                            <button
+                                onClick={() => boqFileInput.current?.click()}
+                                disabled={importing}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+                            >
+                                <HiOutlineUpload className="h-4 w-4" /> {importing ? 'Importing…' : 'Import Excel'}
+                            </button>
+                        </>
+                    )}
+                </div>
+            </div>
 
             {loading ? (
                 <LoadingSpinner />

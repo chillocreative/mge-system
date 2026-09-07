@@ -141,6 +141,25 @@ class ContractController extends Controller
         return $this->created($item, 'BOQ item added.');
     }
 
+    public function importBoq(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:20480'],
+        ]);
+
+        $result = $this->contractService->importBoq($id, $request->file('file'), $request->user()->id);
+
+        return $this->success($result, "Imported {$result['imported']} BQ item(s).");
+    }
+
+    public function downloadBoqTemplate()
+    {
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\BoqTemplateExport,
+            'BQ-Import-Template.xlsx',
+        );
+    }
+
     public function destroyBoqItem(int $itemId): JsonResponse
     {
         $this->contractService->deleteBoqItem($itemId);
