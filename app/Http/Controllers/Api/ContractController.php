@@ -81,6 +81,46 @@ class ContractController extends Controller
         return $this->success(null, 'File deleted.');
     }
 
+    // ── Drawings / bulk folder upload (Ciri 4, shared upload engine) ──
+
+    public function indexDrawings(int $id): JsonResponse
+    {
+        return $this->success($this->contractService->listDrawings($id));
+    }
+
+    public function storeDrawings(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'files' => ['required', 'array', 'min:1'],
+            'files.*' => ['file', 'max:204800'], // 200 MB per file
+            // One relative path per file, from the browser folder picker
+            // (webkitRelativePath). Sanitised in the upload engine.
+            'paths' => ['nullable', 'array'],
+            'paths.*' => ['nullable', 'string'],
+        ]);
+
+        $result = $this->contractService->addDrawings(
+            $id,
+            $request->file('files', []),
+            $request->input('paths', []),
+            $request->user()->id,
+        );
+
+        return $this->success($result, 'Drawings uploaded.');
+    }
+
+    public function downloadDrawing(int $attachmentId)
+    {
+        return $this->contractService->downloadDrawing($attachmentId);
+    }
+
+    public function destroyDrawing(int $attachmentId): JsonResponse
+    {
+        $this->contractService->deleteDrawing($attachmentId);
+
+        return $this->success(null, 'Drawing deleted.');
+    }
+
     public function indexBoqItems(int $id): JsonResponse
     {
         return $this->success($this->contractService->listBoqItems($id));

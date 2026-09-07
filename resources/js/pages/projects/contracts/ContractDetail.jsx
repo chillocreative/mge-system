@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import contractService from '@/services/contractService';
@@ -268,25 +268,26 @@ function DocumentsTab({ contract, canEdit, onRefresh }) {
     );
 }
 
-// ─── Drawings Tab ──────────────────────────────────────────────
-const emptyDrawingForm = () => ({ title: '', drawing_no: '', discipline: 'civil', revision: '', tag: '', file: null });
+// ─── Drawings Tab (bulk / folder upload on the shared attachments engine) ──
+function formatSize(bytes) {
+    if (!bytes) return '';
+    const mb = bytes / (1024 * 1024);
+    return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
 
 function DrawingsTab({ contract, canEdit }) {
-    const { can } = useAuth();
     const [drawings, setDrawings] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showForm, setShowForm] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [form, setForm] = useState(emptyDrawingForm());
-
-    const canUpload = can('drawings.upload');
-    const canManage = can('drawings.manage');
+    const [uploading, setUploading] = useState(false);
+    const [progress, setProgress] = useState(null);
+    const folderInput = useRef(null);
+    const fileInput = useRef(null);
 
     const fetchDrawings = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await drawingService.list({ contract_id: contract.id, per_page: 100 });
-            setDrawings(res.data?.data || []);
+            const res = await contractService.listDrawings(contract.id);
+            setDrawings(res.data || []);
         } catch {
             setDrawings([]);
         } finally {
@@ -296,36 +297,48 @@ function DrawingsTab({ contract, canEdit }) {
 
     useEffect(() => { fetchDrawings(); }, [fetchDrawings]);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!form.file) return toast.error('Please select a file');
-        setSaving(true);
+    const upload = async (fileList) => {
+        const files = Array.from(fileList || []);
+        if (!files.length) return;
+
+        setUploading(true);
+        setProgress({ done: 0, total: files.length });
+
+        // Upload in batches so a whole folder does not go up in one giant
+        // request the server would reject; each batch carries its files' relative
+        // folder paths (webkitRelativePath) so structure is preserved.
+        const BATCH = 10;
+        let uploaded = 0;
+        let skipped = 0;
         try {
-            const fd = new FormData();
-            fd.append('title', form.title);
-            fd.append('drawing_no', form.drawing_no);
-            fd.append('discipline', form.discipline);
-            if (form.revision) fd.append('revision', form.revision);
-            if (form.tag) fd.append('tag', form.tag);
-            fd.append('project_id', contract.project_id);
-            fd.append('contract_id', contract.id);
-            fd.append('file', form.file);
-            await drawingService.create(fd);
-            toast.success('Drawing uploaded');
-            setShowForm(false);
-            setForm(emptyDrawingForm());
+            for (let i = 0; i < files.length; i += BATCH) {
+                const slice = files.slice(i, i + BATCH);
+                const fd = new FormData();
+                slice.forEach((f) => {
+                    fd.append('files[]', f);
+                    fd.append('paths[]', f.webkitRelativePath || f.name);
+                });
+                const res = await contractService.uploadDrawings(contract.id, fd);
+                uploaded += res.data?.uploaded ?? 0;
+                skipped += res.data?.skipped ?? 0;
+                setProgress({ done: Math.min(i + BATCH, files.length), total: files.length });
+            }
+            toast.success(`Uploaded ${uploaded} file${uploaded === 1 ? '' : 's'}${skipped ? `, skipped ${skipped} duplicate${skipped === 1 ? '' : 's'}` : ''}`);
             fetchDrawings();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Upload failed');
         } finally {
-            setSaving(false);
+            setUploading(false);
+            setProgress(null);
+            if (folderInput.current) folderInput.current.value = '';
+            if (fileInput.current) fileInput.current.value = '';
         }
     };
 
     const handleDelete = async (id) => {
         if (!confirm('Delete this drawing?')) return;
         try {
-            await drawingService.remove(id);
+            await contractService.deleteDrawing(id);
             toast.success('Drawing deleted');
             fetchDrawings();
         } catch {
@@ -333,63 +346,100 @@ function DrawingsTab({ contract, canEdit }) {
         }
     };
 
+    // Group by folder for display.
+    const groups = drawings.reduce((acc, d) => {
+        const key = d.folder || '(root)';
+        (acc[key] = acc[key] || []).push(d);
+        return acc;
+    }, {});
+
     return (
         <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-lg font-semibold text-gray-900">Drawings</h2>
-                {canEdit && canUpload && (
-                    <button onClick={() => setShowForm(!showForm)} className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:text-primary-700">
-                        <HiOutlinePlus className="h-4 w-4" /> Add Drawing
-                    </button>
+                {canEdit && (
+                    <div className="flex items-center gap-2">
+                        <input
+                            ref={folderInput}
+                            type="file"
+                            webkitdirectory=""
+                            directory=""
+                            multiple
+                            hidden
+                            onChange={(e) => upload(e.target.files)}
+                        />
+                        <input
+                            ref={fileInput}
+                            type="file"
+                            multiple
+                            hidden
+                            onChange={(e) => upload(e.target.files)}
+                        />
+                        <button
+                            onClick={() => fileInput.current?.click()}
+                            disabled={uploading}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                        >
+                            <HiOutlinePlus className="h-4 w-4" /> Add Files
+                        </button>
+                        <button
+                            onClick={() => folderInput.current?.click()}
+                            disabled={uploading}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+                        >
+                            <HiOutlineFolderOpen className="h-4 w-4" /> Upload Folder
+                        </button>
+                    </div>
                 )}
             </div>
 
-            {showForm && (
-                <form onSubmit={handleSubmit} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                        <input type="text" placeholder="Title" required value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                        <input type="text" placeholder="Drawing No." required value={form.drawing_no} onChange={(e) => setForm((p) => ({ ...p, drawing_no: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                        <select value={form.discipline} onChange={(e) => setForm((p) => ({ ...p, discipline: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
-                            {['architectural', 'structural', 'civil', 'mechanical', 'electrical', 'other'].map((d) => (
-                                <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
-                            ))}
-                        </select>
-                        <input type="text" placeholder="Revision" value={form.revision} onChange={(e) => setForm((p) => ({ ...p, revision: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                        <input type="text" placeholder="Tag" value={form.tag} onChange={(e) => setForm((p) => ({ ...p, tag: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                        <input type="file" accept=".dwg,.dxf,.pdf,.png,.jpg,.jpeg" onChange={(e) => setForm((p) => ({ ...p, file: e.target.files[0] }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary-50 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary-700" />
+            {uploading && progress && (
+                <div className="mb-4">
+                    <div className="mb-1 flex justify-between text-xs text-gray-500">
+                        <span>Uploading…</span>
+                        <span>{progress.done} / {progress.total}</span>
                     </div>
-                    <div className="mt-3 flex justify-end gap-2">
-                        <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
-                        <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Uploading...' : 'Upload'}</button>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+                        <div className="h-full bg-primary-500 transition-all" style={{ width: `${(progress.done / progress.total) * 100}%` }} />
                     </div>
-                </form>
+                </div>
             )}
 
             {loading ? (
                 <LoadingSpinner />
             ) : drawings.length ? (
-                <ul className="divide-y divide-gray-100 rounded-lg border border-gray-100">
-                    {drawings.map((d) => (
-                        <li key={d.id} className="flex items-center justify-between px-3 py-2">
-                            <span className="flex min-w-0 items-center gap-2 text-sm text-gray-700">
-                                <HiOutlineDocumentText className="h-4 w-4 flex-shrink-0 text-gray-400" />
-                                <span className="truncate">{d.title} <span className="text-gray-400">({d.drawing_no}{d.revision ? ` · Rev ${d.revision}` : ''})</span></span>
-                            </span>
-                            <span className="flex shrink-0 items-center gap-1">
-                                <a href={drawingService.getDownloadUrl(d.id)} className="rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600" title="Download">
-                                    <HiOutlineDownload className="h-4 w-4" />
-                                </a>
-                                {canEdit && canManage && (
-                                    <button onClick={() => handleDelete(d.id)} className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600" title="Delete">
-                                        <HiOutlineTrash className="h-4 w-4" />
-                                    </button>
-                                )}
-                            </span>
-                        </li>
+                <div className="space-y-4">
+                    {Object.keys(groups).sort().map((folder) => (
+                        <div key={folder}>
+                            <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                                <HiOutlineFolderOpen className="h-3.5 w-3.5" /> {folder}
+                            </p>
+                            <ul className="divide-y divide-gray-100 rounded-lg border border-gray-100">
+                                {groups[folder].map((d) => (
+                                    <li key={d.id} className="flex items-center justify-between px-3 py-2">
+                                        <span className="flex min-w-0 items-center gap-2 text-sm text-gray-700">
+                                            <HiOutlineDocumentText className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                                            <span className="truncate">{d.name}</span>
+                                            {d.size ? <span className="shrink-0 text-xs text-gray-400">{formatSize(d.size)}</span> : null}
+                                        </span>
+                                        <span className="flex shrink-0 items-center gap-1">
+                                            <a href={contractService.getDrawingDownloadUrl(d.id)} className="rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600" title="Download">
+                                                <HiOutlineDownload className="h-4 w-4" />
+                                            </a>
+                                            {canEdit && (
+                                                <button onClick={() => handleDelete(d.id)} className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600" title="Delete">
+                                                    <HiOutlineTrash className="h-4 w-4" />
+                                                </button>
+                                            )}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
                     ))}
-                </ul>
+                </div>
             ) : (
-                <p className="text-sm text-gray-400">No drawings for this contract</p>
+                <p className="text-sm text-gray-400">No drawings for this contract. Use “Upload Folder” to add a whole folder at once.</p>
             )}
         </div>
     );

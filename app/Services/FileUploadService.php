@@ -50,9 +50,14 @@ class FileUploadService
         // Skip a byte-identical file already attached to the same record, when
         // asked — folder re-uploads are common and this avoids silent dupes.
         if (($options['skip_duplicates'] ?? false) && $checksum) {
+            // A duplicate is the same bytes in the same place with the same name
+            // — re-uploading a folder. The same file legitimately filed under a
+            // different folder or name is NOT a duplicate and is kept.
             $existing = Attachment::where('attachable_type', $attachable->getMorphClass())
                 ->where('attachable_id', $attachable->getKey())
                 ->where('checksum', $checksum)
+                ->where('folder_path', $folderPath)
+                ->where('original_name', $file->getClientOriginalName())
                 ->first();
 
             if ($existing) {

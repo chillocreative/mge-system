@@ -48,6 +48,23 @@ const contractService = {
         const response = await apiClient.post(`/project-contracts/${contractId}/boq-items`, data);
         return response.data;
     },
+    async listDrawings(contractId) {
+        const response = await apiClient.get(`/project-contracts/${contractId}/drawings`);
+        return response.data;
+    },
+    async uploadDrawings(contractId, formData) {
+        const response = await apiClient.post(`/project-contracts/${contractId}/drawings`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
+    getDrawingDownloadUrl(attachmentId) {
+        return `/api/project-contracts/drawings/${attachmentId}/download`;
+    },
+    async deleteDrawing(attachmentId) {
+        const response = await apiClient.delete(`/project-contracts/drawings/${attachmentId}`);
+        return response.data;
+    },
     async removeBoqItem(itemId) {
         const response = await apiClient.delete(`/project-contracts/boq-items/${itemId}`);
         return response.data;

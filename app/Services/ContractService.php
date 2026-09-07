@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Attachment;
 use App\Models\ContractBoqItem;
 use App\Models\ProjectContract;
 use App\Models\ProjectContractFile;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Storage;
 
 class ContractService
 {
+    public function __construct(private FileUploadService $uploads) {}
+
     public function list(array $filters, int $perPage = 15): LengthAwarePaginator
     {
         $query = ProjectContract::with([
@@ -151,6 +154,88 @@ class ContractService
     public function deleteBoqItem(int $itemId): void
     {
         ContractBoqItem::findOrFail($itemId)->delete();
+    }
+
+    // ── Drawings folder store (Ciri 4) — bulk/folder upload via the shared engine ──
+
+    public function listDrawings(int $contractId)
+    {
+        $contract = ProjectContract::findOrFail($contractId);
+
+        return Attachment::where('attachable_type', $contract->getMorphClass())
+            ->where('attachable_id', $contract->id)
+            ->with('uploader:id,first_name,last_name')
+            ->orderBy('folder_path')
+            ->orderBy('original_name')
+            ->get()
+            ->map(fn (Attachment $a) => [
+                'id' => $a->id,
+                'name' => $a->original_name,
+                'folder' => $a->folder_path,
+                'size' => $a->size_bytes,
+                'extension' => $a->extension,
+                'uploaded_by' => $a->uploader ? trim($a->uploader->first_name.' '.$a->uploader->last_name) : null,
+                'uploaded_at' => $a->created_at?->toIso8601String(),
+            ]);
+    }
+
+    /**
+     * Bulk upload — one or many files, optionally with a relative folder path
+     * each (from the browser folder picker). Duplicates within the same contract
+     * are skipped so re-uploading a folder does not pile up copies.
+     *
+     * @param  array<int, \Illuminate\Http\UploadedFile>  $files
+     * @param  array<int, string|null>  $paths
+     * @return array{uploaded: int, skipped: int}
+     */
+    public function addDrawings(int $contractId, array $files, array $paths, int $userId): array
+    {
+        $contract = ProjectContract::findOrFail($contractId);
+        $uploaded = 0;
+        $skipped = 0;
+
+        foreach ($files as $i => $file) {
+            $relative = $paths[$i] ?? null;
+            // webkitRelativePath includes the filename; keep only the directory.
+            $folder = $relative ? trim(dirname(str_replace('\\', '/', $relative)), '/.') : null;
+
+            $before = $contract->id;
+            $attachment = $this->uploads->attach($file, $contract, $userId, [
+                'folder_path' => $folder ?: null,
+                'allowed_extensions' => ['pdf', 'dwg', 'dxf', 'dwf', 'rvt', 'ifc', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'doc', 'docx', 'xls', 'xlsx'],
+                'max_size_kb' => 204800,
+                'directory' => 'contract-drawings/'.$contract->id,
+                'skip_duplicates' => true,
+            ]);
+
+            // attach() returns an existing row (same id already present) when a
+            // duplicate is skipped; count it as skipped if it predates this call.
+            if ($attachment && $attachment->wasRecentlyCreated) {
+                $uploaded++;
+            } else {
+                $skipped++;
+            }
+        }
+
+        return ['uploaded' => $uploaded, 'skipped' => $skipped];
+    }
+
+    public function downloadDrawing(int $attachmentId)
+    {
+        $attachment = Attachment::findOrFail($attachmentId);
+
+        abort_unless(
+            \Illuminate\Support\Facades\Storage::disk($attachment->disk)->exists($attachment->stored_path),
+            404,
+        );
+
+        return \Illuminate\Support\Facades\Storage::disk($attachment->disk)
+            ->download($attachment->stored_path, $attachment->original_name);
+    }
+
+    public function deleteDrawing(int $attachmentId): void
+    {
+        $this->uploads->remove(Attachment::findOrFail($attachmentId));
     }
 
     private function storeFiles(ProjectContract $contract, array $files): void
