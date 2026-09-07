@@ -30,7 +30,7 @@ Rahim reviewed the outstanding risks and chose to proceed. Recorded here so the 
 
 > **STATUS 7 Sep 2026 (late):** Batches 6 (Safety) and 7 (Correspondence) are now COMPLETE and live in production — the last two blocks you named. The 25 plan features are substantially built and deployed. What remains is NOT code:
 > 1. **HR/ops data entry** — run `leave:opening-balance` with Jan–Aug figures; fill `hire_date` for 5 staff; confirm Islamic 2026 holiday dates vs federal warta; flip `NOTIFICATIONS_EMAIL_ENABLED` once SMTP is verified.
-> 2. **One deferred structural item — `project_sites` (multi-site per project):** NOT built on purpose. It is a large refactor touching site logs, incidents, permits and correspondence on a live DB, and every module already carries a working free-text `location`. Confirm you actually want a multi-site hierarchy before I refactor — otherwise free-text location stays.
+> 2. **`project_sites` (multi-site per project): ✅ BUILT & LIVE (7 Sep).** Rahim asked for it — shipped additively: new `project_sites` table + nullable `site_id` on 7 operational tables (site logs, incidents, hazards, permits, HIRARC, toolbox, checklists), ON DELETE SET NULL so nothing is ever destroyed. Sites tab on the project page + site pickers on the site-log/HIRARC/permit forms. Free-text location still works alongside.
 > 3. Safety sub-items (Safety Meetings / Safety Activity / Safety PIC) were **not duplicated** — toolbox meetings + attendees, checklists, and project_members role-tagging already cover them. Say if you want dedicated modules instead.
 
 Ordered by how much damage a wrong answer causes.
@@ -623,3 +623,13 @@ Purely additive; existing project_correspondences rows untouched.
 - Frontend: workflow drawer (current party, timeline, handover + inline add-party, note, guarded close, reopen, PDF) from a new row action; existing table/edit flow untouched.
 - 7 feature tests. Suite: 225 passing. Commit `f36de99`. CI + deploy green.
 - ASSUMPTION (R2): party types = client/consultant/main_contractor/subcontractor/supplier/authority/other. (R1) history covers raised/handed_over/noted/status_changed/closed/reopened.
+
+### Batch 8 — Multi-site per project (project_sites) — SHIPPED
+Additive, non-destructive foundation for Ciri 25.
+- `project_sites` table (name/code/address/lat-long/is_active) + `ProjectSite` model.
+- Nullable `site_id` on site_logs, safety_incidents, hazard_reports, work_permits, hirarc_assessments, toolbox_meetings, compliance_checklists — **ON DELETE SET NULL** (deleting a site keeps its records, just unlinks them).
+- `ProjectSiteController` CRUD (project-scoped); site_id validated across site-log/safety/permit/HIRARC; **cross-project site rejected (422)** on site logs.
+- Frontend: **Sites tab** on the project detail page (ProjectSitesPanel); **site pickers** on Site Log, HIRARC, Permit forms (disabled until a project is chosen, reset on project change).
+- Free-text `location` untouched everywhere — sites are an optional refinement.
+- 4 feature tests (scoping, file-under-site, cross-project reject, safe-delete). Suite: 229 passing. Commit `c41761a`. CI + deploy green.
+- ASSUMPTION: site_id wired into the 7 operational record types above. Correspondence keeps its party model (not site-scoped); can add site_id there too if wanted.
