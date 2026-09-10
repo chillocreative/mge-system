@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import apiClient from '@/services/apiClient';
 import roleService from '@/services/roleService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import SearchableSelect from '@/components/SearchableSelect';
 import toast from 'react-hot-toast';
 import { HiOutlineKey, HiOutlineCheck, HiOutlineInformationCircle, HiOutlineUser } from 'react-icons/hi';
 
@@ -121,15 +122,14 @@ export default function Roles() {
             {/* User picker */}
             <div className="mb-6 max-w-md">
                 <label className="mb-1 block text-sm font-medium text-gray-700">User</label>
-                <select value={activeUserId} onChange={(e) => selectUser(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
-                    <option value="">Select a user…</option>
-                    {users.map((u) => (
-                        <option key={u.id} value={u.id}>
-                            {u.full_name} — {u.email}{u.is_manager ? ' [MGR]' : ''}{u.is_director ? ' [DIR]' : ''}
-                        </option>
-                    ))}
-                </select>
+                <SearchableSelect
+                    value={activeUserId}
+                    onChange={selectUser}
+                    options={users}
+                    placeholder="Search a user by name or email…"
+                    getValue={(u) => u.id}
+                    getLabel={(u) => `${u.full_name} — ${u.email}${u.is_manager ? ' [MGR]' : ''}${u.is_director ? ' [DIR]' : ''}`}
+                />
             </div>
 
             {!activeUserId ? (

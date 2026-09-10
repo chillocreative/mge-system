@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import dashboardService from '@/services/dashboardService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import SearchableSelect from '@/components/SearchableSelect';
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -29,7 +30,6 @@ import {
     HiOutlineAcademicCap,
     HiOutlineClock,
     HiOutlineCalendar,
-    HiOutlineOfficeBuilding,
 } from 'react-icons/hi';
 
 ChartJS.register(
@@ -222,20 +222,16 @@ export default function Dashboard() {
                 : null;
 
     const deptDropdown = departments.length > 0 && (
-        <label className="group inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/15 bg-white/10 py-1 pl-2.5 pr-1.5 backdrop-blur transition-colors hover:bg-white/[0.15] focus-within:border-lime-400/60">
-            <HiOutlineOfficeBuilding className="h-3.5 w-3.5 shrink-0 text-lime-300/80" />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-200/50">Filter</span>
-            <select
-                value={dept}
-                onChange={(e) => setDept(e.target.value)}
-                className="cursor-pointer border-0 bg-transparent py-0.5 pl-0 pr-1 text-xs font-medium text-emerald-50 outline-none focus:ring-0"
-            >
-                <option value="" className="bg-primary-900 text-white">All Departments</option>
-                {departments.map((d) => (
-                    <option key={d.id} value={d.id} className="bg-primary-900 text-white">{d.name}</option>
-                ))}
-            </select>
-        </label>
+        <SearchableSelect
+            value={dept}
+            onChange={setDept}
+            options={departments}
+            placeholder="All departments"
+            getValue={(d) => d.id}
+            getLabel={(d) => d.name}
+            dark
+            className="w-56"
+        />
     );
 
     return (
