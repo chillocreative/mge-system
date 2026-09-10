@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\NormalizesNullableColumns;
 use App\Http\Controllers\Controller;
 use App\Models\Milestone;
 use App\Models\Project;
@@ -10,6 +11,8 @@ use Illuminate\Http\Request;
 
 class MilestoneController extends Controller
 {
+    use NormalizesNullableColumns;
+
     // ── Global (cross-project) milestone management ──
 
     public function globalIndex(Request $request): JsonResponse
@@ -38,6 +41,7 @@ class MilestoneController extends Controller
         ]);
         $validated['created_by'] = $request->user()->id;
 
+        $validated = $this->dropNullColumns($validated, ['status', 'progress', 'sort_order']);
         $milestone = Milestone::create($validated);
 
         return $this->created(
@@ -63,6 +67,7 @@ class MilestoneController extends Controller
             $validated['progress'] = 100;
         }
 
+        $validated = $this->dropNullColumns($validated, ['status', 'progress', 'sort_order']);
         $milestone->update($validated);
 
         return $this->success(
@@ -106,6 +111,7 @@ class MilestoneController extends Controller
         $validated['project_id'] = $project->id;
         $validated['created_by'] = $request->user()->id;
 
+        $validated = $this->dropNullColumns($validated, ['status', 'progress', 'sort_order']);
         $milestone = Milestone::create($validated);
 
         return $this->created($milestone->load('creator:id,first_name,last_name'), 'Milestone created.');
@@ -139,6 +145,7 @@ class MilestoneController extends Controller
             $validated['progress'] = 100;
         }
 
+        $validated = $this->dropNullColumns($validated, ['status', 'progress', 'sort_order']);
         $milestone->update($validated);
 
         return $this->success($milestone->fresh()->load('creator:id,first_name,last_name'), 'Milestone updated.');

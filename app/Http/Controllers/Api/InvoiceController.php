@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\NormalizesNullableColumns;
 use App\Http\Controllers\Controller;
 use App\Services\InvoiceService;
 use Illuminate\Http\JsonResponse;
@@ -9,6 +10,8 @@ use Illuminate\Http\Request;
 
 class InvoiceController extends Controller
 {
+    use NormalizesNullableColumns;
+
     public function __construct(private InvoiceService $invoiceService) {}
 
     public function index(Request $request): JsonResponse
@@ -91,6 +94,7 @@ class InvoiceController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
+        $validated = $this->dropNullColumns($validated, ['method']);
         $payment = $this->invoiceService->recordPayment($id, $validated, $request->user()->id);
 
         return $this->created($payment, 'Payment recorded.');

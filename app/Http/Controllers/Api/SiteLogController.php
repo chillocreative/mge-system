@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\AssertsSiteInProject;
+use App\Http\Controllers\Concerns\NormalizesNullableColumns;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Project;
@@ -15,6 +16,7 @@ use Illuminate\Http\Request;
 class SiteLogController extends Controller
 {
     use AssertsSiteInProject;
+    use NormalizesNullableColumns;
 
     private const MACHINERY_TYPES = [
         'Excavator', 'Bulldozer', 'Crane', 'Compactor', 'Loader', 'Dump Truck', 'Generator', 'Other',
@@ -38,6 +40,7 @@ class SiteLogController extends Controller
         $project = Project::findOrFail($projectId);
 
         $validated = $this->validatePayload($request, true);
+        $validated = $this->dropNullColumns($validated, ['workers_count']);
         $machinery = $validated['machinery'] ?? [];
         $weatherEvents = $validated['weather_events'] ?? [];
         unset($validated['machinery'], $validated['weather_events']);
@@ -103,6 +106,7 @@ class SiteLogController extends Controller
         $this->assertEditable($request, $log);
 
         $validated = $this->validatePayload($request, false);
+        $validated = $this->dropNullColumns($validated, ['workers_count']);
         $machinery = $validated['machinery'] ?? null;
         $weatherEvents = $validated['weather_events'] ?? null;
         unset($validated['machinery'], $validated['weather_events']);

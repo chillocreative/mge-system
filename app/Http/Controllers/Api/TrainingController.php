@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\NormalizesNullableColumns;
 use App\Http\Controllers\Controller;
 use App\Services\TrainingService;
 use Illuminate\Http\JsonResponse;
@@ -9,6 +10,8 @@ use Illuminate\Http\Request;
 
 class TrainingController extends Controller
 {
+    use NormalizesNullableColumns;
+
     public function __construct(private TrainingService $trainingService) {}
 
     // ── Records ──
@@ -24,6 +27,7 @@ class TrainingController extends Controller
     public function storeRecord(Request $request): JsonResponse
     {
         $validated = $this->validateRecord($request, true);
+        $validated = $this->dropNullColumns($validated, ['cost', 'hrdf_claimable', 'status']);
 
         return $this->created(
             $this->trainingService->createRecord($validated, $request->user()->id),
@@ -34,6 +38,7 @@ class TrainingController extends Controller
     public function updateRecord(Request $request, int $id): JsonResponse
     {
         $validated = $this->validateRecord($request, false);
+        $validated = $this->dropNullColumns($validated, ['cost', 'hrdf_claimable', 'status']);
 
         return $this->success($this->trainingService->updateRecord($id, $validated), 'Training record updated.');
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\NormalizesNullableColumns;
 use App\Http\Controllers\Controller;
 use App\Services\EmployeeService;
 use Illuminate\Http\JsonResponse;
@@ -11,6 +12,8 @@ use Illuminate\Validation\Rule;
 
 class EmployeeController extends Controller
 {
+    use NormalizesNullableColumns;
+
     public function __construct(private EmployeeService $employeeService) {}
 
     public function index(Request $request): JsonResponse
@@ -61,7 +64,7 @@ class EmployeeController extends Controller
 
         $validated = array_merge($validated, \App\Models\Employee::splitName($validated['full_name']));
         unset($validated['photo'], $validated['full_name']);
-        $validated = $this->dropNullNotNullDefaults($validated);
+        $validated = $this->dropNullColumns($validated, ['number_of_children', 'base_salary', 'employment_type', 'category', 'status']);
 
         $employee = $this->employeeService->create($validated, $request->user()->id, $request->file('photo'));
 
@@ -116,36 +119,11 @@ class EmployeeController extends Controller
             unset($validated['full_name']);
         }
         unset($validated['photo']);
-        $validated = $this->dropNullNotNullDefaults($validated);
+        $validated = $this->dropNullColumns($validated, ['number_of_children', 'base_salary', 'employment_type', 'category', 'status']);
 
         $employee = $this->employeeService->update($id, $validated, $request->file('photo'));
 
         return $this->success($employee, 'Staff member updated successfully.');
-    }
-
-    /**
-     * The staff form posts every field, including blanks, which the
-     * ConvertEmptyStringsToNull middleware turns into null. A handful of
-     * employee columns are NOT NULL with a database default (number_of_children,
-     * base_salary, employment_type, category, status), so writing null to them
-     * throws an integrity-constraint error (the "Server Error" on Add Staff).
-     *
-     * Dropping the key when the value is null is the safe fix: on create the
-     * column falls back to its DB default, and on update the existing value is
-     * left untouched rather than being nulled or reset.
-     *
-     * @param  array<string, mixed>  $validated
-     * @return array<string, mixed>
-     */
-    private function dropNullNotNullDefaults(array $validated): array
-    {
-        foreach (['number_of_children', 'base_salary', 'employment_type', 'category', 'status'] as $column) {
-            if (array_key_exists($column, $validated) && $validated[$column] === null) {
-                unset($validated[$column]);
-            }
-        }
-
-        return $validated;
     }
 
     public function destroy(int $id): JsonResponse

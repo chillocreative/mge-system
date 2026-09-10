@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\AssertsSiteInProject;
+use App\Http\Controllers\Concerns\NormalizesNullableColumns;
 use App\Http\Controllers\Controller;
 use App\Models\WorkPermit;
 use App\Services\FileUploadService;
@@ -14,6 +15,7 @@ use RuntimeException;
 class WorkPermitController extends Controller
 {
     use AssertsSiteInProject;
+    use NormalizesNullableColumns;
 
     public function __construct(
         private readonly WorkPermitService $permits,
@@ -51,6 +53,7 @@ class WorkPermitController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $this->validatePayload($request);
+        $data = $this->dropNullColumns($data, ['type']);
         $this->assertSiteInProject($data['site_id'] ?? null, $data['project_id'] ?? null);
         $submit = $request->boolean('submit');
 
@@ -63,6 +66,7 @@ class WorkPermitController extends Controller
     {
         $permit = WorkPermit::findOrFail($id);
         $data = $this->validatePayload($request, true);
+        $data = $this->dropNullColumns($data, ['type']);
         $this->assertSiteInProject($data['site_id'] ?? null, $data['project_id'] ?? $permit->project_id);
 
         return $this->guard(fn () => $this->success($this->permits->update($permit, $data)->fresh(), 'Permit updated.'));

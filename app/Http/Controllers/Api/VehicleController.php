@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\NormalizesNullableColumns;
 use App\Http\Controllers\Controller;
 use App\Services\AssetService;
 use Illuminate\Http\JsonResponse;
@@ -10,6 +11,8 @@ use Illuminate\Support\Facades\Storage;
 
 class VehicleController extends Controller
 {
+    use NormalizesNullableColumns;
+
     public function __construct(private AssetService $assetService) {}
 
     // ── Vehicles ──
@@ -40,6 +43,7 @@ class VehicleController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
+        $validated = $this->dropNullColumns($validated, ['status']);
         $vehicle = $this->assetService->createVehicle($validated, $request->user()->id);
 
         return $this->created($vehicle, 'Vehicle added successfully.');
@@ -67,6 +71,8 @@ class VehicleController extends Controller
             'status' => ['sometimes', 'in:active,inactive,disposed'],
             'notes' => ['nullable', 'string'],
         ]);
+
+        $validated = $this->dropNullColumns($validated, ['status']);
 
         return $this->success($this->assetService->updateVehicle($id, $validated), 'Vehicle updated.');
     }
