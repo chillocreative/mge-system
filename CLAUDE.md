@@ -183,3 +183,43 @@ This project has `chillocreative/qwen-agent` installed (path-repo at `../qwen-ag
 - `storage/app/qwen-tasks/` is gitignored scratch space for task prompts/responses.
 
 Use this for well-scoped, mechanical sub-tasks (boilerplate, repetitive edits, straightforward bugfixes) to save cost/time, while keeping architectural decisions and review with Claude.
+
+
+---
+
+# Claude Memory (migrated from Claude to Zed)
+
+The following memory entries were copied from Claude Code's project memory.
+
+## Memory index
+
+- [100% qwen coding delegation](qwen-100-percent-coding-delegation.md) — for this project, Claude never writes code directly: plan/review/find bugs only, qwen-agent authors every patch
+
+## qwen-100-percent-coding-delegation
+
+---
+name: qwen-100-percent-coding-delegation
+description: "User wants 100% of code authorship delegated to qwen-agent for this project — Claude does planning, code review, and bug-finding only, never originates code itself"
+metadata: 
+  node_type: memory
+  type: feedback
+  originSessionId: a6f0173d-1481-49c3-843c-dee2ba136d68
+  modified: 2026-09-13T16:03:39.883Z
+---
+
+For the mge-system project, the user has explicitly tightened the delegation model beyond what the global `~/.claude/CLAUDE.md` and project `CLAUDE.md` already describe: **all code authorship — new code and bug fixes alike — must be written by `qwen-agent`, not by Claude.** Claude's role is scoped to: planning/architecture decisions, scoping and writing the task prompt for qwen, reviewing qwen's output for correctness/quality, and diagnosing bugs (root cause) before handing the fix description to qwen.
+
+This removes the "trivial one-liner, no round-trip needed" exception that the global CLAUDE.md otherwise allows — for this project, even small fixes go through qwen first.
+
+**What still has to be done directly by Claude, because qwen-agent is structurally incapable of it** (it is read-only and has no shell/file-write access — confirmed and accepted by the user when this was made explicit):
+- Applying qwen's proposed patch to the actual file (Edit/Write tool)
+- Running builds/tests/migrations to verify the patch
+- git add/commit/push and other repo operations
+- Browser-based visual verification
+
+Established working pattern (used successfully once already, see the "My Tasks" panel dead-CSS-class fix on 2026-09-13): Claude finds/diagnoses an issue → writes a precise task prompt to `storage/app/qwen-tasks/*.txt` describing the bug and the required fix shape → runs `qwen-agent <task>.txt --context=<file> --out=<out>.md` → Claude reviews qwen's proposed diff critically (round 1 had a subtle redundant-class issue Claude caught and sent back) → iterates with qwen until the fix is clean → Claude applies it → Claude verifies (build + visual check).
+
+**Why:** the user wants to keep tight control over cost/spend by using the cheaper qwen model for all code generation, while relying on Claude specifically for judgment — architecture, review, and catching what a less capable model gets wrong or produces imperfectly, exactly as demonstrated in the "My Tasks" fix round-trip.
+
+See also [[mge-system-project-overview]] if that memory exists, and the project's own `CLAUDE.md` "Qwen sub-agent" section for the mechanics (`qwen-agent` CLI location, env config, `storage/app/qwen-tasks/` scratch dir).
+

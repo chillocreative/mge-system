@@ -11,11 +11,16 @@ import {
     HiOutlineTag,
     HiOutlineChevronRight,
     HiOutlineTrash,
+    HiOutlinePencilAlt,
 } from 'react-icons/hi';
 
 function formatQty(val) {
     return Number(val || 0).toLocaleString('en-MY', { maximumFractionDigits: 2 });
 }
+
+const emptyForm = {
+    name: '', sku: '', category_id: '', unit: '', quantity_on_hand: '', reorder_level: '', unit_cost: '', location: '', status: 'active',
+};
 
 export default function Inventory() {
     const { can } = useAuth();
@@ -29,10 +34,8 @@ export default function Inventory() {
     const [showForm, setShowForm] = useState(false);
     const [showCatModal, setShowCatModal] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [form, setForm] = useState({
-        name: '', sku: '', category_id: '', unit: '', quantity_on_hand: '',
-        reorder_level: '', unit_cost: '', location: '', status: 'active',
-    });
+    const [editingItem, setEditingItem] = useState(null);
+    const [form, setForm] = useState({ ...emptyForm });
     const [catForm, setCatForm] = useState({ name: '', code: '', description: '' });
 
     const fetchItems = async (page = 1) => {
@@ -66,21 +69,66 @@ export default function Inventory() {
 
     useEffect(() => { fetchItems(); fetchCategories(); }, []);
 
+    const openNewForm = () => {
+        setEditingItem(null);
+        setForm({ ...emptyForm });
+        setShowForm(true);
+    };
+
+    const openEdit = (item) => {
+        setEditingItem(item);
+        setForm({
+            name: item.name || '',
+            sku: item.sku || '',
+            category_id: item.category?.id || '',
+            unit: item.unit || '',
+            quantity_on_hand: item.quantity_on_hand ?? '',
+            reorder_level: item.reorder_level ?? '',
+            unit_cost: item.unit_cost ?? '',
+            location: item.location || '',
+            status: item.status || 'active',
+        });
+        setShowForm(true);
+    };
+
+    const closeForm = () => {
+        setShowForm(false);
+        setEditingItem(null);
+        setForm({ ...emptyForm });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
         try {
             const payload = { ...form };
             Object.keys(payload).forEach((k) => { if (payload[k] === '') delete payload[k]; });
-            await inventoryService.createItem(payload);
-            toast.success('Item created');
-            setShowForm(false);
-            setForm({ name: '', sku: '', category_id: '', unit: '', quantity_on_hand: '', reorder_level: '', unit_cost: '', location: '', status: 'active' });
+
+            if (editingItem) {
+                await inventoryService.updateItem(editingItem.id, payload);
+                toast.success('Item updated');
+            } else {
+                await inventoryService.createItem(payload);
+                toast.success('Item created');
+            }
+
+            closeForm();
             fetchItems();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to create item');
+            toast.error(err.response?.data?.message || 'Failed to save item');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!confirm('Delete this item?')) return;
+        try {
+            await inventoryService.deleteItem(id);
+            toast.success('Item deleted');
+            fetchItems();
+        } catch {
+            toast.error('Failed to delete item');
         }
     };
 
@@ -123,7 +171,7 @@ export default function Inventory() {
                         </button>
                     )}
                     {can('inventory.manage') && (
-                        <button onClick={() => setShowForm(true)} className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700">
+                        <button onClick={openNewForm} className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700">
                             <HiOutlinePlus className="h-5 w-5" /> New Item
                         </button>
                     )}
@@ -182,7 +230,21 @@ export default function Inventory() {
                                         <td className="px-4 py-3 text-right text-sm text-gray-500">{formatQty(item.reorder_level)}</td>
                                         <td className="px-4 py-3 text-sm text-gray-600">{item.location || '-'}</td>
                                         <td className="px-4 py-3 text-right">
-                                            <Link to={`/assets/inventory/${item.id}`} className="inline-flex items-center text-gray-400 hover:text-primary-600"><HiOutlineChevronRight className="h-5 w-5" /></Link>
+                                            <div className="flex items-center justify-end gap-2">
+                                                {can('inventory.manage') && (
+                                                    <>
+                                                        <button onClick={() => openEdit(item)} className="rounded p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600" title="Edit">
+                                                            <HiOutlinePencilAlt className="h-4 w-4" />
+                                                        </button>
+                                                        <button onClick={() => handleDelete(item.id)} className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600" title="Delete">
+                                                            <HiOutlineTrash className="h-4 w-4" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                                <Link to={`/assets/inventory/${item.id}`} className="inline-flex items-center text-gray-400 hover:text-primary-600 ml-2">
+                                                    <HiOutlineChevronRight className="h-5 w-5" />
+                                                </Link>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -203,11 +265,11 @@ export default function Inventory() {
                 </div>
             )}
 
-            {/* New Item Modal */}
+            {/* Create/Edit Item Modal */}
             {showForm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowForm(false)}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={closeForm}>
                     <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="mb-4 text-lg font-semibold text-gray-900">New Inventory Item</h3>
+                        <h3 className="mb-4 text-lg font-semibold text-gray-900">{editingItem ? 'Edit Inventory Item' : 'New Inventory Item'}</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -251,8 +313,8 @@ export default function Inventory() {
                                 <input type="text" value={form.location} onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                             </div>
                             <div className="flex justify-end gap-2 pt-2">
-                                <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                                <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Saving...' : 'Create Item'}</button>
+                                <button type="button" onClick={closeForm} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                                <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Saving...' : editingItem ? 'Update Item' : 'Create Item'}</button>
                             </div>
                         </form>
                     </div>

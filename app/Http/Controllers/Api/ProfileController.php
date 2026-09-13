@@ -7,6 +7,7 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -31,6 +32,7 @@ class ProfileController extends Controller
             'phone' => ['nullable', 'string', 'max:20'],
             'ic_number' => ['nullable', 'string', 'max:50'],
             'avatar' => ['nullable', 'image', 'max:5120'],
+            'current_password' => [Rule::requiredIf(fn () => $request->input('email') !== $request->user()->email), 'current_password'],
         ]);
 
         // Prevent an empty multipart/null avatar field from silently wiping
@@ -38,6 +40,8 @@ class ProfileController extends Controller
         // new file upload (unlike phone/ic_number, there is no legitimate
         // "clear my avatar via a blank field" user action).
         unset($validated['avatar']);
+
+        unset($validated['current_password']);
 
         // Handle avatar replacement if a new file is provided
         if ($request->hasFile('avatar')) {
@@ -80,6 +84,15 @@ class ProfileController extends Controller
         $request->user()->update([
             'password' => $validated['password'],
         ]);
+
+        // A password change should not leave any other already-open
+        // session (e.g. one an attacker had hijacked) still authenticated.
+        DB::table('sessions')
+            ->where('user_id', $request->user()->id)
+            ->where('id', '!=', $request->session()->getId())
+            ->delete();
+
+        $request->session()->regenerate();
 
         return $this->success(null, 'Password updated successfully.');
     }

@@ -4,6 +4,7 @@ namespace Tests\Feature\Profile;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -37,6 +38,7 @@ class ProfileTest extends TestCase
                 'email' => $newEmail,
                 'phone' => '012-3456789',
                 'ic_number' => '980101-10-1234',
+                'current_password' => 'x',
             ])
             ->assertStatus(200);
 
@@ -113,6 +115,68 @@ class ProfileTest extends TestCase
     }
 
     /**
+     * A user attempting to change their email without sending current_password gets rejected.
+     */
+    public function test_email_change_without_current_password_is_rejected(): void
+    {
+        $user = $this->user();
+        $newEmail = 'no-pw-'.uniqid().'@mge-eng.com';
+
+        $this->actingAs($user)
+            ->putJson('/api/profile', [
+                'full_name' => 'No Password Sent',
+                'email' => $newEmail,
+                'phone' => null,
+                'ic_number' => null,
+            ])
+            ->assertStatus(422);
+
+        $this->assertNotEquals($newEmail, $user->fresh()->email);
+    }
+
+    /**
+     * A user attempting to change their email with the wrong current_password gets rejected.
+     */
+    public function test_email_change_with_wrong_current_password_is_rejected(): void
+    {
+        $user = $this->user();
+        $newEmail = 'wrong-pw-'.uniqid().'@mge-eng.com';
+
+        $this->actingAs($user)
+            ->putJson('/api/profile', [
+                'full_name' => 'Wrong Password',
+                'email' => $newEmail,
+                'phone' => null,
+                'ic_number' => null,
+                'current_password' => 'DefinitelyWrongPassword',
+            ])
+            ->assertStatus(422);
+
+        $this->assertNotEquals($newEmail, $user->fresh()->email);
+    }
+
+    /**
+     * A user changing their email with the correct current_password succeeds.
+     */
+    public function test_email_change_with_correct_current_password_succeeds(): void
+    {
+        $user = $this->user();
+        $newEmail = 'correct-pw-'.uniqid().'@mge-eng.com';
+
+        $this->actingAs($user)
+            ->putJson('/api/profile', [
+                'full_name' => 'Correct Password',
+                'email' => $newEmail,
+                'phone' => null,
+                'ic_number' => null,
+                'current_password' => 'x',
+            ])
+            ->assertStatus(200);
+
+        $this->assertSame($newEmail, $user->fresh()->email);
+    }
+
+    /**
      * Case 4: Password change succeeds with correct current_password + valid new password + matching confirmation.
      */
     public function test_password_change_succeeds_with_valid_current_and_new_password(): void
@@ -120,7 +184,9 @@ class ProfileTest extends TestCase
         $user = $this->user();
         $newPassword = 'NewSecurePass1';
 
-        $this->actingAs($user)
+        $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class)
+            ->withHeader('Referer', 'http://localhost')
+            ->actingAs($user)
             ->putJson('/api/profile/password', [
                 'current_password' => 'x',
                 'password' => $newPassword,
@@ -162,5 +228,34 @@ class ProfileTest extends TestCase
                 'password_confirmation' => 'MismatchedPass1',
             ])
             ->assertStatus(422);
+    }
+
+    /**
+     * Changing a password invalidates the user's other sessions.
+     */
+    public function test_password_change_invalidates_other_sessions(): void
+    {
+        $user = $this->user();
+
+        DB::table('sessions')->insert([
+            'id' => 'other-device-session-id',
+            'user_id' => $user->id,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'test-agent',
+            'payload' => base64_encode(serialize([])),
+            'last_activity' => time(),
+        ]);
+
+        $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class)
+            ->withHeader('Referer', 'http://localhost')
+            ->actingAs($user)
+            ->putJson('/api/profile/password', [
+                'current_password' => 'x',
+                'password' => 'NewSecurePass1',
+                'password_confirmation' => 'NewSecurePass1',
+            ])
+            ->assertStatus(200);
+
+        $this->assertDatabaseMissing('sessions', ['id' => 'other-device-session-id']);
     }
 }

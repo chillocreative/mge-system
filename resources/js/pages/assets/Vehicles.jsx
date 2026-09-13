@@ -12,8 +12,8 @@ import {
     HiOutlineTruck,
     HiOutlineExclamation,
     HiOutlineCube,
-    HiOutlineChevronRight,
     HiOutlinePencilAlt,
+    HiOutlineTrash,
 } from 'react-icons/hi';
 
 const statusColors = {
@@ -37,6 +37,7 @@ export default function Vehicles() {
     const [typeFilter, setTypeFilter] = useState('');
     const [pagination, setPagination] = useState({});
     const [showForm, setShowForm] = useState(false);
+    const [editingId, setEditingId] = useState(null);
     const [employees, setEmployees] = useState([]);
     const [saving, setSaving] = useState(false);
     const [dashboard, setDashboard] = useState(null);
@@ -98,24 +99,87 @@ export default function Vehicles() {
             .catch(() => {});
     }, []);
 
+    const openEdit = (vehicle) => {
+        setForm({
+            registration_no: vehicle.registration_no || '',
+            chassis_no: vehicle.chassis_no || '',
+            engine_no: vehicle.engine_no || '',
+            serial_no: vehicle.serial_no || '',
+            make: vehicle.make || '',
+            model: vehicle.model || '',
+            year: vehicle.year || '',
+            type: vehicle.type || 'car',
+            purchase_date: vehicle.purchase_date || '',
+            current_value: vehicle.current_value || '',
+            assigned_to: vehicle.assigned_to?.id || '',
+            status: vehicle.status || 'active',
+            notes: vehicle.notes || '',
+        });
+        setEditingId(vehicle.id);
+        setShowForm(true);
+    };
+
+    const openCreate = () => {
+        setForm({
+            registration_no: '',
+            chassis_no: '',
+            engine_no: '',
+            serial_no: '',
+            make: '',
+            model: '',
+            year: '',
+            type: 'car',
+            purchase_date: '',
+            current_value: '',
+            assigned_to: '',
+            status: 'active',
+            notes: '',
+        });
+        setEditingId(null);
+        setShowForm(true);
+    };
+
+    const closeForm = () => {
+        setShowForm(false);
+        setEditingId(null);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
         try {
             const payload = { ...form };
             Object.keys(payload).forEach((k) => {
-                if (payload[k] === '') delete payload[k];
+                if (payload[k] === '' || payload[k] === null) delete payload[k];
             });
-            await assetService.createVehicle(payload);
-            toast.success('Vehicle added');
-            setShowForm(false);
-            setForm({ registration_no: '', chassis_no: '', engine_no: '', serial_no: '', make: '', model: '', year: '', type: 'car', purchase_date: '', current_value: '', assigned_to: '', status: 'active', notes: '' });
+
+            if (editingId) {
+                await assetService.updateVehicle(editingId, payload);
+                toast.success('Vehicle updated successfully');
+            } else {
+                await assetService.createVehicle(payload);
+                toast.success('Vehicle created successfully');
+            }
+
+            closeForm();
             fetchVehicles();
             fetchSummary();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to add vehicle');
+            toast.error(err.response?.data?.message || 'Failed to save vehicle');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!confirm('Are you sure you want to delete this vehicle? This action cannot be undone.')) return;
+        try {
+            await assetService.deleteVehicle(id);
+            toast.success('Vehicle deleted successfully');
+            fetchVehicles();
+            fetchSummary();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to delete vehicle');
         }
     };
 
@@ -128,7 +192,7 @@ export default function Vehicles() {
                 </div>
                 {can('assets.manage') && (
                     <button
-                        onClick={() => setShowForm(true)}
+                        onClick={openCreate}
                         className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700"
                     >
                         <HiOutlinePlus className="h-5 w-5" />
@@ -249,9 +313,24 @@ export default function Vehicles() {
                                             <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[v.status]}`}>{v.status}</span>
                                         </td>
                                         <td className="px-4 py-3 text-right">
-                                            <Link to={`/assets/vehicles/${v.id}`} className="inline-flex items-center text-gray-400 hover:text-primary-600" title="Open / edit">
-                                                <HiOutlinePencilAlt className="h-5 w-5" />
-                                            </Link>
+                                            {can('assets.manage') && (
+                                                <div className="flex justify-end gap-3">
+                                                    <button
+                                                        onClick={() => openEdit(v)}
+                                                        className="text-gray-400 hover:text-primary-600 transition-colors"
+                                                        title="Edit"
+                                                    >
+                                                        <HiOutlinePencilAlt className="h-5 w-5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(v.id)}
+                                                        className="text-gray-400 hover:text-red-600 transition-colors"
+                                                        title="Delete"
+                                                    >
+                                                        <HiOutlineTrash className="h-5 w-5" />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
@@ -278,11 +357,11 @@ export default function Vehicles() {
                 </div>
             )}
 
-            {/* Create Vehicle Modal */}
+            {/* Create/Edit Vehicle Modal */}
             {showForm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowForm(false)}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={closeForm}>
                     <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="mb-4 text-lg font-semibold text-gray-900">Add Vehicle</h3>
+                        <h3 className="mb-4 text-lg font-semibold text-gray-900">{editingId ? 'Edit Vehicle' : 'Add Vehicle'}</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -354,8 +433,8 @@ export default function Vehicles() {
                                 <textarea rows={2} value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                             </div>
                             <div className="flex justify-end gap-2 pt-2">
-                                <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                                <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Saving...' : 'Add Vehicle'}</button>
+                                <button type="button" onClick={closeForm} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                                <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Saving...' : editingId ? 'Update Vehicle' : 'Add Vehicle'}</button>
                             </div>
                         </form>
                     </div>
