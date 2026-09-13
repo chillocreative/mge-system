@@ -57,6 +57,11 @@ class SiteLog extends Model
         return $this->hasMany(SiteLogWeatherEvent::class)->orderBy('event_time');
     }
 
+    public function workers(): HasMany
+    {
+        return $this->hasMany(SiteLogWorker::class);
+    }
+
     public function attachments(): MorphMany
     {
         return $this->morphMany(Attachment::class, 'attachable');

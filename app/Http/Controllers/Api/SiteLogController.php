@@ -23,6 +23,11 @@ class SiteLogController extends Controller
         'Excavator', 'Bulldozer', 'Crane', 'Compactor', 'Loader', 'Dump Truck', 'Generator', 'Other',
     ];
 
+    private const WORKER_TYPES = [
+        'General Worker', 'Operator', 'Bar Bender', 'Carpenter', 'Steel Fixer',
+        'Mason', 'Electrician', 'Plumber', 'Welder', 'Supervisor', 'Other',
+    ];
+
     private const WEATHER_CONDITIONS = ['rain_start', 'rain_stop', 'overcast', 'clear'];
 
     public function __construct(
@@ -32,7 +37,7 @@ class SiteLogController extends Controller
     public function index(int $projectId, Request $request): JsonResponse
     {
         $logs = SiteLog::where('project_id', $projectId)
-            ->with(['logger:id,first_name,last_name', 'site:id,name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'attachments'])
+            ->with(['logger:id,first_name,last_name', 'site:id,name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'attachments', 'workers'])
             ->when($request->date_from && $request->date_to, fn ($q) => $q->forPeriod($request->date_from, $request->date_to))
             ->orderByDesc('log_date')
             ->paginate($request->integer('per_page', 15));
@@ -47,24 +52,30 @@ class SiteLogController extends Controller
         $validated = $this->validatePayload($request, true);
         $validated = $this->dropNullColumns($validated, ['workers_count']);
         $machinery = $validated['machinery'] ?? [];
+        $workers = $validated['workers'] ?? [];
         $weatherEvents = $validated['weather_events'] ?? [];
-        unset($validated['machinery'], $validated['weather_events']);
+        unset($validated['machinery'], $validated['workers'], $validated['weather_events']);
 
         $this->assertSiteInProject($validated['site_id'] ?? null, $project->id);
         $validated['project_id'] = $project->id;
         $validated['logged_by'] = $request->user()->id;
 
+        if ($workers !== []) {
+            $validated['workers_count'] = collect($workers)->sum(fn ($w) => (int) ($w['count'] ?? 0));
+        }
+
         $log = SiteLog::create($validated);
         $this->syncMachinery($log, $machinery);
+        $this->syncWorkers($log, $workers);
         $this->syncWeatherEvents($log, $weatherEvents);
 
-        return $this->created($log->load(['logger:id,first_name,last_name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents']), 'Site log created.');
+        return $this->created($log->load(['logger:id,first_name,last_name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'workers']), 'Site log created.');
     }
 
     public function show(int $projectId, int $logId): JsonResponse
     {
         $log = SiteLog::where('project_id', $projectId)
-            ->with(['logger:id,first_name,last_name', 'site:id,name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'attachments'])
+            ->with(['logger:id,first_name,last_name', 'site:id,name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'attachments', 'workers'])
             ->findOrFail($logId);
 
         return $this->success($log);
@@ -113,8 +124,13 @@ class SiteLogController extends Controller
         $validated = $this->validatePayload($request, false);
         $validated = $this->dropNullColumns($validated, ['workers_count']);
         $machinery = $validated['machinery'] ?? null;
+        $workers = $validated['workers'] ?? null;
         $weatherEvents = $validated['weather_events'] ?? null;
-        unset($validated['machinery'], $validated['weather_events']);
+        unset($validated['machinery'], $validated['workers'], $validated['weather_events']);
+
+        if ($workers !== null && $workers !== []) {
+            $validated['workers_count'] = collect($workers)->sum(fn ($w) => (int) ($w['count'] ?? 0));
+        }
 
         if (array_key_exists('site_id', $validated)) {
             $this->assertSiteInProject($validated['site_id'], $log->project_id);
@@ -124,13 +140,16 @@ class SiteLogController extends Controller
         if ($machinery !== null) {
             $this->syncMachinery($log, $machinery);
         }
+        if ($workers !== null) {
+            $this->syncWorkers($log, $workers);
+        }
         if ($weatherEvents !== null) {
             $this->syncWeatherEvents($log, $weatherEvents);
         }
 
         $this->auditLog($request, $log, 'sitelog.updated');
 
-        return $this->success($log->fresh()->load(['logger:id,first_name,last_name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents']), 'Site log updated.');
+        return $this->success($log->fresh()->load(['logger:id,first_name,last_name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'workers']), 'Site log updated.');
     }
 
     public function destroy(int $projectId, int $logId, Request $request): JsonResponse
@@ -279,6 +298,21 @@ class SiteLogController extends Controller
         }
     }
 
+    private function syncWorkers(SiteLog $log, array $workers): void
+    {
+        $log->workers()->delete();
+
+        foreach ($workers as $item) {
+            if (empty($item['worker_type'])) {
+                continue;
+            }
+            $log->workers()->create([
+                'worker_type' => $item['worker_type'],
+                'count' => $item['count'] ?? 1,
+            ]);
+        }
+    }
+
     private function syncWeatherEvents(SiteLog $log, array $weatherEvents): void
     {
         $log->weatherEvents()->delete();
@@ -298,6 +332,7 @@ class SiteLogController extends Controller
     {
         $required = $creating ? 'required' : 'sometimes';
         $machineryTypes = implode(',', self::MACHINERY_TYPES);
+        $workerTypes = implode(',', self::WORKER_TYPES);
         $weatherConditions = implode(',', self::WEATHER_CONDITIONS);
 
         return $request->validate([
@@ -316,6 +351,9 @@ class SiteLogController extends Controller
             'machinery.*.machinery_type' => ['required_with:machinery', 'in:'.$machineryTypes],
             'machinery.*.quantity' => ['nullable', 'integer', 'min:1'],
             'machinery.*.vehicle_id' => ['nullable', 'exists:vehicles,id'],
+            'workers' => ['nullable', 'array'],
+            'workers.*.worker_type' => ['required_with:workers', 'in:'.$workerTypes],
+            'workers.*.count' => ['nullable', 'integer', 'min:1'],
             'weather_events' => ['nullable', 'array'],
             'weather_events.*.condition' => ['required_with:weather_events', 'in:'.$weatherConditions],
             'weather_events.*.event_time' => ['required_with:weather_events', 'date_format:H:i'],

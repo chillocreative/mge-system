@@ -518,6 +518,7 @@ function TimelineTab({ project }) {
 
 // ─── Site Logs Tab ─────────────────────────────────────────────
 const MACHINERY_TYPES = ['Excavator', 'Bulldozer', 'Crane', 'Compactor', 'Loader', 'Dump Truck', 'Generator', 'Other'];
+const WORKER_TYPES = ['General Worker', 'Operator', 'Bar Bender', 'Carpenter', 'Steel Fixer', 'Mason', 'Electrician', 'Plumber', 'Welder', 'Supervisor', 'Other'];
 const WEATHER_CONDITIONS = [
     { value: 'rain_start', label: 'Rain Start' },
     { value: 'rain_stop', label: 'Rain Stop' },
@@ -529,7 +530,8 @@ const emptySiteLogForm = () => ({
     log_date: new Date().toISOString().split('T')[0],
     site_id: '',
     weather: '',
-    workers_count: '', work_performed: '', materials_used: '', issues: '', safety_notes: '',
+    work_performed: '', materials_used: '', issues: '', safety_notes: '',
+    workers: [],
     machinery: [],
     weather_events: [],
 });
@@ -576,6 +578,10 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
     const removeMachinery = (idx) => setForm((p) => ({ ...p, machinery: p.machinery.filter((_, i) => i !== idx) }));
     const updateMachinery = (idx, field, value) => setForm((p) => ({ ...p, machinery: p.machinery.map((m, i) => i === idx ? { ...m, [field]: value } : m) }));
 
+    const addWorker = () => setForm((p) => ({ ...p, workers: [...p.workers, { worker_type: WORKER_TYPES[0], count: 1 }] }));
+    const removeWorker = (idx) => setForm((p) => ({ ...p, workers: p.workers.filter((_, i) => i !== idx) }));
+    const updateWorker = (idx, field, value) => setForm((p) => ({ ...p, workers: p.workers.map((w, i) => i === idx ? { ...w, [field]: value } : w) }));
+
     const addWeatherEvent = () => setForm((p) => ({ ...p, weather_events: [...p.weather_events, { condition: WEATHER_CONDITIONS[0].value, event_time: '' }] }));
     const removeWeatherEvent = (idx) => setForm((p) => ({ ...p, weather_events: p.weather_events.filter((_, i) => i !== idx) }));
     const updateWeatherEvent = (idx, field, value) => setForm((p) => ({ ...p, weather_events: p.weather_events.map((w, i) => i === idx ? { ...w, [field]: value } : w) }));
@@ -592,7 +598,7 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
             log_date: log.log_date ? String(log.log_date).slice(0, 10) : '',
             site_id: log.site_id || '',
             weather: log.weather || '',
-            workers_count: log.workers_count ?? '',
+            workers: (log.workers || []).map((w) => ({ worker_type: w.worker_type, count: w.count })),
             work_performed: log.work_performed || '',
             materials_used: log.materials_used || '',
             issues: log.issues || '',
@@ -609,7 +615,6 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
         const payload = {
             ...form,
             site_id: form.site_id || null,
-            workers_count: form.workers_count ? Number(form.workers_count) : 0,
         };
         try {
             if (editingId) {
@@ -710,7 +715,30 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                                 {sites.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
                             </select>
                         )}
-                        <input type="number" placeholder="Workers on site" value={form.workers_count} onChange={(e) => setForm({ ...form, workers_count: e.target.value })} min="0" className="sm:col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                    </div>
+
+                    <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
+                        <div className="mb-2 flex items-center justify-between">
+                            <p className="text-xs font-semibold uppercase text-gray-500">Workers</p>
+                            <button type="button" onClick={addWorker} className="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-700">
+                                <HiOutlinePlus className="h-3.5 w-3.5" /> Add
+                            </button>
+                        </div>
+                        {form.workers.length === 0 ? (
+                            <p className="text-xs text-gray-400">No workers recorded</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {form.workers.map((w, i) => (
+                                    <div key={i} className="flex items-center gap-2">
+                                        <select value={w.worker_type} onChange={(e) => updateWorker(i, 'worker_type', e.target.value)} className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                                            {WORKER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                        <input type="number" min="1" value={w.count} onChange={(e) => updateWorker(i, 'count', e.target.value)} className="w-16 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                        <button type="button" onClick={() => removeWorker(i)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"><HiOutlineX className="h-3.5 w-3.5" /></button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
@@ -816,6 +844,13 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                                 <div className="mt-2 flex flex-wrap gap-1.5">
                                     {log.machinery.map((m) => (
                                         <span key={m.id} className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600">{m.machinery_type} x{m.quantity}</span>
+                                    ))}
+                                </div>
+                            )}
+                            {log.workers?.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {log.workers.map((w) => (
+                                        <span key={w.id} className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700">{w.worker_type} x{w.count}</span>
                                     ))}
                                 </div>
                             )}
