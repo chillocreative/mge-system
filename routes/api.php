@@ -83,6 +83,20 @@ Route::get('/health', function () {
     ]);
 });
 
+// TEMPORARY — verifies public/.user.ini actually applies to real web
+// requests (CLI's php -i never reflects .user.ini, only CGI/FPM does).
+// Removed right after this is confirmed.
+Route::get('/_tmp-upload-limits-check', function () {
+    return response()->json([
+        'upload_max_filesize' => ini_get('upload_max_filesize'),
+        'post_max_size' => ini_get('post_max_size'),
+        'max_execution_time' => ini_get('max_execution_time'),
+        'max_input_time' => ini_get('max_input_time'),
+        'memory_limit' => ini_get('memory_limit'),
+        'sapi' => php_sapi_name(),
+    ]);
+});
+
 /*
 |--------------------------------------------------------------------------
 | Authenticated Routes
