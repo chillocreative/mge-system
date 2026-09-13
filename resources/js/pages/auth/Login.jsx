@@ -146,7 +146,7 @@ export default function Login() {
                         <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                                 <label htmlFor="password" className="text-xs font-bold uppercase tracking-widest text-lime-200/80">Access Code</label>
-                                <Link to="/forgot-password" className="text-[11px] font-bold text-emerald-200/60 transition-colors hover:text-lime-300">Recovery Access</Link>
+                                <Link to="/forgot-password" className="text-[11px] font-bold text-emerald-200/60 transition-colors hover:text-lime-300">Forgot Password</Link>
                             </div>
                             <div className="relative">
                                 <input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" required

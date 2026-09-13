@@ -27,6 +27,18 @@ const authService = {
         const response = await apiClient.get('/user');
         return response.data;
     },
+
+    async forgotPassword(email) {
+        await getCsrfCookie();
+        const response = await apiClient.post('/forgot-password', { email });
+        return response.data;
+    },
+
+    async resetPassword(data) {
+        await getCsrfCookie();
+        const response = await apiClient.post('/reset-password', data);
+        return response.data;
+    },
 };
 
 export default authService;

@@ -10,6 +10,7 @@ use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Password;
 
 class AuthController extends Controller
 {
@@ -108,5 +109,57 @@ class AuthController extends Controller
         $user->load(['department', 'designation', 'roles', 'permissions']);
 
         return $this->success(new UserResource($user));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Forgot / reset password (public — no auth required)
+    |--------------------------------------------------------------------------
+    */
+
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        // Never branch the response on the broker's status — always answer
+        // identically whether the email matches an account or not, so this
+        // endpoint can't be used to enumerate registered accounts.
+        Password::sendResetLink($request->only('email'));
+
+        return $this->success(
+            null,
+            'If that email is registered, a password reset link has been sent.'
+        );
+    }
+
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'token' => ['required', 'string'],
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->forceFill(['password' => $password])->save();
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return $this->success(null, 'Your password has been reset successfully.');
+        }
+
+        // Safe to be specific here — reaching this point already required
+        // possessing the token from the email, unlike forgotPassword() above.
+        return $this->error(match ($status) {
+            Password::INVALID_USER => 'We could not find an account with that email address.',
+            Password::INVALID_TOKEN => 'This password reset link is invalid or has expired. Please request a new one.',
+            Password::RESET_THROTTLED => 'Please wait a moment before trying again.',
+            default => 'Unable to reset your password. Please request a new reset link and try again.',
+        }, 422);
     }
 }

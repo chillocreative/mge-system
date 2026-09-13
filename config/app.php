@@ -15,6 +15,8 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost'),
+
     /*
     | The protected System Administrator account. This user cannot be edited,
     | deleted, or rejected from the Users management screen, and is the only
