@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\ProjectSite;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -108,5 +109,35 @@ class HirarcTest extends TestCase
         $this->actingAs($this->actor(['safety.create']))
             ->postJson('/api/safety/hirarc', ['title' => 'X', 'project_id' => $project->id, 'site_id' => $foreignSite->id, 'items' => []])
             ->assertStatus(422);
+    }
+
+    public function test_uploading_a_file_attaches_it_to_the_assessment(): void
+    {
+        $assessment = HirarcAssessment::create(['title' => 'Excavation works', 'status' => 'active']);
+
+        $res = $this->actingAs($this->actor(['safety.create']))
+            ->postJson("/api/safety/hirarc/{$assessment->id}/files", [
+                'files' => [UploadedFile::fake()->create('toolbox-talk.pdf', 40, 'application/pdf')],
+            ])
+            ->assertOk();
+
+        $this->assertCount(1, $res->json('data.attachments'));
+        $this->assertSame('toolbox-talk.pdf', $res->json('data.attachments.0.original_name'));
+    }
+
+    public function test_downloading_an_attached_file_streams_it_back(): void
+    {
+        $assessment = HirarcAssessment::create(['title' => 'Excavation works', 'status' => 'active']);
+        $user = $this->actor(['safety.create', 'safety.view']);
+
+        $upload = $this->actingAs($user)
+            ->postJson("/api/safety/hirarc/{$assessment->id}/files", [
+                'files' => [UploadedFile::fake()->create('toolbox-talk.pdf', 40, 'application/pdf')],
+            ]);
+        $attachmentId = $upload->json('data.attachments.0.id');
+
+        $this->actingAs($user)
+            ->get("/api/safety/hirarc/{$assessment->id}/attachments/{$attachmentId}/download")
+            ->assertOk();
     }
 }

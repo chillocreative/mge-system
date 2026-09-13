@@ -106,6 +106,15 @@ class FileUploadService
         }
     }
 
+    /**
+     * Stream an attachment back to the browser under its original filename
+     * (never the randomised stored name — that's disk-internal only).
+     */
+    public function download(Attachment $attachment)
+    {
+        return Storage::disk($attachment->disk)->download($attachment->stored_path, $attachment->original_name);
+    }
+
     private function guardExtension(string $extension, array $allowed): void
     {
         if ($allowed === []) {

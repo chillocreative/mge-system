@@ -117,6 +117,11 @@ class WorkPermitController extends Controller
         return $this->success($permit->fresh()->load('attachments'), 'Files attached.');
     }
 
+    public function downloadAttachment(int $attachment)
+    {
+        return $this->files->download(\App\Models\Attachment::findOrFail($attachment));
+    }
+
     /**
      * Turn a state-machine RuntimeException into a clean 422 instead of a 500 —
      * these are user-facing "you can't do that from here" messages.

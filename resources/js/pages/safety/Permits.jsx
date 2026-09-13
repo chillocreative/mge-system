@@ -37,6 +37,13 @@ const TYPES = [
     ['general', 'General'],
 ];
 
+function fmtSize(b) {
+    if (!b && b !== 0) return '';
+    if (b < 1024) return `${b} B`;
+    if (b < 1048576) return `${(b / 1024).toFixed(0)} KB`;
+    return `${(b / 1048576).toFixed(1)} MB`;
+}
+
 const emptyForm = () => ({ id: null, title: '', type: 'general', project_id: '', site_id: '', location: '', description: '', precautions: '', valid_from: '', valid_to: '' });
 
 export default function Permits() {
@@ -50,6 +57,8 @@ export default function Permits() {
     const [showForm, setShowForm] = useState(false);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState(emptyForm());
+    const [attachments, setAttachments] = useState([]);
+    const [uploadingFiles, setUploadingFiles] = useState(false);
 
     const fetchList = useCallback(async () => {
         setLoading(true);
@@ -72,14 +81,21 @@ export default function Permits() {
         projectSiteService.list(form.project_id, true).then((r) => setSites(r.data || [])).catch(() => setSites([]));
     }, [form.project_id]);
 
-    const openCreate = () => { setForm(emptyForm()); setShowForm(true); };
-    const openEdit = (row) => {
-        setForm({
-            id: row.id, title: row.title || '', type: row.type || 'general', project_id: row.project_id || '', site_id: row.site_id || '',
-            location: row.location || '', description: row.description || '', precautions: row.precautions || '',
-            valid_from: (row.valid_from || '').slice(0, 16), valid_to: (row.valid_to || '').slice(0, 16),
-        });
-        setShowForm(true);
+    const openCreate = () => { setForm(emptyForm()); setAttachments([]); setShowForm(true); };
+    const openEdit = async (row) => {
+        try {
+            const res = await safetyService.getPermit(row.id);
+            const p = res.data;
+            setForm({
+                id: p.id, title: p.title || '', type: p.type || 'general', project_id: p.project_id || '', site_id: p.site_id || '',
+                location: p.location || '', description: p.description || '', precautions: p.precautions || '',
+                valid_from: (p.valid_from || '').slice(0, 16), valid_to: (p.valid_to || '').slice(0, 16),
+            });
+            setAttachments(p.attachments || []);
+            setShowForm(true);
+        } catch {
+            toast.error('Failed to load permit');
+        }
     };
 
     const submitForm = async (e, submitForApproval = false) => {
@@ -109,6 +125,24 @@ export default function Permits() {
             fetchList();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Action failed');
+        }
+    };
+
+    const uploadFiles = async (e) => {
+        const picked = Array.from(e.target.files);
+        e.target.value = '';
+        if (!picked.length || !form.id) return;
+        setUploadingFiles(true);
+        try {
+            const fd = new FormData();
+            picked.forEach((f) => fd.append('files[]', f));
+            const res = await safetyService.uploadPermitFiles(form.id, fd);
+            setAttachments(res.data.attachments || []);
+            toast.success(`${picked.length} file(s) uploaded`);
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Upload failed');
+        } finally {
+            setUploadingFiles(false);
         }
     };
 
@@ -222,6 +256,31 @@ export default function Permits() {
                             </div>
                             <div><label className="mb-1 block text-sm font-medium text-gray-700">Description of work</label><textarea rows={2} value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} className={inputCls} /></div>
                             <div><label className="mb-1 block text-sm font-medium text-gray-700">Precautions / controls</label><textarea rows={2} value={form.precautions} onChange={(e) => setForm((p) => ({ ...p, precautions: e.target.value }))} className={inputCls} /></div>
+
+                            {form.id && (
+                                <div>
+                                    <div className="mb-2 flex items-center justify-between">
+                                        <label className="text-sm font-medium text-gray-700">Attachments</label>
+                                        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:border-primary-400 hover:text-primary-700">
+                                            {uploadingFiles ? 'Uploading...' : 'Add files'}
+                                            <input type="file" multiple className="hidden" onChange={uploadFiles} disabled={uploadingFiles} />
+                                        </label>
+                                    </div>
+                                    {attachments.length === 0 ? (
+                                        <p className="text-sm text-gray-400">No files attached yet.</p>
+                                    ) : (
+                                        <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
+                                            {attachments.map((f) => (
+                                                <li key={f.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                                                    <span className="min-w-0 flex-1 truncate text-gray-700">{f.original_name}</span>
+                                                    <span className="shrink-0 text-xs text-gray-400">{fmtSize(f.size_bytes)}</span>
+                                                    <a href={`/api/safety/permits/${form.id}/attachments/${f.id}/download`} target="_blank" rel="noreferrer" className="shrink-0 text-xs font-medium text-primary-600 hover:text-primary-700">Download</a>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="flex justify-end gap-2 pt-2">
                                 <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>

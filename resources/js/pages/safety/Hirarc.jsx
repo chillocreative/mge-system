@@ -30,6 +30,13 @@ function previewLevel(l, s) {
     return { rating: r, level };
 }
 
+function fmtSize(b) {
+    if (!b && b !== 0) return '';
+    if (b < 1024) return `${b} B`;
+    if (b < 1048576) return `${(b / 1024).toFixed(0)} KB`;
+    return `${(b / 1048576).toFixed(1)} MB`;
+}
+
 const emptyItem = () => ({ hazard: '', risk: '', existing_control: '', likelihood: 1, severity: 1, recommended_control: '', pic: '', due_date: '' });
 const emptyForm = () => ({ id: null, title: '', process: '', location: '', project_id: '', site_id: '', assessment_date: '', review_date: '', items: [emptyItem()] });
 
@@ -43,6 +50,8 @@ export default function Hirarc() {
     const [showForm, setShowForm] = useState(false);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState(emptyForm());
+    const [attachments, setAttachments] = useState([]);
+    const [uploadingFiles, setUploadingFiles] = useState(false);
 
     const fetchList = useCallback(async () => {
         setLoading(true);
@@ -65,7 +74,7 @@ export default function Hirarc() {
         projectSiteService.list(form.project_id, true).then((r) => setSites(r.data || [])).catch(() => setSites([]));
     }, [form.project_id]);
 
-    const openCreate = () => { setForm(emptyForm()); setShowForm(true); };
+    const openCreate = () => { setForm(emptyForm()); setAttachments([]); setShowForm(true); };
 
     const openEdit = async (row) => {
         try {
@@ -80,6 +89,7 @@ export default function Hirarc() {
                     recommended_control: it.recommended_control || '', pic: it.pic || '', due_date: it.due_date || '',
                 })),
             });
+            setAttachments(a.attachments || []);
             if (!res.data.items?.length) setForm((p) => ({ ...p, items: [emptyItem()] }));
             setShowForm(true);
         } catch {
@@ -120,6 +130,24 @@ export default function Hirarc() {
             fetchList();
         } catch {
             toast.error('Failed to archive');
+        }
+    };
+
+    const uploadFiles = async (e) => {
+        const picked = Array.from(e.target.files);
+        e.target.value = '';
+        if (!picked.length || !form.id) return;
+        setUploadingFiles(true);
+        try {
+            const fd = new FormData();
+            picked.forEach((f) => fd.append('files[]', f));
+            const res = await safetyService.uploadHirarcFiles(form.id, fd);
+            setAttachments(res.data.attachments || []);
+            toast.success(`${picked.length} file(s) uploaded`);
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Upload failed');
+        } finally {
+            setUploadingFiles(false);
         }
     };
 
@@ -246,6 +274,31 @@ export default function Hirarc() {
                                     })}
                                 </div>
                             </div>
+
+                            {form.id && (
+                                <div>
+                                    <div className="mb-2 flex items-center justify-between">
+                                        <label className="text-sm font-medium text-gray-700">Attachments</label>
+                                        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:border-primary-400 hover:text-primary-700">
+                                            {uploadingFiles ? 'Uploading...' : 'Add files'}
+                                            <input type="file" multiple className="hidden" onChange={uploadFiles} disabled={uploadingFiles} />
+                                        </label>
+                                    </div>
+                                    {attachments.length === 0 ? (
+                                        <p className="text-sm text-gray-400">No files attached yet.</p>
+                                    ) : (
+                                        <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
+                                            {attachments.map((f) => (
+                                                <li key={f.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                                                    <span className="min-w-0 flex-1 truncate text-gray-700">{f.original_name}</span>
+                                                    <span className="shrink-0 text-xs text-gray-400">{fmtSize(f.size_bytes)}</span>
+                                                    <a href={`/api/safety/hirarc/${form.id}/attachments/${f.id}/download`} target="_blank" rel="noreferrer" className="shrink-0 text-xs font-medium text-primary-600 hover:text-primary-700">Download</a>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="flex justify-end gap-2 pt-2">
                                 <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>

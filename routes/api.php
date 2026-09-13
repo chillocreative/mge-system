@@ -156,6 +156,9 @@ Route::middleware('auth:sanctum')->group(function () {
                 ->middleware('permission:projects.edit');
             Route::delete('/{siteLog}', [SiteLogController::class, 'destroy'])
                 ->middleware('permission:projects.edit');
+            Route::post('/{siteLog}/files', [SiteLogController::class, 'upload'])
+                ->middleware('permission:projects.edit');
+            Route::get('/{siteLog}/attachments/{attachment}/download', [SiteLogController::class, 'downloadAttachment']);
         });
 
         // Documents — nested under projects
@@ -533,6 +536,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{id}', [HirarcController::class, 'show'])->middleware('permission:safety.view');
         Route::put('/{id}', [HirarcController::class, 'update'])->middleware('permission:safety.manage');
         Route::delete('/{id}', [HirarcController::class, 'destroy'])->middleware('permission:safety.manage');
+        Route::post('/{id}/files', [HirarcController::class, 'upload'])->middleware('permission:safety.create');
+        Route::get('/{id}/attachments/{attachment}/download', [HirarcController::class, 'downloadAttachment'])->middleware('permission:safety.view');
     });
 
     // ── Permit To Work (PTW) ──
@@ -546,6 +551,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/reject', [WorkPermitController::class, 'reject'])->middleware('permission:safety.manage');
         Route::post('/{id}/close', [WorkPermitController::class, 'close'])->middleware('permission:safety.manage');
         Route::post('/{id}/files', [WorkPermitController::class, 'upload'])->middleware('permission:safety.create');
+        Route::get('/{id}/attachments/{attachment}/download', [WorkPermitController::class, 'downloadAttachment'])->middleware('permission:safety.view');
     });
 
     Route::prefix('safety/incidents')->group(function () {

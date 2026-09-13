@@ -7,6 +7,7 @@ use App\Models\ProjectSite;
 use App\Models\User;
 use App\Models\WorkPermit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -127,5 +128,36 @@ class WorkPermitTest extends TestCase
         $this->actingAs($this->actor(['safety.create']))
             ->postJson('/api/safety/permits', $this->payload(['project_id' => $project->id, 'site_id' => $foreignSite->id]))
             ->assertStatus(422);
+    }
+
+    public function test_uploading_a_file_attaches_it_to_the_permit(): void
+    {
+        $user = $this->actor(['safety.create']);
+        $permitId = $this->actingAs($user)->postJson('/api/safety/permits', $this->payload())->json('data.id');
+
+        $res = $this->actingAs($user)
+            ->postJson("/api/safety/permits/{$permitId}/files", [
+                'files' => [UploadedFile::fake()->create('risk-assessment.pdf', 40, 'application/pdf')],
+            ])
+            ->assertOk();
+
+        $this->assertCount(1, $res->json('data.attachments'));
+        $this->assertSame('risk-assessment.pdf', $res->json('data.attachments.0.original_name'));
+    }
+
+    public function test_downloading_an_attached_permit_file_streams_it_back(): void
+    {
+        $user = $this->actor(['safety.create', 'safety.view']);
+        $permitId = $this->actingAs($user)->postJson('/api/safety/permits', $this->payload())->json('data.id');
+
+        $upload = $this->actingAs($user)
+            ->postJson("/api/safety/permits/{$permitId}/files", [
+                'files' => [UploadedFile::fake()->create('risk-assessment.pdf', 40, 'application/pdf')],
+            ]);
+        $attachmentId = $upload->json('data.attachments.0.id');
+
+        $this->actingAs($user)
+            ->get("/api/safety/permits/{$permitId}/attachments/{$attachmentId}/download")
+            ->assertOk();
     }
 }

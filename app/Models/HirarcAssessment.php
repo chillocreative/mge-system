@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class HirarcAssessment extends Model
 {
@@ -39,5 +40,10 @@ class HirarcAssessment extends Model
     public function items(): HasMany
     {
         return $this->hasMany(HirarcItem::class)->orderBy('sort_order');
+    }
+
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
     }
 }

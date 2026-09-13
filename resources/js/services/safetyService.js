@@ -64,6 +64,12 @@ const safetyService = {
         const response = await apiClient.delete(`/safety/hirarc/${id}`);
         return response.data;
     },
+    async uploadHirarcFiles(id, formData) {
+        const response = await apiClient.post(`/safety/hirarc/${id}/files`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
 
     // ── Permit To Work (PTW) ──
     async listPermits(params = {}) {
@@ -96,6 +102,12 @@ const safetyService = {
     },
     async closePermit(id) {
         const response = await apiClient.post(`/safety/permits/${id}/close`);
+        return response.data;
+    },
+    async uploadPermitFiles(id, formData) {
+        const response = await apiClient.post(`/safety/permits/${id}/files`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
         return response.data;
     },
 

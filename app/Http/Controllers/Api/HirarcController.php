@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Concerns\AssertsSiteInProject;
 use App\Http\Controllers\Controller;
 use App\Models\HirarcAssessment;
+use App\Services\FileUploadService;
 use App\Services\Safety\RiskMatrix;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,6 +14,10 @@ use Illuminate\Support\Facades\DB;
 class HirarcController extends Controller
 {
     use AssertsSiteInProject;
+
+    public function __construct(
+        private readonly FileUploadService $files,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -33,7 +38,7 @@ class HirarcController extends Controller
     public function show(int $id): JsonResponse
     {
         return $this->success(
-            HirarcAssessment::with(['items', 'project:id,name,code', 'site:id,name', 'preparer:id,first_name,last_name'])->findOrFail($id),
+            HirarcAssessment::with(['items', 'attachments', 'project:id,name,code', 'site:id,name', 'preparer:id,first_name,last_name'])->findOrFail($id),
         );
     }
 
@@ -79,6 +84,26 @@ class HirarcController extends Controller
         HirarcAssessment::findOrFail($id)->update(['status' => 'archived']);
 
         return $this->success(null, 'HIRARC archived.');
+    }
+
+    public function upload(Request $request, int $id): JsonResponse
+    {
+        $assessment = HirarcAssessment::findOrFail($id);
+        $request->validate(['files' => ['required', 'array'], 'files.*' => ['file', 'max:20480']]);
+
+        foreach ($request->file('files', []) as $file) {
+            $this->files->attach($file, $assessment, $request->user()->id, [
+                'directory' => 'safety/hirarc',
+                'max_size_kb' => 20480,
+            ]);
+        }
+
+        return $this->success($assessment->fresh()->load('attachments'), 'Files attached.');
+    }
+
+    public function downloadAttachment(int $attachment)
+    {
+        return $this->files->download(\App\Models\Attachment::findOrFail($attachment));
     }
 
     /**
