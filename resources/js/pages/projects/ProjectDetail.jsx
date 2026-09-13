@@ -258,7 +258,7 @@ function TasksTab({ project, canEdit, onRefresh }) {
             )}
         >
             {showForm && (
-                <form onSubmit={handleSubmit} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
+                <form onSubmit={handleCreate} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
                     <div className="grid gap-3 sm:grid-cols-2">
                         <input
                             type="text"
@@ -366,15 +366,15 @@ function MilestonesTab({ project, canEdit, onRefresh }) {
             )}
         >
             {showForm && (
-                <form onSubmit={handleSubmit} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
+                <form onSubmit={handleCreate} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
                     <div className="grid gap-3 sm:grid-cols-2">
                         <input type="text" placeholder="Milestone title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required className="sm:col-span-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                         <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                         <textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="sm:col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                     </div>
                     <div className="mt-3 flex justify-end gap-2">
-                        <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
-                        <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Saving...' : editingId ? 'Update' : 'Create'}</button>
+                        <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
+                        <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Saving...' : 'Create'}</button>
                     </div>
                 </form>
             )}
