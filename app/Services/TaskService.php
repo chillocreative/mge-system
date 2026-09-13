@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\ActivityLog;
 use App\Models\Task;
-use App\Models\TaskAttachment;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -119,9 +118,10 @@ class TaskService
         return (bool) $task->delete();
     }
 
-    public function downloadAttachment(int $attachmentId)
+    public function downloadAttachment(int $taskId, int $attachmentId)
     {
-        $attachment = TaskAttachment::findOrFail($attachmentId);
+        $task = Task::findOrFail($taskId);
+        $attachment = $task->attachments()->findOrFail($attachmentId);
 
         return Storage::disk('local')->download($attachment->file_path, $attachment->file_name);
     }

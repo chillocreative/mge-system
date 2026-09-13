@@ -41,9 +41,9 @@ class TaskController extends Controller
         return $this->created(new TaskResource($task), 'Task created successfully.');
     }
 
-    public function downloadAttachment(int $attachment)
+    public function downloadAttachment(int $task, int $attachment)
     {
-        return $this->taskService->downloadAttachment($attachment);
+        return $this->taskService->downloadAttachment($task, $attachment);
     }
 
     public function show(int $id): JsonResponse

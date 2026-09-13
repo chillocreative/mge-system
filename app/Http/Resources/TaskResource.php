@@ -58,7 +58,7 @@ class TaskResource extends JsonResource
                 'file_size' => $a->file_size,
                 'file_type' => $a->file_type,
                 'uploaded_by' => $a->uploader?->full_name,
-                'download_url' => "/api/tasks/attachments/{$a->id}/download",
+                'download_url' => "/api/tasks/{$this->id}/attachments/{$a->id}/download",
                 'created_at' => $a->created_at?->toISOString(),
             ])),
             'activities' => $this->whenLoaded('activities', fn () => $this->activities->map(fn ($log) => [

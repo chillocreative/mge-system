@@ -28,8 +28,8 @@ const taskService = {
         return response.data;
     },
 
-    attachmentDownloadUrl(id) {
-        return `/api/tasks/attachments/${id}/download`;
+    attachmentDownloadUrl(taskId, id) {
+        return `/api/tasks/${taskId}/attachments/${id}/download`;
     },
 };
 
