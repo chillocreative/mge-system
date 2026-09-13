@@ -29,7 +29,7 @@ class ProjectDocumentController extends Controller
         $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'file' => ['required', 'file', 'max:51200'], // 50MB max
+            'file' => ['required', 'file', 'max:5242880'], // 5GB max
             'category' => ['nullable', 'in:drawing,contract,permit,report,photo,specification,invoice,other'],
         ]);
 
@@ -61,7 +61,7 @@ class ProjectDocumentController extends Controller
 
         $request->validate([
             'files' => ['required', 'array', 'min:1', 'max:20'],
-            'files.*' => ['file', 'max:51200', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg,gif,dwg,dxf,zip,txt,csv'],
+            'files.*' => ['file', 'max:5242880', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg,gif,dwg,dxf,zip,txt,csv'],
             'category' => ['nullable', 'in:drawing,contract,permit,report,photo,specification,invoice,other'],
         ]);
 

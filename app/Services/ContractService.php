@@ -239,7 +239,7 @@ class ContractService
             $attachment = $this->uploads->attach($file, $contract, $userId, [
                 'folder_path' => $folder ?: null,
                 'allowed_extensions' => ['pdf', 'dwg', 'dxf', 'dwf', 'rvt', 'ifc', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'doc', 'docx', 'xls', 'xlsx'],
-                'max_size_kb' => 204800,
+                'max_size_kb' => 5242880,
                 'directory' => 'contract-drawings/'.$contract->id,
                 'skip_duplicates' => true,
             ]);
