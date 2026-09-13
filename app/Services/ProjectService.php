@@ -31,6 +31,7 @@ class ProjectService
             'siteLogs.logger:id,first_name,last_name',
             'siteLogs.machinery',
             'siteLogs.weatherEvents',
+            'siteLogs.attachments',
             'documents.uploader:id,first_name,last_name',
             'calendarEvents.creator:id,first_name,last_name',
         ]);

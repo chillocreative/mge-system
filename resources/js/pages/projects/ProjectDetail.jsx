@@ -541,6 +541,7 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
     const [saving, setSaving] = useState(false);
     const [sites, setSites] = useState([]);
     const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
+    const [uploadingLogId, setUploadingLogId] = useState(null);
 
     useEffect(() => {
         projectSiteService.list(project.id, true).then((r) => setSites(r.data || [])).catch(() => setSites([]));
@@ -637,6 +638,24 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
             onRefresh();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to delete site log');
+        }
+    };
+
+    const uploadSiteLogFiles = async (logId, e) => {
+        const picked = Array.from(e.target.files);
+        e.target.value = '';
+        if (!picked.length) return;
+        setUploadingLogId(logId);
+        try {
+            const fd = new FormData();
+            picked.forEach((f) => fd.append('files[]', f));
+            await projectService.uploadSiteLogFile(project.id, logId, fd);
+            toast.success(`${picked.length} file(s) uploaded`);
+            onRefresh();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Upload failed');
+        } finally {
+            setUploadingLogId(null);
         }
     };
 
@@ -812,6 +831,26 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                                     <p className="text-xs text-gray-500 whitespace-pre-wrap">{log.issues}</p>
                                 </div>
                             )}
+                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                {(log.attachments || []).map((f) => (
+                                    <a
+                                        key={f.id}
+                                        href={`/api/projects/${project.id}/site-logs/${log.id}/attachments/${f.id}/download`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="rounded-full bg-primary-50 px-2 py-0.5 text-[11px] text-primary-700 hover:bg-primary-100"
+                                    >
+                                        {f.original_name}
+                                    </a>
+                                ))}
+                                {canEdit && (
+                                    <label className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-gray-300 px-2 py-0.5 text-[11px] text-gray-500 hover:border-primary-400 hover:text-primary-700">
+                                        <HiOutlineUpload className="h-3 w-3" />
+                                        {uploadingLogId === log.id ? 'Uploading...' : 'Add file'}
+                                        <input type="file" multiple className="hidden" onChange={(e) => uploadSiteLogFiles(log.id, e)} disabled={uploadingLogId === log.id} />
+                                    </label>
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>

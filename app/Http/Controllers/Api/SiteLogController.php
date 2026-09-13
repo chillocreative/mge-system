@@ -9,6 +9,7 @@ use App\Models\ActivityLog;
 use App\Models\Project;
 use App\Models\SiteLog;
 use App\Models\SiteLogMachinery;
+use App\Services\FileUploadService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,10 +25,14 @@ class SiteLogController extends Controller
 
     private const WEATHER_CONDITIONS = ['rain_start', 'rain_stop', 'overcast', 'clear'];
 
+    public function __construct(
+        private readonly FileUploadService $files,
+    ) {}
+
     public function index(int $projectId, Request $request): JsonResponse
     {
         $logs = SiteLog::where('project_id', $projectId)
-            ->with(['logger:id,first_name,last_name', 'site:id,name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents'])
+            ->with(['logger:id,first_name,last_name', 'site:id,name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'attachments'])
             ->when($request->date_from && $request->date_to, fn ($q) => $q->forPeriod($request->date_from, $request->date_to))
             ->orderByDesc('log_date')
             ->paginate($request->integer('per_page', 15));
@@ -59,7 +64,7 @@ class SiteLogController extends Controller
     public function show(int $projectId, int $logId): JsonResponse
     {
         $log = SiteLog::where('project_id', $projectId)
-            ->with(['logger:id,first_name,last_name', 'site:id,name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents'])
+            ->with(['logger:id,first_name,last_name', 'site:id,name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'attachments'])
             ->findOrFail($logId);
 
         return $this->success($log);
@@ -137,6 +142,26 @@ class SiteLogController extends Controller
         $log->delete();
 
         return $this->success(null, 'Site log deleted.');
+    }
+
+    public function upload(int $projectId, int $logId, Request $request): JsonResponse
+    {
+        $log = SiteLog::where('project_id', $projectId)->findOrFail($logId);
+        $request->validate(['files' => ['required', 'array'], 'files.*' => ['file', 'max:20480']]);
+
+        foreach ($request->file('files', []) as $file) {
+            $this->files->attach($file, $log, $request->user()->id, [
+                'directory' => 'site-logs',
+                'max_size_kb' => 20480,
+            ]);
+        }
+
+        return $this->success($log->fresh()->load('attachments'), 'Files attached.');
+    }
+
+    public function downloadAttachment(int $attachment)
+    {
+        return $this->files->download(\App\Models\Attachment::findOrFail($attachment));
     }
 
     /**

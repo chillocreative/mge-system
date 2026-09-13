@@ -58,6 +58,12 @@ const projectService = {
         const response = await apiClient.delete(`/projects/${projectId}/site-logs/${logId}`);
         return response.data;
     },
+    async uploadSiteLogFile(projectId, logId, formData) {
+        const response = await apiClient.post(`/projects/${projectId}/site-logs/${logId}/files`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
     getSiteLogReportUrl(projectId, month) {
         return `/api/projects/${projectId}/site-logs/report/pdf?month=${month}`;
     },
