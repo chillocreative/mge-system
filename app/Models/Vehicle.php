@@ -13,7 +13,7 @@ class Vehicle extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'registration_no', 'make', 'model', 'year', 'type',
+        'registration_no', 'make', 'model', 'year', 'type', 'custom_type',
         'chassis_no', 'engine_no', 'serial_no',
         'purchase_date', 'current_value', 'assigned_to', 'status',
         'notes', 'created_by',

@@ -85,7 +85,7 @@ export default function Maintenance() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!form.vehicle_id) { toast.error('Select a vehicle'); return; }
+        if (!form.vehicle_id) { toast.error('Select a machinery'); return; }
         setSaving(true);
         try {
             const payload = {
@@ -217,9 +217,9 @@ export default function Maintenance() {
                         <h3 className="mb-4 text-lg font-semibold text-gray-900">New Maintenance Log</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Vehicle *</label>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Machinery *</label>
                                 <select value={form.vehicle_id} onChange={(e) => setForm((p) => ({ ...p, vehicle_id: e.target.value }))} required className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
-                                    <option value="">Select vehicle...</option>
+                                    <option value="">Select machinery...</option>
                                     {vehicles.map((v) => <option key={v.id} value={v.id}>{v.registration_no} — {v.make}{v.model ? ` ${v.model}` : ''}</option>)}
                                 </select>
                             </div>

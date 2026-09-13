@@ -56,7 +56,7 @@ export default function VehicleDetail() {
             const res = await assetService.getVehicle(id);
             setVehicle(res.data);
         } catch {
-            toast.error('Failed to load vehicle');
+            toast.error('Failed to load machinery');
         } finally {
             setLoading(false);
         }
@@ -80,7 +80,7 @@ export default function VehicleDetail() {
         if (!assignForm.project_id) return;
         try {
             await assetService.assignProject(id, assignForm);
-            toast.success('Vehicle assigned to project');
+            toast.success('Machinery assigned to project');
             setAssignForm({ project_id: '', assigned_at: '', notes: '' });
             fetchAssignments();
         } catch (err) {
@@ -151,7 +151,7 @@ export default function VehicleDetail() {
     return (
         <div>
             <Link to="/assets/vehicles" className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-primary-600">
-                <HiOutlineArrowLeft className="h-4 w-4" /> Back to Vehicles
+                <HiOutlineArrowLeft className="h-4 w-4" /> Back to Machineries
             </Link>
 
             <div className="mb-6 rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
@@ -160,7 +160,7 @@ export default function VehicleDetail() {
                         <h1 className="text-2xl font-bold text-gray-900">{vehicle.registration_no}</h1>
                         <p className="text-sm text-gray-500">{vehicle.make}{vehicle.model ? ` ${vehicle.model}` : ''}{vehicle.year ? ` (${vehicle.year})` : ''}</p>
                     </div>
-                    <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">{cap(vehicle.type)}</span>
+                    <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">{vehicle.type === 'other' && vehicle.custom_type ? vehicle.custom_type : cap(vehicle.type)}</span>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
                     <div><p className="text-gray-500">Status</p><p className="font-medium text-gray-900">{cap(vehicle.status)}</p></div>

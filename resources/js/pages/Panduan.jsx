@@ -278,7 +278,7 @@ const SECTIONS = [
                 heading: 'Cara guna',
                 steps: [
                     'Klik "Assets" di menu kiri.',
-                    'Vehicles — rekod kenderaan/jentera, no. siri/casis dan penetapan kepada projek.',
+                    'Machineries — rekod kenderaan/jentera, no. siri/casis dan penetapan kepada projek.',
                     'Inventory — stok dan barangan.',
                     'Maintenance — jadual dan rekod penyelenggaraan.',
                 ],

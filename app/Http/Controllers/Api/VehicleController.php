@@ -36,6 +36,7 @@ class VehicleController extends Controller
             'serial_no' => ['nullable', 'string', 'max:255'],
             'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
             'type' => ['required', 'in:car,van,truck,lorry,machinery,other'],
+            'custom_type' => ['nullable', 'string', 'max:255', 'required_if:type,other'],
             'purchase_date' => ['nullable', 'date'],
             'current_value' => ['nullable', 'numeric', 'min:0'],
             'assigned_to' => ['nullable', 'exists:employees,id'],
@@ -46,7 +47,7 @@ class VehicleController extends Controller
         $validated = $this->dropNullColumns($validated, ['status']);
         $vehicle = $this->assetService->createVehicle($validated, $request->user()->id);
 
-        return $this->created($vehicle, 'Vehicle added successfully.');
+        return $this->created($vehicle, 'Machinery added successfully.');
     }
 
     public function show(int $id): JsonResponse
@@ -65,6 +66,7 @@ class VehicleController extends Controller
             'serial_no' => ['nullable', 'string', 'max:255'],
             'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
             'type' => ['sometimes', 'in:car,van,truck,lorry,machinery,other'],
+            'custom_type' => ['nullable', 'string', 'max:255', 'required_if:type,other'],
             'purchase_date' => ['nullable', 'date'],
             'current_value' => ['nullable', 'numeric', 'min:0'],
             'assigned_to' => ['nullable', 'exists:employees,id'],
@@ -74,14 +76,14 @@ class VehicleController extends Controller
 
         $validated = $this->dropNullColumns($validated, ['status']);
 
-        return $this->success($this->assetService->updateVehicle($id, $validated), 'Vehicle updated.');
+        return $this->success($this->assetService->updateVehicle($id, $validated), 'Machinery updated.');
     }
 
     public function destroy(int $id): JsonResponse
     {
         $this->assetService->deleteVehicle($id);
 
-        return $this->success(null, 'Vehicle deleted.');
+        return $this->success(null, 'Machinery deleted.');
     }
 
     // ── Documents ──
@@ -101,14 +103,14 @@ class VehicleController extends Controller
 
         $assignment = $this->assetService->assignToProject($vehicleId, $validated, $request->user()->id);
 
-        return $this->created($assignment, 'Vehicle assigned to project.');
+        return $this->created($assignment, 'Machinery assigned to project.');
     }
 
     public function releaseProject(int $vehicleId, int $assignmentId): JsonResponse
     {
         $this->assetService->releaseFromProject($vehicleId, $assignmentId);
 
-        return $this->success(null, 'Vehicle released from project.');
+        return $this->success(null, 'Machinery released from project.');
     }
 
     public function storeDocument(Request $request, int $vehicleId): JsonResponse

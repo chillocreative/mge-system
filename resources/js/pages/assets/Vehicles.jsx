@@ -28,6 +28,10 @@ function cap(s) {
     return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 }
 
+function typeLabel(v) {
+    return v.type === 'other' && v.custom_type ? v.custom_type : cap(v.type);
+}
+
 export default function Vehicles() {
     const { can } = useAuth();
     const [vehicles, setVehicles] = useState([]);
@@ -56,6 +60,7 @@ export default function Vehicles() {
         assigned_to: '',
         status: 'active',
         notes: '',
+        custom_type: '',
     });
 
     const fetchVehicles = async (page = 1) => {
@@ -114,6 +119,7 @@ export default function Vehicles() {
             assigned_to: vehicle.assigned_to?.id || '',
             status: vehicle.status || 'active',
             notes: vehicle.notes || '',
+            custom_type: vehicle.custom_type || '',
         });
         setEditingId(vehicle.id);
         setShowForm(true);
@@ -134,6 +140,7 @@ export default function Vehicles() {
             assigned_to: '',
             status: 'active',
             notes: '',
+            custom_type: '',
         });
         setEditingId(null);
         setShowForm(true);
@@ -155,31 +162,31 @@ export default function Vehicles() {
 
             if (editingId) {
                 await assetService.updateVehicle(editingId, payload);
-                toast.success('Vehicle updated successfully');
+                toast.success('Machinery updated successfully');
             } else {
                 await assetService.createVehicle(payload);
-                toast.success('Vehicle created successfully');
+                toast.success('Machinery created successfully');
             }
 
             closeForm();
             fetchVehicles();
             fetchSummary();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to save vehicle');
+            toast.error(err.response?.data?.message || 'Failed to save machinery');
         } finally {
             setSaving(false);
         }
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Are you sure you want to delete this vehicle? This action cannot be undone.')) return;
+        if (!confirm('Are you sure you want to delete this machinery? This action cannot be undone.')) return;
         try {
             await assetService.deleteVehicle(id);
-            toast.success('Vehicle deleted successfully');
+            toast.success('Machinery deleted successfully');
             fetchVehicles();
             fetchSummary();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to delete vehicle');
+            toast.error(err.response?.data?.message || 'Failed to delete machinery');
         }
     };
 
@@ -187,7 +194,7 @@ export default function Vehicles() {
         <div>
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Vehicles &amp; Assets</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">Machineries &amp; Assets</h1>
                     <p className="text-sm text-gray-500">Manage company vehicles, road tax, insurance and permits</p>
                 </div>
                 {can('assets.manage') && (
@@ -196,7 +203,7 @@ export default function Vehicles() {
                         className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700"
                     >
                         <HiOutlinePlus className="h-5 w-5" />
-                        New Vehicle
+                        New Machinery
                     </button>
                 )}
             </div>
@@ -207,7 +214,7 @@ export default function Vehicles() {
                     <div className="flex items-center gap-3">
                         <span className="rounded-lg bg-primary-50 p-2 text-primary-600"><HiOutlineTruck className="h-6 w-6" /></span>
                         <div>
-                            <p className="text-xs text-gray-500">Total Vehicles</p>
+                            <p className="text-xs text-gray-500">Total Machineries</p>
                             <p className="text-xl font-bold text-gray-900">{dashboard?.total_vehicles ?? '–'}</p>
                         </div>
                     </div>
@@ -278,7 +285,7 @@ export default function Vehicles() {
             ) : vehicles.length === 0 ? (
                 <div className="rounded-xl bg-white py-12 text-center shadow-sm ring-1 ring-gray-200">
                     <HiOutlineTruck className="mx-auto h-12 w-12 text-gray-300" />
-                    <p className="mt-2 text-sm text-gray-500">No vehicles found</p>
+                    <p className="mt-2 text-sm text-gray-500">No machineries found</p>
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
@@ -306,7 +313,7 @@ export default function Vehicles() {
                                             {v.make}{v.model ? ` ${v.model}` : ''}{v.year ? ` (${v.year})` : ''}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{cap(v.type)}</span>
+                                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{typeLabel(v)}</span>
                                         </td>
                                         <td className="px-4 py-3 text-sm text-gray-600">{v.assigned_to?.full_name || '-'}</td>
                                         <td className="px-4 py-3">
@@ -361,7 +368,7 @@ export default function Vehicles() {
             {showForm && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={closeForm}>
                     <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="mb-4 text-lg font-semibold text-gray-900">{editingId ? 'Edit Vehicle' : 'Add Vehicle'}</h3>
+                        <h3 className="mb-4 text-lg font-semibold text-gray-900">{editingId ? 'Edit Machinery' : 'Add Machinery'}</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -375,6 +382,19 @@ export default function Vehicles() {
                                     </select>
                                 </div>
                             </div>
+                            {form.type === 'other' && (
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Specify Type *</label>
+                                    <input
+                                        type="text"
+                                        value={form.custom_type}
+                                        onChange={(e) => setForm((p) => ({ ...p, custom_type: e.target.value }))}
+                                        required
+                                        placeholder="e.g. Concrete Pump, Piling Rig"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                    />
+                                </div>
+                            )}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Make *</label>
@@ -434,7 +454,7 @@ export default function Vehicles() {
                             </div>
                             <div className="flex justify-end gap-2 pt-2">
                                 <button type="button" onClick={closeForm} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                                <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Saving...' : editingId ? 'Update Vehicle' : 'Add Vehicle'}</button>
+                                <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Saving...' : editingId ? 'Update Machinery' : 'Add Machinery'}</button>
                             </div>
                         </form>
                     </div>
