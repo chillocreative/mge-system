@@ -50,6 +50,7 @@ import MyLeave from '@/pages/hr/leave/MyLeave';
 import Training from '@/pages/hr/training/Training';
 import MyTraining from '@/pages/hr/training/MyTraining';
 import Notifications from '@/pages/notifications/Notifications';
+import Profile from '@/pages/profile/Profile';
 import Settings from '@/pages/settings/Settings';
 import Memo from '@/pages/hr/memos/Memo';
 import Calendar from '@/pages/hr/calendar/Calendar';
@@ -91,6 +92,9 @@ function AppRoutes() {
 
                     {/* Notifications — all authenticated users */}
                     <Route path="/notifications" element={<Notifications />} />
+
+                    {/* Profile — all authenticated users */}
+                    <Route path="/profile" element={<Profile />} />
 
                     {/* Projects — requires projects.view */}
                     <Route element={<PermissionGate permission="projects.view" />}>

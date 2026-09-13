@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\MemoController;
 use App\Http\Controllers\Api\MilestoneController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PayrollController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectDocumentController;
 use App\Http\Controllers\Api\ProjectInvoiceController;
@@ -91,6 +92,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth — available to all authenticated users
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+
+    // Self-service profile management (any authenticated user, own account only)
+    Route::put('/profile', [ProfileController::class, 'update']);
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword']);
+    Route::get('/profile/avatar', [ProfileController::class, 'avatar']);
 
     // Token-based auth (mobile/native) — works with Bearer token
     Route::post('/auth/logout', [AuthController::class, 'tokenLogout']);

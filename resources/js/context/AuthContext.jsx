@@ -81,6 +81,7 @@ export function AuthProvider({ children }) {
             register,
             logout,
             isAuthenticated: !!user,
+            refreshUser: fetchUser,
             // Role helpers
             hasRole,
             hasAnyRole,
@@ -89,7 +90,7 @@ export function AuthProvider({ children }) {
             canAny,
             canAll,
         }),
-        [user, loading, hasRole, hasAnyRole, can, canAny, canAll]
+        [user, loading, fetchUser, hasRole, hasAnyRole, can, canAny, canAll]
     );
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

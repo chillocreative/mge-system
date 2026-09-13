@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Link, Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Logo from '@/components/Logo';
 import {
@@ -35,6 +35,7 @@ import {
     HiOutlineBell,
     HiOutlineAcademicCap,
     HiOutlineScale,
+    HiOutlineUserCircle,
 } from 'react-icons/hi';
 import NotificationBell from '@/components/NotificationBell';
 import toast from 'react-hot-toast';
@@ -311,6 +312,10 @@ export default function DashboardLayout() {
                                             </span>
                                         )}
                                     </div>
+                                    <Link to="/profile" onClick={() => setProfileOpen(false)} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-primary-700 hover:bg-primary-50">
+                                        <HiOutlineUserCircle className="h-4 w-4" />
+                                        My Profile
+                                    </Link>
                                     <button
                                         onClick={handleLogout}
                                         className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
