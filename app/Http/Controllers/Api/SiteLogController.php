@@ -159,9 +159,12 @@ class SiteLogController extends Controller
         return $this->success($log->fresh()->load('attachments'), 'Files attached.');
     }
 
-    public function downloadAttachment(int $attachment)
+    public function downloadAttachment(int $projectId, int $logId, int $attachment)
     {
-        return $this->files->download(\App\Models\Attachment::findOrFail($attachment));
+        $log = SiteLog::where('project_id', $projectId)->findOrFail($logId);
+        $attachment = $log->attachments()->findOrFail($attachment);
+
+        return $this->files->download($attachment);
     }
 
     /**

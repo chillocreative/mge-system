@@ -160,4 +160,22 @@ class WorkPermitTest extends TestCase
             ->get("/api/safety/permits/{$permitId}/attachments/{$attachmentId}/download")
             ->assertOk();
     }
+
+    public function test_downloading_an_attachment_through_the_wrong_permit_is_rejected(): void
+    {
+        $user = $this->actor(['safety.create', 'safety.view']);
+
+        $ownerId = $this->actingAs($user)->postJson('/api/safety/permits', $this->payload())->json('data.id');
+        $otherId = $this->actingAs($user)->postJson('/api/safety/permits', $this->payload(['title' => 'Other permit']))->json('data.id');
+
+        $upload = $this->actingAs($user)
+            ->postJson("/api/safety/permits/{$ownerId}/files", [
+                'files' => [\Illuminate\Http\UploadedFile::fake()->create('secret.pdf', 10, 'application/pdf')],
+            ]);
+        $attachmentId = $upload->json('data.attachments.0.id');
+
+        $this->actingAs($user)
+            ->get("/api/safety/permits/{$otherId}/attachments/{$attachmentId}/download")
+            ->assertNotFound();
+    }
 }

@@ -79,4 +79,22 @@ class SiteLogAttachmentTest extends TestCase
         $index = $this->actingAs($user)->getJson("/api/projects/{$project->id}/site-logs")->assertOk();
         $this->assertCount(1, $index->json('data.data.0.attachments'));
     }
+
+    public function test_downloading_an_attachment_through_the_wrong_site_log_is_rejected(): void
+    {
+        $project = Project::create(['name' => 'P', 'code' => 'P'.uniqid(), 'status' => 'in_progress']);
+        $user = $this->actor();
+        $ownerLog = SiteLog::create(['project_id' => $project->id, 'log_date' => '2026-09-05', 'logged_by' => $user->id]);
+        $otherLog = SiteLog::create(['project_id' => $project->id, 'log_date' => '2026-09-06', 'logged_by' => $user->id]);
+
+        $upload = $this->actingAs($user)
+            ->postJson("/api/projects/{$project->id}/site-logs/{$ownerLog->id}/files", [
+                'files' => [UploadedFile::fake()->create('secret.pdf', 10, 'application/pdf')],
+            ]);
+        $attachmentId = $upload->json('data.attachments.0.id');
+
+        $this->actingAs($user)
+            ->get("/api/projects/{$project->id}/site-logs/{$otherLog->id}/attachments/{$attachmentId}/download")
+            ->assertNotFound();
+    }
 }

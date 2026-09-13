@@ -140,4 +140,23 @@ class HirarcTest extends TestCase
             ->get("/api/safety/hirarc/{$assessment->id}/attachments/{$attachmentId}/download")
             ->assertOk();
     }
+
+    public function test_downloading_an_attachment_through_the_wrong_assessment_is_rejected(): void
+    {
+        $user = $this->actor(['safety.create', 'safety.view']);
+
+        $ownerId = $this->actingAs($user)->postJson('/api/safety/hirarc', ['title' => 'Owner'])->json('data.id');
+        $otherId = $this->actingAs($user)->postJson('/api/safety/hirarc', ['title' => 'Other'])->json('data.id');
+
+        $upload = $this->actingAs($user)
+            ->postJson("/api/safety/hirarc/{$ownerId}/files", [
+                'files' => [\Illuminate\Http\UploadedFile::fake()->create('secret.pdf', 10, 'application/pdf')],
+            ]);
+        $attachmentId = $upload->json('data.attachments.0.id');
+
+        // Same attachment ID, but requested through a DIFFERENT assessment's URL.
+        $this->actingAs($user)
+            ->get("/api/safety/hirarc/{$otherId}/attachments/{$attachmentId}/download")
+            ->assertNotFound();
+    }
 }

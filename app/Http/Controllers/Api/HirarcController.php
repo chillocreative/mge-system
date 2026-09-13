@@ -101,9 +101,12 @@ class HirarcController extends Controller
         return $this->success($assessment->fresh()->load('attachments'), 'Files attached.');
     }
 
-    public function downloadAttachment(int $attachment)
+    public function downloadAttachment(int $id, int $attachment)
     {
-        return $this->files->download(\App\Models\Attachment::findOrFail($attachment));
+        $assessment = HirarcAssessment::findOrFail($id);
+        $attachment = $assessment->attachments()->findOrFail($attachment);
+
+        return $this->files->download($attachment);
     }
 
     /**

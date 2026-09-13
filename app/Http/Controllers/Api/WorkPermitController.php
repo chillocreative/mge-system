@@ -117,9 +117,12 @@ class WorkPermitController extends Controller
         return $this->success($permit->fresh()->load('attachments'), 'Files attached.');
     }
 
-    public function downloadAttachment(int $attachment)
+    public function downloadAttachment(int $id, int $attachment)
     {
-        return $this->files->download(\App\Models\Attachment::findOrFail($attachment));
+        $permit = WorkPermit::findOrFail($id);
+        $attachment = $permit->attachments()->findOrFail($attachment);
+
+        return $this->files->download($attachment);
     }
 
     /**
