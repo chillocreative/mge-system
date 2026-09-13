@@ -152,7 +152,7 @@ export default function DashboardLayout() {
         .filter(Boolean);
 
     return (
-        <div className="min-h-screen bg-primary-100">
+        <div className="min-h-screen bg-gray-50">
             {/* Mobile sidebar overlay */}
             {sidebarOpen && (
                 <div
