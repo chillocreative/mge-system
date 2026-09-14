@@ -185,6 +185,50 @@ This project has `chillocreative/qwen-agent` installed (path-repo at `../qwen-ag
 Use this for well-scoped, mechanical sub-tasks (boilerplate, repetitive edits, straightforward bugfixes) to save cost/time, while keeping architectural decisions and review with Claude.
 
 
+## Qwen orchestrator/writer workflow (since 2026-09-15)
+
+This project runs a two-model split inside Qwen Code, documented in
+[`docs/ORCHESTRATOR.md`](docs/ORCHESTRATOR.md). It supersedes the "Claude applies the
+patch by hand" pattern above for work done in Qwen Code; `php artisan qwen:agent` still
+exists for one-shot read-only diff proposals.
+
+- **Qwen 3.8-Flash = lead.** Plans, writes SPECs, reviews, commits. Never authors
+  application code — not even a one-line fix.
+- **Qwen 3.5-Flash = writer.** Authors 100% of the application code from a written work
+  order, runs the verification steps, reports into `.qwen/runs/`.
+- Paper trail: `.qwen/specs/SPEC-NNN-<slug>.md` → `.qwen/runs/RUN-NNN.md` →
+  `.qwen/reviews/REVIEW-NNN-<slug>.md` → commit. Hard cap of 3 REJECT rounds, then escalate.
+
+Enforced by a `PreToolUse` hook, `.qwen/hooks/orchestrator-gate.py`:
+
+- The lead may write only `.qwen/**` and `docs/**` in this repo (plus its own agent and
+  memory files under `~/.qwen/`). Anything else — including this file — is refused.
+- `git commit` is refused unless some `REVIEW-*.md` contains `Verdict: APPROVE` **and** that
+  review post-dates the writer's run report **and** every changed file outside those two
+  areas. Signing off cannot be skipped, and code edited after a review cannot ride along
+  on an older approval.
+- Emergency bypass only: `touch .qwen/hooks/GATE_OFF`, and record why in the review.
+
+Four project facts this workflow already paid to discover:
+
+1. `vendor/bin/*` is committed **without the exec bit**, so `vendor/bin/pint` dies with
+   `Permission denied` on every clone, local and production. Use `php vendor/bin/pint …`
+   (and the same for `phpunit`).
+2. **`public/build/**` is tracked and production never runs vite** — `deploy.sh` and
+   `.cpanel.yml` contain no npm step, so the server serves whatever hashed bundle is in git.
+   Any `resources/js/**` change is incomplete until `npm run build` runs and the new hashed
+   asset plus `public/build/manifest.json` are committed. A "still showing the old UI" report
+   is one of: not deployed, not built, or the wrong page — in that order of likelihood.
+3. `.gitignore` contains a line `.md`, which matches a path component named exactly `.md`;
+   it is **not** `*.md`, and Markdown is tracked normally. Leave it alone.
+4. The writer model confabulates. Observed: reporting a `PASS` for a command that cannot
+   execute, and answering a three-step read-only check with zero tool calls and two invented
+   facts. Treat every writer report as a claim to re-run, not evidence. Per-request
+   `source`/`model`/token counts are auditable in `~/.qwen/usage/token-usage-YYYY-MM.jsonl`.
+
+Deploy is unchanged: `git pull` then `bash deploy.sh` in the cPanel terminal (that is where
+`artisan migrate --force` runs).
+
 ---
 
 # Claude Memory (migrated from Claude to Zed)
