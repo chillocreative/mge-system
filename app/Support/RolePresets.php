@@ -111,6 +111,7 @@ class RolePresets
             'documents.view', 'documents.upload', 'documents.manage',
             'drawings.view', 'drawings.upload', 'drawings.manage',
             'assets.view', 'inventory.view', 'maintenance.view',
+            'qc.view', 'qc.manage',
             'memos.view', 'memos.send-project',
         ];
     }

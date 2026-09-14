@@ -167,6 +167,10 @@ class RolePermissionSeeder extends Seeder
             'environmental.create',
             'environmental.manage',
 
+            // QA/QC
+            'qc.view',
+            'qc.manage',
+
             // Memos (internal memos)
             'memos.view',
             'memos.send-hr',

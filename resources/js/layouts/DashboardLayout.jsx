@@ -92,6 +92,12 @@ const navigation = [
     },
     { name: 'Safety', href: '/safety', icon: HiOutlineShieldCheck, permission: 'safety.view' },
     { name: 'Environmental', href: '/environmental', icon: HiOutlineGlobe, permission: 'environmental.view' },
+    {
+        name: 'QA/QC', icon: HiOutlineClipboardCheck,
+        children: [
+            { name: 'Records', href: '/qc', icon: HiOutlineClipboardCheck, permission: 'qc.view' },
+        ],
+    },
     { name: 'Users', href: '/users', icon: HiOutlineUserGroup, permission: 'users.view' },
     { name: 'User Access', href: '/roles', icon: HiOutlineKey, permission: 'roles.view' },
     { name: 'Settings', href: '/settings', icon: HiOutlineCog, permission: 'departments.view' },

@@ -37,6 +37,7 @@ import Hirarc from '@/pages/safety/Hirarc';
 import Permits from '@/pages/safety/Permits';
 import SafetyStatistics from '@/pages/safety/Statistics';
 import Environmental from '@/pages/environmental/Environmental';
+import QcRecords from '@/pages/qc/QcRecords';
 import Chat from '@/pages/chat/Chat';
 import StaffList from '@/pages/staff/StaffList';
 import StaffForm from '@/pages/staff/StaffForm';
@@ -155,6 +156,11 @@ function AppRoutes() {
                     {/* Environmental — requires environmental.view */}
                     <Route element={<PermissionGate permission="environmental.view" />}>
                         <Route path="/environmental" element={<Environmental />} />
+                    </Route>
+
+                    {/* QA/QC — requires qc.view */}
+                    <Route element={<PermissionGate permission="qc.view" />}>
+                        <Route path="/qc" element={<QcRecords />} />
                     </Route>
 
                     {/* Staff — requires staff.view */}

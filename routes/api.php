@@ -36,6 +36,7 @@ use App\Http\Controllers\Api\ProjectDocumentController;
 use App\Http\Controllers\Api\ProjectInvoiceController;
 use App\Http\Controllers\Api\ProjectPartyController;
 use App\Http\Controllers\Api\ProjectSiteController;
+use App\Http\Controllers\Api\QcController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SafetyController;
 use App\Http\Controllers\Api\SafetyStatisticsController;
@@ -929,5 +930,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{id}', [DrawingController::class, 'update'])->middleware('permission:drawings.manage');
         Route::delete('/{id}', [DrawingController::class, 'destroy'])->middleware('permission:drawings.manage');
         Route::get('/{id}/download', [DrawingController::class, 'download'])->middleware('permission:drawings.view');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | QA/QC Records — Inspections, NCRs, Material Tests, Quality Audits
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('qc-records')->group(function () {
+        Route::get('/', [QcController::class, 'index'])->middleware('permission:qc.view');
+        Route::post('/', [QcController::class, 'store'])->middleware('permission:qc.manage');
+        Route::get('/{id}', [QcController::class, 'show'])->middleware('permission:qc.view');
+        Route::put('/{id}', [QcController::class, 'update'])->middleware('permission:qc.manage');
+        Route::delete('/{id}', [QcController::class, 'destroy'])->middleware('permission:qc.manage');
     });
 });
