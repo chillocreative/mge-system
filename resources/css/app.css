@@ -1,5 +1,13 @@
 @import 'tailwindcss';
 
+@layer base {
+    input:not([type='checkbox']):not([type='radio']),
+    select,
+    textarea {
+        @apply border border-solid border-gray-300;
+    }
+}
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
