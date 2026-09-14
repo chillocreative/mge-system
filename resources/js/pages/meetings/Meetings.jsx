@@ -13,12 +13,6 @@ import {
     HiOutlineTrash,
 } from 'react-icons/hi';
 
-const statusColors = {
-    draft: 'bg-gray-100 text-gray-600',
-    published: 'bg-green-100 text-green-700',
-    archived: 'bg-yellow-100 text-yellow-700',
-};
-
 export default function Meetings() {
     const { can } = useAuth();
     const navigate = useNavigate();
@@ -128,48 +122,45 @@ export default function Meetings() {
                     <p className="mt-2 text-sm text-gray-500">No meetings found</p>
                 </div>
             ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="divide-y divide-gray-100 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
                     {meetings.map((m) => (
                         <Link
                             key={m.id}
                             to={`/meetings/${m.id}`}
-                            className="group relative flex flex-col rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200 transition hover:shadow-md"
+                            className="group flex items-center justify-between gap-4 p-4 transition hover:bg-gray-50"
                         >
-                            <div className="mb-2 flex items-start justify-between gap-2">
-                                <h3 className="text-base font-semibold text-gray-900 group-hover:text-primary-700">{m.title}</h3>
-                                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[m.status] || statusColors.draft}`}>
-                                    {m.status}
-                                </span>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="truncate text-base font-semibold text-gray-900 group-hover:text-primary-700">{m.title}</h3>
+                                <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
+                                    <span className="flex items-center gap-1.5">
+                                        <HiOutlineCalendar className="h-4 w-4 text-gray-400" />
+                                        {m.meeting_date}{m.meeting_time ? ` · ${m.meeting_time}` : ''}
+                                    </span>
+                                    {m.location && (
+                                        <span className="flex items-center gap-1.5">
+                                            <HiOutlineLocationMarker className="h-4 w-4 text-gray-400" />
+                                            {m.location}
+                                        </span>
+                                    )}
+                                    {m.project && (
+                                        <span className="text-xs text-gray-400">Project: {m.project.name}</span>
+                                    )}
+                                </div>
                             </div>
-                            <div className="mt-1 space-y-1 text-sm text-gray-500">
-                                <p className="flex items-center gap-2">
-                                    <HiOutlineCalendar className="h-4 w-4 text-gray-400" />
-                                    {m.meeting_date}{m.meeting_time ? ` · ${m.meeting_time}` : ''}
-                                </p>
-                                {m.location && (
-                                    <p className="flex items-center gap-2">
-                                        <HiOutlineLocationMarker className="h-4 w-4 text-gray-400" />
-                                        {m.location}
-                                    </p>
-                                )}
-                                {m.project && (
-                                    <p className="text-xs text-gray-400">Project: {m.project.name}</p>
-                                )}
-                            </div>
-                            <div className="mt-3 flex items-center gap-3 border-t pt-3 text-xs text-gray-500">
+                            <div className="flex shrink-0 items-center gap-4 text-xs text-gray-500">
                                 <span>{m.files?.length || 0} file(s)</span>
                                 <span>{m.action_items?.length || 0} action(s)</span>
                                 {m.attendees?.length ? <span>{m.attendees.length} attendee(s)</span> : null}
+                                {can('meetings.manage') && (
+                                    <button
+                                        onClick={(e) => { e.preventDefault(); handleDelete(m.id); }}
+                                        className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                                        title="Delete"
+                                    >
+                                        <HiOutlineTrash className="h-4 w-4" />
+                                    </button>
+                                )}
                             </div>
-                            {can('meetings.manage') && (
-                                <button
-                                    onClick={(e) => { e.preventDefault(); handleDelete(m.id); }}
-                                    className="absolute bottom-3 right-3 rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                                    title="Delete"
-                                >
-                                    <HiOutlineTrash className="h-4 w-4" />
-                                </button>
-                            )}
                         </Link>
                     ))}
                 </div>
