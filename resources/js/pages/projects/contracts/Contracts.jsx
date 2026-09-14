@@ -13,6 +13,7 @@ import {
     HiOutlineTrash,
     HiOutlineEye,
     HiOutlineX,
+    HiOutlineUpload,
 } from 'react-icons/hi';
 
 const statusColors = {
@@ -26,6 +27,14 @@ const statuses = ['active', 'completed', 'terminated'];
 function formatCurrency(val) {
     if (val === null || val === undefined || val === '') return '-';
     return 'RM ' + Number(val).toLocaleString('en-MY', { minimumFractionDigits: 2 });
+}
+
+function formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB'];
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 const emptyPic = () => ({ name: '', email: '', phone: '', company: '', designation: '' });
@@ -61,6 +70,23 @@ export default function Contracts() {
     const [editing, setEditing] = useState(null);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState(emptyForm());
+    const [files, setFiles] = useState([]);
+
+    const handleFilesChange = (e) => {
+        const newFiles = Array.from(e.target.files || []);
+        setFiles((prev) => {
+            if (prev.length + newFiles.length > 10) {
+                toast.error('Maximum 10 files allowed');
+                return [...prev, ...newFiles.slice(0, 10 - prev.length)];
+            }
+            return [...prev, ...newFiles];
+        });
+        e.target.value = '';
+    };
+
+    const removeFile = (idx) => {
+        setFiles((prev) => prev.filter((_, i) => i !== idx));
+    };
 
     const fetchContracts = async (page = 1) => {
         setLoading(true);
@@ -92,6 +118,7 @@ export default function Contracts() {
     const openCreate = () => {
         setEditing(null);
         setForm(emptyForm());
+        setFiles([]);
         setShowForm(true);
     };
 
@@ -110,6 +137,7 @@ export default function Contracts() {
             status: c.status || 'active',
             notes: c.notes || '',
         });
+        setFiles([]);
         setShowForm(true);
     };
 
@@ -139,6 +167,7 @@ export default function Contracts() {
                 if (pic.company) fd.append(`pics[${i}][company]`, pic.company);
                 if (pic.designation) fd.append(`pics[${i}][designation]`, pic.designation);
             });
+            files.forEach((file) => fd.append('files[]', file));
 
             if (editing) {
                 await contractService.update(editing.id, fd);
@@ -147,6 +176,7 @@ export default function Contracts() {
                 await contractService.create(fd);
                 toast.success('Contract created');
             }
+            setFiles([]);
             setShowForm(false);
             fetchContracts();
         } catch (err) {
@@ -470,6 +500,36 @@ export default function Contracts() {
                                     onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                                 />
+                            </div>
+                            <div>
+                                <label className="mb-1 flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                                    <HiOutlineUpload className="h-4 w-4 text-gray-400" /> Attachments
+                                </label>
+                                <p className="mb-2 text-xs text-gray-400">PDF, Word, Excel, or images — max 10 files, 50MB each</p>
+                                <input
+                                    type="file"
+                                    multiple
+                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                                    onChange={handleFilesChange}
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200"
+                                />
+                                {files.length > 0 && (
+                                    <ul className="mt-2 space-y-1">
+                                        {files.map((file, i) => (
+                                            <li key={i} className="flex items-center justify-between rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                                                <span className="mr-2 truncate">{file.name}</span>
+                                                <span className="mr-2 whitespace-nowrap text-xs text-gray-500">{formatFileSize(file.size)}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeFile(i)}
+                                                    className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                                                >
+                                                    <HiOutlineX className="h-4 w-4" />
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
                             </div>
                             <div className="flex justify-end gap-2 pt-2">
                                 <button
