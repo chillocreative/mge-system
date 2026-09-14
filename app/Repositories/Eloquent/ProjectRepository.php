@@ -18,8 +18,14 @@ class ProjectRepository extends BaseRepository implements ProjectRepositoryInter
     {
         $query = $this->model->with(['client', 'manager'])->withCount('documents');
 
-        if (! empty($filters['status'])) {
-            $query->byStatus($filters['status']);
+        if (! empty($filters['status']) && $filters['status'] === 'archived') {
+            $query->whereNotNull('archived_at');
+        } else {
+            $query->whereNull('archived_at');
+
+            if (! empty($filters['status'])) {
+                $query->byStatus($filters['status']);
+            }
         }
 
         if (! empty($filters['priority'])) {
@@ -58,5 +64,23 @@ class ProjectRepository extends BaseRepository implements ProjectRepositoryInter
     public function getActiveProjects(): Collection
     {
         return $this->model->active()->with(['client', 'manager'])->get();
+    }
+
+    public function archive(int $id): Project
+    {
+        $project = $this->model->findOrFail($id);
+        // archived_at is deliberately excluded from $fillable (never settable
+        // via mass-assignment on create/update), so it needs forceFill() here.
+        $project->forceFill(['archived_at' => now()])->save();
+
+        return $project->fresh();
+    }
+
+    public function unarchive(int $id): Project
+    {
+        $project = $this->model->findOrFail($id);
+        $project->forceFill(['archived_at' => null])->save();
+
+        return $project->fresh();
     }
 }

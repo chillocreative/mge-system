@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Contracts;
 
+use App\Models\Project;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -14,4 +15,8 @@ interface ProjectRepositoryInterface extends BaseRepositoryInterface
     public function getByClient(int $clientId): Collection;
 
     public function getActiveProjects(): Collection;
+
+    public function archive(int $id): Project;
+
+    public function unarchive(int $id): Project;
 }

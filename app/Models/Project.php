@@ -39,6 +39,7 @@ class Project extends Model
             'budget' => 'decimal:2',
             'spent' => 'decimal:2',
             'progress' => 'integer',
+            'archived_at' => 'datetime',
         ];
     }
 
@@ -90,7 +91,7 @@ class Project extends Model
 
     public function scopeActive($query)
     {
-        return $query->whereNotIn('status', ['completed', 'cancelled']);
+        return $query->whereNotIn('status', ['completed', 'cancelled'])->whereNull('archived_at');
     }
 
     public function scopeByStatus($query, string $status)

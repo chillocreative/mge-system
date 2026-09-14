@@ -22,6 +22,14 @@ const projectService = {
         const response = await apiClient.delete(`/projects/${id}`);
         return response.data;
     },
+    async archive(id) {
+        const response = await apiClient.post(`/projects/${id}/archive`);
+        return response.data;
+    },
+    async unarchive(id) {
+        const response = await apiClient.post(`/projects/${id}/unarchive`);
+        return response.data;
+    },
 
     // ── Milestones ──
     async getMilestones(projectId, params = {}) {

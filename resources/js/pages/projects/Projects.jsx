@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import projectService from '@/services/projectService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
 import ProjectFilesPanel from '@/components/ProjectFilesPanel';
-import { HiOutlinePlus, HiOutlineSearch, HiOutlineBriefcase, HiOutlinePaperClip, HiOutlineX } from 'react-icons/hi';
+import toast from 'react-hot-toast';
+import {
+    HiOutlinePlus, HiOutlineSearch, HiOutlineBriefcase, HiOutlinePaperClip, HiOutlineX,
+    HiOutlineArchive, HiOutlineRefresh, HiOutlineTrash,
+} from 'react-icons/hi';
 
 const statusColors = {
     draft: 'bg-gray-100 text-gray-700',
@@ -23,6 +28,10 @@ const priorityColors = {
 };
 
 export default function Projects() {
+    const { can } = useAuth();
+    const canEdit = can('projects.edit');
+    const canDelete = can('projects.delete');
+
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -56,6 +65,39 @@ export default function Projects() {
         }, 400);
         return () => clearTimeout(timer);
     }, [search]);
+
+    const handleArchive = async (project) => {
+        if (!confirm('Archive this project? It will be hidden from the main list until restored.')) return;
+        try {
+            await projectService.archive(project.id);
+            toast.success('Project archived');
+            fetchProjects();
+        } catch {
+            toast.error('Failed to archive project');
+        }
+    };
+
+    const handleUnarchive = async (project) => {
+        if (!confirm('Restore this project to the active list?')) return;
+        try {
+            await projectService.unarchive(project.id);
+            toast.success('Project restored');
+            fetchProjects();
+        } catch {
+            toast.error('Failed to restore project');
+        }
+    };
+
+    const handleDelete = async (project) => {
+        if (!confirm('Delete this project? This cannot be undone from the UI.')) return;
+        try {
+            await projectService.delete(project.id);
+            toast.success('Project deleted');
+            fetchProjects();
+        } catch {
+            toast.error('Failed to delete project');
+        }
+    };
 
     return (
         <div>
@@ -97,6 +139,7 @@ export default function Projects() {
                     <option value="on_hold">On Hold</option>
                     <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
+                    <option value="archived">Archived</option>
                 </select>
             </div>
 
@@ -108,66 +151,105 @@ export default function Projects() {
                     <p className="mt-2 text-sm text-gray-500">No projects found</p>
                 </div>
             ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {projects.map((project) => (
-                        <Link
-                            key={project.id}
-                            to={`/projects/${project.id}`}
-                            className="group rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200 transition-shadow hover:shadow-md"
-                        >
-                            <div className="mb-3 flex items-start justify-between">
-                                <div>
-                                    <h3 className="text-sm font-semibold text-gray-900 group-hover:text-primary-600">
-                                        {project.name}
-                                    </h3>
-                                    <p className="text-xs text-gray-500">{project.code}</p>
-                                </div>
-                                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${priorityColors[project.priority]}`}>
-                                    {project.priority}
-                                </span>
-                            </div>
-
-                            {project.client && (
-                                <p className="mb-3 text-xs text-gray-500">
-                                    Client: {project.client.company_name}
-                                </p>
-                            )}
-
-                            <div className="mb-3">
-                                <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                                    <span>Progress</span>
-                                    <span>{project.progress}%</span>
-                                </div>
-                                <div className="h-2 w-full rounded-full bg-gray-200">
-                                    <div
-                                        className="h-2 rounded-full bg-primary-500 transition-all"
-                                        style={{ width: `${project.progress}%` }}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[project.status]}`}>
-                                    {project.status.replace('_', ' ')}
-                                </span>
-                                {project.end_date && (
-                                    <span className="text-xs text-gray-400">
-                                        Due: {formatDate(project.end_date)}
-                                    </span>
-                                )}
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={(e) => openFiles(e, project)}
-                                className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-500 hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700"
-                                title="View project files"
-                            >
-                                <HiOutlinePaperClip className="h-3.5 w-3.5" />
-                                {project.documents_count ?? 0} file{(project.documents_count ?? 0) === 1 ? '' : 's'}
-                            </button>
-                        </Link>
-                    ))}
+                <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Project</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Client</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Priority</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Progress</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Due</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Files</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {projects.map((project) => (
+                                    <tr key={project.id} className="hover:bg-gray-50">
+                                        <td className="px-4 py-3">
+                                            <Link to={`/projects/${project.id}`} className="text-sm font-semibold text-gray-900 hover:text-primary-600">
+                                                {project.name}
+                                            </Link>
+                                            <p className="text-xs text-gray-500">{project.code}</p>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">{project.client?.company_name || '-'}</td>
+                                        <td className="px-4 py-3">
+                                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${priorityColors[project.priority]}`}>
+                                                {project.priority}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[project.status]}`}>
+                                                {project.status.replace('_', ' ')}
+                                            </span>
+                                            {project.archived_at && (
+                                                <span className="ml-1.5 text-xs text-gray-400">&middot; Archived</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex min-w-[7rem] items-center gap-2">
+                                                <div className="h-2 w-full rounded-full bg-gray-200">
+                                                    <div
+                                                        className="h-2 rounded-full bg-primary-500 transition-all"
+                                                        style={{ width: `${project.progress}%` }}
+                                                    />
+                                                </div>
+                                                <span className="text-xs text-gray-500">{project.progress}%</span>
+                                            </div>
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                                            {project.end_date ? formatDate(project.end_date) : '-'}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => openFiles(e, project)}
+                                                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-500 hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700"
+                                                title="View project files"
+                                            >
+                                                <HiOutlinePaperClip className="h-3.5 w-3.5" />
+                                                {project.documents_count ?? 0}
+                                            </button>
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                                {canEdit && !project.archived_at && (
+                                                    <button
+                                                        onClick={() => handleArchive(project)}
+                                                        className="rounded p-1.5 text-gray-400 hover:bg-amber-50 hover:text-amber-600"
+                                                        title="Archive"
+                                                    >
+                                                        <HiOutlineArchive className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                                {canEdit && project.archived_at && (
+                                                    <button
+                                                        onClick={() => handleUnarchive(project)}
+                                                        className="rounded p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600"
+                                                        title="Restore"
+                                                    >
+                                                        <HiOutlineRefresh className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                                {canDelete && (
+                                                    <button
+                                                        onClick={() => handleDelete(project)}
+                                                        className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                                                        title="Delete"
+                                                    >
+                                                        <HiOutlineTrash className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 

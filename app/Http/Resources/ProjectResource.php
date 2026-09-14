@@ -43,6 +43,7 @@ class ProjectResource extends JsonResource
             'calendar_events_count' => $this->whenCounted('calendarEvents'),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
+            'archived_at' => $this->archived_at?->toISOString(),
         ];
     }
 }

@@ -53,4 +53,18 @@ class ProjectController extends Controller
 
         return $this->success(null, 'Project deleted successfully.');
     }
+
+    public function archive(int $id): JsonResponse
+    {
+        $project = $this->projectService->archiveProject($id);
+
+        return $this->success(new ProjectResource($project), 'Project archived successfully.');
+    }
+
+    public function unarchive(int $id): JsonResponse
+    {
+        $project = $this->projectService->unarchiveProject($id);
+
+        return $this->success(new ProjectResource($project), 'Project restored successfully.');
+    }
 }

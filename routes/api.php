@@ -132,6 +132,10 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middleware('permission:projects.edit');
         Route::delete('/{project}', [ProjectController::class, 'destroy'])
             ->middleware('permission:projects.delete');
+        Route::post('/{id}/archive', [ProjectController::class, 'archive'])
+            ->middleware('permission:projects.edit');
+        Route::post('/{id}/unarchive', [ProjectController::class, 'unarchive'])
+            ->middleware('permission:projects.edit');
 
         // Milestones — nested under projects
         Route::prefix('{project}/milestones')->middleware('permission:projects.view')->group(function () {

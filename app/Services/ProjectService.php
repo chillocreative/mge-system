@@ -146,6 +146,16 @@ class ProjectService
         return $this->projectRepository->delete($id);
     }
 
+    public function archiveProject(int $id): Project
+    {
+        return $this->projectRepository->archive($id);
+    }
+
+    public function unarchiveProject(int $id): Project
+    {
+        return $this->projectRepository->unarchive($id);
+    }
+
     /**
      * Notify users who were just added to a project's team.
      */
