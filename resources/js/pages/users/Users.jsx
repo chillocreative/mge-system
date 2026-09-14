@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import apiClient from '@/services/apiClient';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { HiOutlineUserGroup, HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineLockClosed } from 'react-icons/hi';
 import toast from 'react-hot-toast';
@@ -29,6 +30,7 @@ const unwrap = (r) => r.data?.data?.data || r.data?.data || [];
 
 export default function Users() {
     const { can, user } = useAuth();
+    const confirm = useConfirm();
     const canGrantSuper = !!user?.is_protected; // only the System Administrator
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -108,7 +110,7 @@ export default function Users() {
     };
 
     const handleDelete = async (user) => {
-        if (!window.confirm(`Delete ${user.full_name}? This cannot be undone.`)) return;
+        if (!(await confirm({ title: 'Delete user?', message: `Delete ${user.full_name}? This cannot be undone.` }))) return;
         setActionLoading(user.id);
         try {
             await apiClient.delete(`/users/${user.id}`);
@@ -137,7 +139,7 @@ export default function Users() {
     };
 
     const handleReject = async (user) => {
-        if (!window.confirm(`Reject ${user.full_name}?`)) return;
+        if (!(await confirm({ title: 'Reject user?', message: `Reject ${user.full_name}?`, confirmText: 'Reject' }))) return;
         setActionLoading(user.id);
         try {
             await apiClient.patch(`/users/${user.id}/reject`);

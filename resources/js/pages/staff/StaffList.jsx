@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import staffService from '@/services/staffService';
 import apiClient from '@/services/apiClient';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -23,6 +24,7 @@ const statusColors = {
 export default function StaffList() {
     const { can } = useAuth();
     const navigate = useNavigate();
+    const confirm = useConfirm();
     const [staff, setStaff] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -63,7 +65,7 @@ export default function StaffList() {
     }, []);
 
     const handleDelete = async (id) => {
-        if (!confirm('Delete this staff member?')) return;
+        if (!(await confirm({ message: 'Delete this staff member?' }))) return;
         try {
             await staffService.delete(id);
             toast.success('Staff member deleted');

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import projectService from '@/services/projectService';
 import toast from 'react-hot-toast';
 import { formatDate } from '@/utils/date';
@@ -19,6 +20,7 @@ const fmtSize = (b) => {
  */
 export default function ProjectFilesPanel({ projectId, readOnly = false }) {
     const { can } = useAuth();
+    const confirm = useConfirm();
     const editable = !readOnly && can('projects.edit');
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -56,7 +58,7 @@ export default function ProjectFilesPanel({ projectId, readOnly = false }) {
     };
 
     const onDelete = async (doc) => {
-        if (!window.confirm(`Delete "${doc.file_name}"?`)) return;
+        if (!(await confirm({ title: 'Delete file?', message: `Delete "${doc.file_name}"?` }))) return;
         try {
             await projectService.deleteDocument(projectId, doc.id);
             toast.success('File deleted');

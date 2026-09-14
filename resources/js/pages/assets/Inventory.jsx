@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import inventoryService from '@/services/inventoryService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -24,6 +25,7 @@ const emptyForm = {
 
 export default function Inventory() {
     const { can } = useAuth();
+    const confirm = useConfirm();
     const [items, setItems] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -122,7 +124,7 @@ export default function Inventory() {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Delete this item?')) return;
+        if (!(await confirm({ message: 'Delete this item?' }))) return;
         try {
             await inventoryService.deleteItem(id);
             toast.success('Item deleted');
@@ -145,7 +147,7 @@ export default function Inventory() {
     };
 
     const handleDeleteCategory = async (catId) => {
-        if (!confirm('Delete this category?')) return;
+        if (!(await confirm({ message: 'Delete this category?' }))) return;
         try {
             await inventoryService.deleteCategory(catId);
             toast.success('Category deleted');

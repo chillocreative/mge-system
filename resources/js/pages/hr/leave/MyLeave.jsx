@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { useConfirm } from '@/context/ConfirmContext';
 import leaveService from '@/services/leaveService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
@@ -26,6 +27,7 @@ const statusLabel = (req) => {
 };
 
 export default function MyLeave() {
+    const confirm = useConfirm();
     const currentYear = new Date().getFullYear();
     const [year, setYear] = useState(currentYear);
     const [employee, setEmployee] = useState(null);
@@ -70,7 +72,7 @@ export default function MyLeave() {
     }, [employee, year]);
 
     const handleCancel = async (id) => {
-        if (!confirm('Cancel this leave request?')) return;
+        if (!(await confirm({ title: 'Cancel leave request?', message: 'Cancel this leave request?', confirmText: 'Cancel Request' }))) return;
         try {
             await leaveService.cancel(id);
             toast.success('Leave request cancelled');

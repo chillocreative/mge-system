@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useConfirm } from '@/context/ConfirmContext';
 import projectSiteService from '@/services/projectSiteService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -13,6 +14,7 @@ import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineLocationMarker
 const emptyForm = () => ({ id: null, name: '', code: '', address: '', is_active: true });
 
 export default function ProjectSitesPanel({ project, canEdit }) {
+    const confirm = useConfirm();
     const [sites, setSites] = useState([]);
     const [loading, setLoading] = useState(true);
     const [form, setForm] = useState(null); // null = closed, else the form object
@@ -54,7 +56,7 @@ export default function ProjectSitesPanel({ project, canEdit }) {
     };
 
     const remove = async (site) => {
-        if (!confirm(`Remove site "${site.name}"? Records filed under it are kept and simply lose the link.`)) return;
+        if (!(await confirm({ title: 'Remove site?', message: `Remove site "${site.name}"? Records filed under it are kept and simply lose the link.`, confirmText: 'Remove', danger: false }))) return;
         try {
             await projectSiteService.remove(site.id);
             toast.success('Site removed');

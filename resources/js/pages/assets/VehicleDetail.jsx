@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import assetService from '@/services/assetService';
 import projectService from '@/services/projectService';
 import maintenanceService from '@/services/maintenanceService';
@@ -34,6 +35,7 @@ function expiryChip(expiry) {
 export default function VehicleDetail() {
     const { id } = useParams();
     const { can } = useAuth();
+    const confirm = useConfirm();
     const [vehicle, setVehicle] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showDocForm, setShowDocForm] = useState(false);
@@ -118,7 +120,7 @@ export default function VehicleDetail() {
     };
 
     const handleDeleteDoc = async (docId) => {
-        if (!confirm('Delete this document?')) return;
+        if (!(await confirm({ message: 'Delete this document?' }))) return;
         try {
             await assetService.deleteDocument(id, docId);
             toast.success('Document deleted');

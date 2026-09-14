@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import apiClient from '@/services/apiClient';
+import { useConfirm } from '@/context/ConfirmContext';
 import leaveService from '@/services/leaveService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
@@ -37,6 +38,7 @@ const emptyTypeForm = {
 
 export default function LeaveList() {
     const { can } = useAuth();
+    const confirm = useConfirm();
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState('');
@@ -97,7 +99,7 @@ export default function LeaveList() {
     };
 
     const handleCancel = async (id) => {
-        if (!confirm('Cancel this leave request?')) return;
+        if (!(await confirm({ title: 'Cancel leave request?', message: 'Cancel this leave request?', confirmText: 'Cancel Request' }))) return;
         try {
             await leaveService.cancel(id);
             toast.success('Leave request cancelled');
@@ -152,7 +154,7 @@ export default function LeaveList() {
     };
 
     const removeType = async (t) => {
-        if (!confirm(`Delete leave type "${t.name}"?`)) return;
+        if (!(await confirm({ message: `Delete leave type "${t.name}"?` }))) return;
         try {
             await leaveService.deleteType(t.id);
             toast.success('Leave type deleted');

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import qcService from '@/services/qcService';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
 import {
@@ -32,6 +33,7 @@ const STATUS_BADGE = {
 
 export default function QcRecords() {
     const { can } = useAuth();
+    const confirm = useConfirm();
     const hasManage = can('qc.manage');
     const hasView = can('qc.view');
 
@@ -145,7 +147,7 @@ export default function QcRecords() {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this record?')) return;
+        if (!(await confirm({ message: 'Are you sure you want to delete this record?' }))) return;
         try {
             await qcService.deleteRecord(id);
             toast.success('Record deleted');

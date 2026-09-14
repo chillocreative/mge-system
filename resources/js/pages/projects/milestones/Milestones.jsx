@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import milestoneService from '@/services/milestoneService';
 import projectService from '@/services/projectService';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -16,6 +17,7 @@ const emptyForm = { project_id: '', title: '', description: '', due_date: '', st
 
 export default function Milestones() {
     const { can } = useAuth();
+    const confirm = useConfirm();
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [pagination, setPagination] = useState({});
@@ -77,7 +79,7 @@ export default function Milestones() {
     };
 
     const remove = async (id) => {
-        if (!confirm('Delete this milestone?')) return;
+        if (!(await confirm({ message: 'Delete this milestone?' }))) return;
         try { await milestoneService.remove(id); toast.success('Deleted'); fetchItems(); }
         catch { toast.error('Failed to delete'); }
     };

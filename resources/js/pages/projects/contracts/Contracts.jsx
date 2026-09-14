@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import contractService from '@/services/contractService';
 import projectService from '@/services/projectService';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -58,6 +59,7 @@ export default function Contracts() {
     const { can } = useAuth();
     const navigate = useNavigate();
     const canEdit = can('projects.edit');
+    const confirm = useConfirm();
 
     const [contracts, setContracts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -188,7 +190,7 @@ export default function Contracts() {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Delete this contract?')) return;
+        if (!(await confirm({ message: 'Delete this contract?' }))) return;
         try {
             await contractService.delete(id);
             toast.success('Contract deleted');

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import contractService from '@/services/contractService';
 import drawingService from '@/services/drawingService';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -197,6 +198,7 @@ export default function ContractDetail() {
 
 // ─── Documents Tab ──────────────────────────────────────────────
 function DocumentsTab({ contract, canEdit, onRefresh }) {
+    const confirm = useConfirm();
     const [uploading, setUploading] = useState(false);
 
     const handleUpload = async (e) => {
@@ -218,7 +220,7 @@ function DocumentsTab({ contract, canEdit, onRefresh }) {
     };
 
     const handleDelete = async (fileId) => {
-        if (!confirm('Delete this document?')) return;
+        if (!(await confirm({ message: 'Delete this document?' }))) return;
         try {
             await contractService.deleteFile(fileId);
             toast.success('Document deleted');
@@ -277,6 +279,7 @@ function formatSize(bytes) {
 }
 
 function DrawingsTab({ contract, canEdit }) {
+    const confirm = useConfirm();
     const [drawings, setDrawings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
@@ -337,7 +340,7 @@ function DrawingsTab({ contract, canEdit }) {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Delete this drawing?')) return;
+        if (!(await confirm({ message: 'Delete this drawing?' }))) return;
         try {
             await contractService.deleteDrawing(id);
             toast.success('Drawing deleted');
@@ -450,6 +453,7 @@ function DrawingsTab({ contract, canEdit }) {
 const emptyBoqForm = () => ({ item_no: '', description: '', unit: '', quantity: '', rate: '' });
 
 function BoqTab({ contract, canEdit }) {
+    const confirm = useConfirm();
     const boqFileInput = useRef(null);
     const [importing, setImporting] = useState(false);
     const [items, setItems] = useState([]);
@@ -504,7 +508,7 @@ function BoqTab({ contract, canEdit }) {
     };
 
     const removeItem = async (itemId) => {
-        if (!confirm('Remove this BOQ item?')) return;
+        if (!(await confirm({ message: 'Remove this BOQ item?', confirmText: 'Remove' }))) return;
         try {
             await contractService.removeBoqItem(itemId);
             setItems((p) => p.filter((i) => i.id !== itemId));

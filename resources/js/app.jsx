@@ -2,6 +2,7 @@ import '../css/app.css';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
+import { ConfirmProvider } from '@/context/ConfirmContext';
 import { Toaster } from 'react-hot-toast';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import GuestRoute from '@/components/GuestRoute';
@@ -269,17 +270,19 @@ const root = createRoot(container);
 root.render(
     <BrowserRouter>
         <AuthProvider>
-            <AppRoutes />
-            <Toaster
-                position="top-right"
-                toastOptions={{
-                    duration: 4000,
-                    style: {
-                        background: '#1f2937',
-                        color: '#f9fafb',
-                    },
-                }}
-            />
+            <ConfirmProvider>
+                <AppRoutes />
+                <Toaster
+                    position="top-right"
+                    toastOptions={{
+                        duration: 4000,
+                        style: {
+                            background: '#1f2937',
+                            color: '#f9fafb',
+                        },
+                    }}
+                />
+            </ConfirmProvider>
         </AuthProvider>
     </BrowserRouter>
 );

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import departmentService from '@/services/departmentService';
 import designationService from '@/services/designationService';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -13,6 +14,7 @@ export default function Settings() {
     const { can } = useAuth();
     const canManageDept = can('departments.create') || can('departments.edit');
     const canManageDesig = can('designations.create') || can('designations.edit');
+    const confirm = useConfirm();
 
     const [tab, setTab] = useState('departments');
     const [loading, setLoading] = useState(true);
@@ -72,7 +74,7 @@ export default function Settings() {
         }
     };
     const deleteDept = async (d) => {
-        if (!confirm(`Delete department "${d.name}"?`)) return;
+        if (!(await confirm({ title: 'Delete department?', message: `Delete department "${d.name}"?` }))) return;
         try {
             await departmentService.remove(d.id);
             toast.success('Department deleted');
@@ -112,7 +114,7 @@ export default function Settings() {
         }
     };
     const deleteDesig = async (d) => {
-        if (!confirm(`Delete designation "${d.name}"?`)) return;
+        if (!(await confirm({ title: 'Delete designation?', message: `Delete designation "${d.name}"?` }))) return;
         try {
             await designationService.remove(d.id);
             toast.success('Designation deleted');

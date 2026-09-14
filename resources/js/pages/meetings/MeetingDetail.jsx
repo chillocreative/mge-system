@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import meetingService from '@/services/meetingService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
@@ -38,6 +39,7 @@ export default function MeetingDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { can } = useAuth();
+    const confirm = useConfirm();
     const [meeting, setMeeting] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -59,7 +61,7 @@ export default function MeetingDetail() {
     }, [id]);
 
     const handleDelete = async () => {
-        if (!confirm('Delete this meeting record?')) return;
+        if (!(await confirm({ message: 'Delete this meeting record?' }))) return;
         try {
             await meetingService.delete(id);
             toast.success('Meeting deleted');

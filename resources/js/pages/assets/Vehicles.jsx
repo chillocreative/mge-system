@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import assetService from '@/services/assetService';
 import staffService from '@/services/staffService';
 import inventoryService from '@/services/inventoryService';
@@ -34,6 +35,7 @@ function typeLabel(v) {
 
 export default function Vehicles() {
     const { can } = useAuth();
+    const confirm = useConfirm();
     const [vehicles, setVehicles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -179,7 +181,7 @@ export default function Vehicles() {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Are you sure you want to delete this machinery? This action cannot be undone.')) return;
+        if (!(await confirm({ title: 'Delete machinery?', message: 'This action cannot be undone.' }))) return;
         try {
             await assetService.deleteVehicle(id);
             toast.success('Machinery deleted successfully');

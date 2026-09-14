@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import apiClient from '@/services/apiClient';
 import trainingService from '@/services/trainingService';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -52,6 +53,7 @@ function StatCard({ icon: Icon, label, value, gradient }) {
 
 export default function Training() {
     const { can } = useAuth();
+    const confirm = useConfirm();
     const canManage = can('training.manage');
     const canApprove = can('training.approve');
 
@@ -135,7 +137,7 @@ export default function Training() {
     };
 
     const deleteRecord = async (rec) => {
-        if (!confirm(`Delete training "${rec.title}"?`)) return;
+        if (!(await confirm({ message: `Delete training "${rec.title}"?` }))) return;
         try {
             await trainingService.deleteRecord(rec.id);
             toast.success('Record deleted');

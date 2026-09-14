@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import financeService from '@/services/financeService';
 import projectService from '@/services/projectService';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -28,6 +29,7 @@ function formatCurrency(val) {
 
 export default function Expenses() {
     const { can } = useAuth();
+    const confirm = useConfirm();
     const [expenses, setExpenses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -122,7 +124,7 @@ export default function Expenses() {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Delete this expense?')) return;
+        if (!(await confirm({ message: 'Delete this expense?' }))) return;
         try {
             await financeService.deleteExpense(id);
             toast.success('Expense deleted');

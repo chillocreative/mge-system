@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useConfirm } from '@/context/ConfirmContext';
 import leaveService from '@/services/leaveService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -35,6 +36,7 @@ function formatDate(iso) {
 }
 
 export default function PublicHolidays() {
+    const confirm = useConfirm();
     const [year, setYear] = useState(currentYear);
     const [holidays, setHolidays] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -121,7 +123,12 @@ export default function PublicHolidays() {
     };
 
     const deactivate = async (h) => {
-        if (!window.confirm(`Deactivate "${h.name}"? It will no longer be excluded from leave, but existing leave already calculated is not changed.`)) {
+        if (!(await confirm({
+            title: 'Deactivate holiday?',
+            message: `Deactivate "${h.name}"? It will no longer be excluded from leave, but existing leave already calculated is not changed.`,
+            confirmText: 'Deactivate',
+            danger: false,
+        }))) {
             return;
         }
         try {

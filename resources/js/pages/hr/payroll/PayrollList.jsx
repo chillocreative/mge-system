@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import payrollService from '@/services/payrollService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -23,6 +24,7 @@ const monthEnd = () => { const d = new Date(); return toDateStr(new Date(d.getFu
 
 export default function PayrollList() {
     const { can } = useAuth();
+    const confirm = useConfirm();
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [pagination, setPagination] = useState({});
@@ -74,7 +76,7 @@ export default function PayrollList() {
     };
 
     const batchEmail = async () => {
-        if (!confirm('Email payslips to all employees in this month?')) return;
+        if (!(await confirm({ title: 'Send payslips?', message: 'Email payslips to all employees in this month?', confirmText: 'Send', danger: false }))) return;
         try {
             const res = await payrollService.batchEmail({ period_start: monthStart(), period_end: monthEnd() });
             toast.success(res.message || 'Payslips emailed');

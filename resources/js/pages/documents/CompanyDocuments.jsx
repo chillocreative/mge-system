@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import documentService from '@/services/documentService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
@@ -39,6 +40,7 @@ function formatSize(bytes) {
 
 export default function CompanyDocuments() {
     const { can } = useAuth();
+    const confirm = useConfirm();
     const [documents, setDocuments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -103,7 +105,7 @@ export default function CompanyDocuments() {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Delete this document?')) return;
+        if (!(await confirm({ message: 'Delete this document?' }))) return;
         try {
             await documentService.remove(id);
             toast.success('Document deleted');

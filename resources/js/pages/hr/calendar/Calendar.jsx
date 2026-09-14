@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import apiClient from '@/services/apiClient';
 import calendarService from '@/services/calendarService';
 import projectService from '@/services/projectService';
@@ -81,6 +82,7 @@ function emptyForm(dateKey) {
 
 export default function Calendar() {
     const { can } = useAuth();
+    const confirm = useConfirm();
     const canManage = can('calendar.manage');
 
     const [viewDate, setViewDate] = useState(startOfMonth(new Date()));
@@ -232,7 +234,7 @@ export default function Calendar() {
     };
 
     const handleDelete = async () => {
-        if (!form.id || !confirm('Delete this event?')) return;
+        if (!form.id || !(await confirm({ message: 'Delete this event?' }))) return;
         try {
             await calendarService.deleteEvent(form.id);
             toast.success('Event deleted');

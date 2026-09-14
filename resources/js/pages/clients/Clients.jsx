@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import clientService from '@/services/clientService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -12,6 +13,7 @@ const emptyForm = {
 
 export default function Clients() {
     const { can } = useAuth();
+    const confirm = useConfirm();
     const [clients, setClients] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -82,7 +84,7 @@ export default function Clients() {
     };
 
     const handleDelete = async (c) => {
-        if (!window.confirm(`Delete ${c.company_name}?`)) return;
+        if (!(await confirm({ title: 'Delete client?', message: `Delete ${c.company_name}?` }))) return;
         try {
             await clientService.delete(c.id);
             toast.success('Client deleted');

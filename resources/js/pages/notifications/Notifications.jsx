@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useConfirm } from '@/context/ConfirmContext';
 import notificationService from '@/services/notificationService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -17,6 +18,7 @@ function relativeTime(value) {
 
 export default function Notifications() {
     const navigate = useNavigate();
+    const confirm = useConfirm();
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -59,7 +61,7 @@ export default function Notifications() {
     };
 
     const clearAll = async () => {
-        if (!confirm('Delete all notifications?')) return;
+        if (!(await confirm({ title: 'Delete all notifications?', message: 'This cannot be undone.' }))) return;
         try {
             await notificationService.clearAll();
             setItems([]);

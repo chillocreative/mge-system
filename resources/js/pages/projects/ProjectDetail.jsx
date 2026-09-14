@@ -9,6 +9,7 @@ import { formatDate } from '@/utils/date';
 import ProjectDiscussions from '@/components/ProjectDiscussions';
 import ProjectSitesPanel from '@/components/ProjectSitesPanel';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import toast from 'react-hot-toast';
 import {
     HiOutlineArrowLeft,
@@ -338,6 +339,7 @@ function TasksTab({ project, canEdit, onRefresh }) {
 const emptyMilestoneForm = () => ({ title: '', description: '', due_date: '', completed_date: '', status: 'pending', progress: 0 });
 
 function MilestonesTab({ project, canEdit, onRefresh }) {
+    const confirm = useConfirm();
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [form, setForm] = useState(emptyMilestoneForm());
@@ -393,7 +395,7 @@ function MilestonesTab({ project, canEdit, onRefresh }) {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Delete this milestone?')) return;
+        if (!(await confirm({ message: 'Delete this milestone?' }))) return;
         try {
             await projectService.deleteMilestone(project.id, id);
             toast.success('Milestone deleted');
@@ -618,6 +620,7 @@ const emptySiteLogForm = () => ({
 });
 
 function SiteLogsTab({ project, canEdit, onRefresh }) {
+    const confirm = useConfirm();
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [form, setForm] = useState(emptySiteLogForm());
@@ -717,7 +720,7 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
     };
 
     const handleDelete = async (logId) => {
-        if (!confirm('Delete this site log? This cannot be undone.')) return;
+        if (!(await confirm({ title: 'Delete site log?', message: 'This cannot be undone.' }))) return;
         try {
             await projectService.deleteSiteLog(project.id, logId);
             toast.success('Site log deleted');
@@ -1025,6 +1028,7 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
 
 // ─── Documents Tab ─────────────────────────────────────────────
 function DocumentsTab({ project, canEdit, onRefresh }) {
+    const confirm = useConfirm();
     const [uploading, setUploading] = useState(false);
     const [showUpload, setShowUpload] = useState(false);
     const [form, setForm] = useState({ title: '', category: 'other', file: null });
@@ -1052,7 +1056,7 @@ function DocumentsTab({ project, canEdit, onRefresh }) {
     };
 
     const handleDelete = async (docId) => {
-        if (!confirm('Delete this document?')) return;
+        if (!(await confirm({ message: 'Delete this document?' }))) return;
         try {
             await projectService.deleteDocument(project.id, docId);
             toast.success('Document deleted');

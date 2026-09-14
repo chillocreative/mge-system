@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import projectInvoiceService from '@/services/projectInvoiceService';
 import projectService from '@/services/projectService';
 import ProjectFilesPanel from '@/components/ProjectFilesPanel';
@@ -39,6 +40,7 @@ const emptyPaymentForm = { amount: '', payment_date: today(), document_no: '', m
 export default function ProjectInvoices() {
     const { can } = useAuth();
     const canEdit = can('projects.edit');
+    const confirm = useConfirm();
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [pagination, setPagination] = useState({});
@@ -164,7 +166,7 @@ export default function ProjectInvoices() {
     };
 
     const remove = async (inv) => {
-        if (!window.confirm(`Delete invoice ${inv.invoice_no || `#${inv.id}`}?`)) return;
+        if (!(await confirm({ title: 'Delete invoice?', message: `Delete invoice ${inv.invoice_no || `#${inv.id}`}?` }))) return;
         try { await projectInvoiceService.remove(inv.id); toast.success('Invoice deleted'); refresh(); }
         catch (err) { toast.error(err.response?.data?.message || 'Failed to delete'); }
     };
@@ -197,7 +199,7 @@ export default function ProjectInvoices() {
     };
 
     const removePayment = async (paymentId) => {
-        if (!window.confirm('Remove this payment record?')) return;
+        if (!(await confirm({ message: 'Remove this payment record?', confirmText: 'Remove' }))) return;
         try { await projectInvoiceService.removePayment(paymentId); setPayments((p) => p.filter((pm) => pm.id !== paymentId)); toast.success('Payment removed'); }
         catch { toast.error('Failed to remove payment'); }
     };

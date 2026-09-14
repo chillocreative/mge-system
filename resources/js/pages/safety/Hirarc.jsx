@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import safetyService from '@/services/safetyService';
 import projectService from '@/services/projectService';
 import projectSiteService from '@/services/projectSiteService';
@@ -42,6 +43,7 @@ const emptyForm = () => ({ id: null, title: '', process: '', location: '', proje
 
 export default function Hirarc() {
     const { can } = useAuth();
+    const confirm = useConfirm();
     const canManage = can('safety.manage') || can('safety.create');
     const [list, setList] = useState([]);
     const [projects, setProjects] = useState([]);
@@ -123,7 +125,7 @@ export default function Hirarc() {
     };
 
     const archive = async (id) => {
-        if (!confirm('Archive this HIRARC?')) return;
+        if (!(await confirm({ title: 'Archive HIRARC?', message: 'Archive this HIRARC?', confirmText: 'Archive', danger: false }))) return;
         try {
             await safetyService.archiveHirarc(id);
             toast.success('Archived');

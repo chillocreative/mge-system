@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import correspondenceService from '@/services/correspondenceService';
 import projectService from '@/services/projectService';
 import projectSiteService from '@/services/projectSiteService';
@@ -48,6 +49,7 @@ const emptyTypeForm = { name: '', code: '', full_name: '', color: 'gray', sort_o
 export default function Correspondence() {
     const { can } = useAuth();
     const canEdit = can('projects.edit');
+    const confirm = useConfirm();
 
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -164,7 +166,7 @@ export default function Correspondence() {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Delete this correspondence?')) return;
+        if (!(await confirm({ message: 'Delete this correspondence?' }))) return;
         try { await correspondenceService.remove(id); toast.success('Correspondence deleted'); fetchItems(); }
         catch { toast.error('Failed to delete correspondence'); }
     };
@@ -205,7 +207,7 @@ export default function Correspondence() {
     };
 
     const removeType = async (t) => {
-        if (!confirm(`Delete type "${t.name}"?`)) return;
+        if (!(await confirm({ message: `Delete type "${t.name}"?` }))) return;
         try { await correspondenceService.deleteType(t.id); toast.success('Type deleted'); fetchTypes(); }
         catch (err) { toast.error(err.response?.data?.message || 'Failed to delete type'); }
     };

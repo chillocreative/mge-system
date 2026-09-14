@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import projectService from '@/services/projectService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
@@ -31,6 +32,7 @@ export default function Projects() {
     const { can } = useAuth();
     const canEdit = can('projects.edit');
     const canDelete = can('projects.delete');
+    const confirm = useConfirm();
 
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -67,7 +69,7 @@ export default function Projects() {
     }, [search]);
 
     const handleArchive = async (project) => {
-        if (!confirm('Archive this project? It will be hidden from the main list until restored.')) return;
+        if (!(await confirm({ title: 'Archive project?', message: 'It will be hidden from the main list until restored.', confirmText: 'Archive', danger: false }))) return;
         try {
             await projectService.archive(project.id);
             toast.success('Project archived');
@@ -78,7 +80,7 @@ export default function Projects() {
     };
 
     const handleUnarchive = async (project) => {
-        if (!confirm('Restore this project to the active list?')) return;
+        if (!(await confirm({ title: 'Restore project?', message: 'Restore this project to the active list?', confirmText: 'Restore', danger: false }))) return;
         try {
             await projectService.unarchive(project.id);
             toast.success('Project restored');
@@ -89,7 +91,7 @@ export default function Projects() {
     };
 
     const handleDelete = async (project) => {
-        if (!confirm('Delete this project? This cannot be undone from the UI.')) return;
+        if (!(await confirm({ title: 'Delete project?', message: 'This cannot be undone from the UI.' }))) return;
         try {
             await projectService.delete(project.id);
             toast.success('Project deleted');

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import discussionService from '@/services/discussionService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -48,6 +49,7 @@ function Avatar({ author }) {
  */
 export default function ProjectDiscussions({ projectId }) {
     const { can, user } = useAuth();
+    const confirm = useConfirm();
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [body, setBody] = useState('');
@@ -112,7 +114,7 @@ export default function ProjectDiscussions({ projectId }) {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Delete this post?')) return;
+        if (!(await confirm({ message: 'Delete this post?' }))) return;
         try {
             await discussionService.remove(id);
             toast.success('Deleted');

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import financeService from '@/services/financeService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
@@ -30,6 +31,7 @@ function formatCurrency(val, currency = 'RM') {
 
 export default function Invoices() {
     const { can } = useAuth();
+    const confirm = useConfirm();
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -70,7 +72,7 @@ export default function Invoices() {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Delete this invoice?')) return;
+        if (!(await confirm({ message: 'Delete this invoice?' }))) return;
         try {
             await financeService.deleteInvoice(id);
             toast.success('Invoice deleted');
