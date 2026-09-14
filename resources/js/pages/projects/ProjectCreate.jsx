@@ -514,26 +514,13 @@ export default function ProjectCreate() {
                     })()}
                 </div>
 
-                {/* Notes */}
+                {/* Documents */}
                 <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-                    <h2 className="mb-4 text-lg font-semibold text-gray-900">Notes</h2>
-                    <textarea
-                        name="notes"
-                        value={form.notes}
-                        onChange={handleChange}
-                        rows={3}
-                        placeholder="Internal notes..."
-                        className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                    />
-                </div>
-
-                {/* Attachments */}
-                <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-                    <h2 className="mb-1 text-lg font-semibold text-gray-900">Attachments</h2>
+                    <h2 className="mb-1 text-lg font-semibold text-gray-900">Documents</h2>
                     <p className="mb-4 text-sm text-gray-500">Upload multiple files (drawings, contracts, etc.). These become the project's shared files, available across related modules.</p>
                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-600 hover:border-primary-400 hover:text-primary-700">
                         <HiOutlinePaperClip className="h-4 w-4" />
-                        Choose files (add multiple)
+                        Add files
                         <input type="file" multiple className="hidden" onChange={addFiles} />
                     </label>
                     {attachFiles.length > 0 && (
@@ -575,6 +562,19 @@ export default function ProjectCreate() {
                             })}
                         </ul>
                     )}
+                </div>
+
+                {/* Notes */}
+                <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
+                    <h2 className="mb-4 text-lg font-semibold text-gray-900">Notes</h2>
+                    <textarea
+                        name="notes"
+                        value={form.notes}
+                        onChange={handleChange}
+                        rows={3}
+                        placeholder="Internal notes..."
+                        className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    />
                 </div>
 
                 {/* Submit */}
