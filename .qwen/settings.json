@@ -13,7 +13,10 @@
       "Bash(git status*)",
       "Bash(git diff*)",
       "Bash(git log*)",
-      "Bash(git show*)"
+      "Bash(git show*)",
+      "WebFetch(app.mge-eng.com)",
+      "Bash(curl *)",
+      "Bash(grep *)"
     ],
     "ask": [
       "Bash(php artisan migrate*)",
