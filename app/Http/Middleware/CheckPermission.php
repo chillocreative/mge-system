@@ -24,8 +24,20 @@ class CheckPermission
             return $next($request);
         }
 
-        // Check if user has ANY of the provided permissions
-        foreach ($permissions as $permission) {
+        // Flatten, split by comma or pipe, and trim whitespace
+        $validPermissions = [];
+        foreach ($permissions as $permGroup) {
+            $segments = preg_split('/[,|]/', $permGroup);
+            foreach ($segments as $segment) {
+                $trimmed = trim($segment);
+                if ($trimmed !== '') {
+                    $validPermissions[] = $trimmed;
+                }
+            }
+        }
+
+        // Check if user has ANY of the parsed permissions
+        foreach ($validPermissions as $permission) {
             if ($user->hasPermissionTo($permission)) {
                 return $next($request);
             }
@@ -34,7 +46,7 @@ class CheckPermission
         return response()->json([
             'success' => false,
             'message' => 'You do not have permission to perform this action.',
-            'required_permissions' => $permissions,
+            'required_permissions' => $validPermissions,
         ], 403);
     }
 }

@@ -70,6 +70,19 @@ export default function LeaveRequestForm() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isFemale, types, form.leave_type_id]);
 
+    // Keep end_date in sync with start_date when toggling half-day mode
+    useEffect(() => {
+        setForm((p) => {
+            let nextEndDate = p.end_date;
+            if (p.half_day) {
+                nextEndDate = p.start_date;
+            } else if (p.end_date && p.end_date < p.start_date) {
+                nextEndDate = p.start_date;
+            }
+            return nextEndDate !== p.end_date ? { ...p, end_date: nextEndDate } : p;
+        });
+    }, [form.half_day, form.start_date]);
+
     // Ask the server what this request would actually cost. Debounced, because
     // it fires on every date keystroke. The server is the only correct source
     // here — rest days and public holidays are policy data, so re-deriving them

@@ -23,6 +23,12 @@ class LeaveController extends Controller
     public function index(Request $request): JsonResponse
     {
         $filters = $request->only(['employee_id', 'status', 'leave_type_id']);
+
+        // Restrict non-HR users to their own employee record only
+        if (! $request->user()->can('leave.manage')) {
+            $filters['employee_id'] = Employee::where('user_id', $request->user()->id)->value('id') ?: 0;
+        }
+
         $perPage = min($request->integer('per_page', 15), 100);
 
         return $this->success($this->leaveService->list($filters, $perPage));
@@ -120,24 +126,51 @@ class LeaveController extends Controller
         ]);
     }
 
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
-        return $this->success($this->leaveService->get($id));
+        $user = $request->user();
+
+        // HR managers can view any request
+        if ($user->can('leave.manage')) {
+            return $this->success($this->leaveService->get($id));
+        }
+
+        // Regular users can only view their own linked employee's requests
+        $employeeId = Employee::where('user_id', $user->id)->value('id');
+        $leave = LeaveRequest::where('id', $id)->where('employee_id', $employeeId)->firstOrFail();
+
+        return $this->success($leave);
     }
 
     public function approve(Request $request, int $id): JsonResponse
     {
-        return $this->success($this->leaveService->approve($id, $request->user()), 'Leave request approved.');
+        $leave = LeaveRequest::with('employee')->findOrFail($id);
+        $actor = $request->user();
+
+        // Prevent self-approval
+        if ($leave->employee->user_id === $actor->id) {
+            return $this->forbidden('You cannot approve your own leave request.');
+        }
+
+        return $this->success($this->leaveService->approve($id, $actor), 'Leave request approved.');
     }
 
     public function reject(Request $request, int $id): JsonResponse
     {
+        $leave = LeaveRequest::with('employee')->findOrFail($id);
+        $actor = $request->user();
+
+        // Prevent self-rejection
+        if ($leave->employee->user_id === $actor->id) {
+            return $this->forbidden('You cannot reject your own leave request.');
+        }
+
         $validated = $request->validate([
             'rejection_reason' => ['nullable', 'string'],
         ]);
 
         return $this->success(
-            $this->leaveService->reject($id, $request->user(), $validated['rejection_reason'] ?? null),
+            $this->leaveService->reject($id, $actor, $validated['rejection_reason'] ?? null),
             'Leave request rejected.'
         );
     }
@@ -185,8 +218,22 @@ class LeaveController extends Controller
         return $this->success($employee);
     }
 
-    public function cancel(int $id): JsonResponse
+    public function cancel(Request $request, int $id): JsonResponse
     {
+        $user = $request->user();
+
+        if ($user->can('leave.manage')) {
+            return $this->success($this->leaveService->cancel($id), 'Leave request cancelled.');
+        }
+
+        $employeeId = Employee::where('user_id', $user->id)->value('id');
+        $leave = LeaveRequest::where('id', $id)->where('employee_id', $employeeId)->firstOrFail();
+
+        // Only allow cancellation of own requests in pending/approved states
+        if (! in_array($leave->status, ['pending', 'approved'], true)) {
+            return $this->forbidden('You can only cancel your own pending or approved leave requests.');
+        }
+
         return $this->success($this->leaveService->cancel($id), 'Leave request cancelled.');
     }
 
@@ -197,13 +244,28 @@ class LeaveController extends Controller
             'year' => ['nullable', 'integer'],
         ]);
 
+        // Restrict non-HR users to their own employee balance
+        if (! $request->user()->can('leave.manage')) {
+            $validated['employee_id'] = Employee::where('user_id', $request->user()->id)->value('id') ?: 0;
+        }
+
         $year = $validated['year'] ?? now()->year;
 
         return $this->success($this->leaveService->balanceFor($validated['employee_id'], $year));
     }
 
-    public function downloadAttachment(int $id)
+    public function downloadAttachment(Request $request, int $id)
     {
+        $user = $request->user();
+
+        if ($user->can('leave.manage')) {
+            return $this->leaveService->downloadAttachment($id);
+        }
+
+        // Restrict download to attachments belonging to the user's own leave request
+        $employeeId = Employee::where('user_id', $user->id)->value('id');
+        LeaveRequest::where('id', $id)->where('employee_id', $employeeId)->firstOrFail();
+
         return $this->leaveService->downloadAttachment($id);
     }
 
