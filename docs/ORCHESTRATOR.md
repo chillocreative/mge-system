@@ -3,14 +3,15 @@
 > **Project:** MGE-PMS — Construction Project Management System
 > **Stack:** Laravel 12 (PHP 8.2+) · React 19 · Vite 7 · Tailwind CSS 4 · MySQL · Sanctum · Spatie Permission
 > **Concept:** Qwen 3.8-Flash as brain, Qwen 3.5-Flash as hands.
-> **Version:** 1.2 (2026-09-15) — rewritten against the real Qwen Code sub-agent contract.
+> **Version:** 1.3 (2026-09-15) — rewritten against the real Qwen Code sub-agent contract.
 > **Supersedes:** v1.0 (2026-09-14), which described an agent config format that Qwen Code does not implement.
 
 ---
 
 ## Changelog
 
-- **v1.2** — writer moved to `qwen3.5-flash` at the user's request: 3.8-Flash leads, one cheaper model writes 100% of the code. `qwen3.5-flash` is **not** in the local `modelProviders` list; it resolves because the agent's request goes to the same DashScope endpoint (verified 2026-09-15: `HTTP 200`). If the picker ever refuses it, register the ID in `~/.qwen/settings.json` rather than changing the workflow.
+- **v1.3** — the gate went live after a restart and was probed, not assumed. Two corrections fell out: the write-path rule was **hard** all along (v1.2's table still called it "Soft"), and out-of-repo paths were misclassified as application code, which blocked the auto-memory store. Now `~/.qwen/agents/**` and `~/.qwen/projects/*/memory/**` are allowed and everything else outside the repo is refused — including `~/.qwen/settings.json`, so registering a model ID there is a human action, not one the orchestrator can take. See [Which paths the orchestrator may write](#which-paths-the-orchestrator-may-write).
+- **v1.2** — writer moved to `qwen3.5-flash` at the user's request: 3.8-Flash leads, one cheaper model writes 100% of the code. `qwen3.5-flash` is **not** in the local `modelProviders` list; it resolves because the agent's request goes to the same DashScope endpoint (verified 2026-09-15: `HTTP 200`). If the picker ever refuses it, the ID must be registered in `~/.qwen/settings.json` by the user — the orchestrator is gated from that file since v1.3 — rather than changing the workflow.
 - **v1.1** — mechanics corrected against the real sub-agent contract (below).
 
 ---
@@ -119,8 +120,23 @@ PY
 | Writer cannot prompt the user | sub-agents have no question tool | **Hard** |
 | Writer turn budget | `maxTurns: 60` | **Hard** |
 | Writer must not read `.env` | `permissions.deny: ["Read(.env)"]` — file rules are also enforced against equivalent shell (`cat`, `grep`, `cp`, …) | **Hard**, session-wide |
-| Orchestrator must not edit app code | prompt rule + commit gate below | **Soft** — see below |
+| Orchestrator must not edit app code | `orchestrator-gate.py` denies `write_file`/`edit`/`notebook_edit` outside `.qwen/**`+`docs/**` | **Hard** for the write tools; **soft** via shell redirection |
 | Nothing reaches git history without a written APPROVE | `PreToolUse` hook `.qwen/hooks/orchestrator-gate.py` | **Hard** |
+
+### Which paths the orchestrator may write
+
+Proven live on 2026-09-15 (attempting either of the first two from the main session returns `Orchestrator gate: …`):
+
+| Target | Result |
+|---|---|
+| `.qwen/**`, `docs/**` inside the repo | allowed — the orchestrator's own deliverables |
+| any other in-repo path (`app/`, `routes/`, `resources/`, `.gitignore`, …) | **denied** → it must become a SPEC for the writer |
+| `~/.qwen/agents/**`, `~/.qwen/projects/*/memory/**` | allowed — harness and auto-memory, not application code |
+| anything else outside the repo (`~/.qwen/settings.json`, `~/Desktop/…`, `/etc/hosts`) | **denied** |
+
+The out-of-repo distinction was itself a bug fix: the first revision called the memory directory "application code", which blocked updates the runtime instructs the agent to make. Editing the hook is separately blocked by Qwen Code's own self-modification policy, which is the right backstop — it needs an explicit user approval for that exact edit, and routing the change through the writer to dodge it would be laundering, not delegating.
+
+Known hole, accepted: a shell command (`sed -i`, `cat >`, a generated script) can still write in-repo files from the main session. That is why the commit gate, not the write gate, is the load-bearing rule.
 
 ### The commit gate (the load-bearing rule)
 
@@ -324,4 +340,4 @@ Keep both: this document is the default flow; `qwen:agent` remains useful for a 
 - Every change needs a written SPEC *and* a written REVIEW before it can exist in git history — the second is machine-enforced, the first is the plan of record.
 - Do not trust a report; run the command.
 
-**File authored:** 2026-09-14 · **v1.2 revised:** 2026-09-15 · MGE-PMS · Orchestrator concept v1.2
+**File authored:** 2026-09-14 · **v1.3 revised:** 2026-09-15 · MGE-PMS · Orchestrator concept v1.3

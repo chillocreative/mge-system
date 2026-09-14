@@ -73,6 +73,42 @@ def is_owner_area(rel):
     return rel is not None and (rel.split(os.sep)[0] in OWNER_DIRS or rel == ".")
 
 
+def external_allowed(target):
+    """True for out-of-repo paths that belong to the orchestrator's own harness.
+
+    Anything outside the project is not application code, but it is also not
+    automatically safe to write. Two areas are legitimate orchestrator state and
+    are whitelisted by shape, not by convenience:
+
+      ~/.qwen/agents/**                 user-level agent definitions
+      ~/.qwen/projects/*/memory/**      the auto-memory system's own store
+
+    An earlier revision denied them as "application code", which blocked memory
+    updates the runtime instructs the agent to perform (observed 2026-09-15,
+    unblocked by explicit user approval). Everything else outside the repo is
+    still refused.
+    """
+    if not target:
+        return False
+    abs_target = os.path.realpath(
+        target if os.path.isabs(target) else os.path.join(os.getcwd(), target)
+    )
+    home = os.path.realpath(os.path.expanduser("~"))
+    qwen = os.path.join(home, ".qwen")
+    try:
+        rel = os.path.relpath(abs_target, qwen)
+    except ValueError:
+        return False
+    if rel.startswith(".."):
+        return False
+    parts = rel.split(os.sep)
+    if parts[0] == "agents":
+        return True
+    if parts[0] == "projects" and "memory" in parts:
+        return True
+    return False
+
+
 def newest(paths):
     existing = [p for p in paths if os.path.exists(p)]
     return max(existing, key=os.path.getmtime) if existing else None
@@ -179,7 +215,16 @@ def main():
     if tool in WRITE_TOOLS:
         target = tool_input.get("file_path") or tool_input.get("notebook_path")
         rel = owned_rel(target, root)
-        if rel is None or not is_owner_area(rel):
+        if rel is None:
+            if external_allowed(target):
+                sys.exit(0)
+            deny(
+                "Orchestrator gate: '{0}' is outside this project and is not a "
+                "workflow area (~/.qwen/agents/** or ~/.qwen/projects/*/memory/**). "
+                "Refusing to write outside the repository on the orchestrator's "
+                "own authority.".format(target or "(no path)")
+            )
+        if not is_owner_area(rel):
             deny(
                 "Orchestrator gate: the orchestrator may only write under "
                 f".qwen/** and docs/**. '{target or '(no path)'}' is application "
