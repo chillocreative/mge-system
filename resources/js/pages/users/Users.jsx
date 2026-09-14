@@ -25,7 +25,11 @@ const statusTabs = [
 
 const SUPER_ADMIN_ROLE = 'Admin & HR';
 const initials = (name = '') => name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-const emptyForm = { full_name: '', ic_number: '', email: '', password: '', phone: '', department_id: '', designation_id: '', role: '', status: 'active' };
+const emptyForm = {
+    full_name: '', ic_number: '', email: '', password: '', phone: '',
+    emergency_contact_name: '', emergency_contact_phone: '', emergency_contact_relationship: '',
+    department_id: '', designation_id: '', role: '', status: 'active',
+};
 const unwrap = (r) => r.data?.data?.data || r.data?.data || [];
 
 export default function Users() {
@@ -70,7 +74,11 @@ export default function Users() {
         setEditId(user.id);
         setForm({
             full_name: user.full_name || '', ic_number: user.ic_number || '', email: user.email || '',
-            password: '', phone: user.phone || '', department_id: user.department?.id || '',
+            password: '', phone: user.phone || '',
+            emergency_contact_name: user.emergency_contact_name || '',
+            emergency_contact_phone: user.emergency_contact_phone || '',
+            emergency_contact_relationship: user.emergency_contact_relationship || '',
+            department_id: user.department?.id || '',
             designation_id: user.designation?.id || '', role: user.roles?.[0] || '', status: user.status || 'active',
         });
         setErrors({});
@@ -85,6 +93,9 @@ export default function Users() {
             if (editId) {
                 const payload = {
                     full_name: form.full_name, ic_number: form.ic_number || null, phone: form.phone || null,
+                    emergency_contact_name: form.emergency_contact_name || null,
+                    emergency_contact_phone: form.emergency_contact_phone || null,
+                    emergency_contact_relationship: form.emergency_contact_relationship || null,
                     department_id: form.department_id || null, designation_id: form.designation_id || null,
                     status: form.status, role: form.role || null,
                 };
@@ -95,6 +106,9 @@ export default function Users() {
                 await apiClient.post('/users', {
                     full_name: form.full_name, ic_number: form.ic_number || null, email: form.email,
                     password: form.password, phone: form.phone || null,
+                    emergency_contact_name: form.emergency_contact_name || null,
+                    emergency_contact_phone: form.emergency_contact_phone || null,
+                    emergency_contact_relationship: form.emergency_contact_relationship || null,
                     department_id: form.department_id || null, designation_id: form.designation_id || null, role: form.role,
                 });
                 toast.success('User created');
@@ -279,6 +293,23 @@ export default function Users() {
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Phone</label>
                                     <input type="tel" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} className={fieldClass('phone')} placeholder="+60 1x-xxx xxxx" />
+                                </div>
+                            </div>
+                            <div>
+                                <p className="mb-1.5 text-sm font-medium text-gray-700">Emergency Contact</p>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <label className="mb-1 block text-xs font-medium text-gray-500">Emergency Contact Name</label>
+                                        <input type="text" value={form.emergency_contact_name} onChange={(e) => setForm((p) => ({ ...p, emergency_contact_name: e.target.value }))} className={fieldClass('emergency_contact_name')} />
+                                    </div>
+                                    <div>
+                                        <label className="mb-1 block text-xs font-medium text-gray-500">Emergency Contact Phone</label>
+                                        <input type="tel" value={form.emergency_contact_phone} onChange={(e) => setForm((p) => ({ ...p, emergency_contact_phone: e.target.value }))} className={fieldClass('emergency_contact_phone')} />
+                                    </div>
+                                </div>
+                                <div className="mt-4">
+                                    <label className="mb-1 block text-xs font-medium text-gray-500">Relationship</label>
+                                    <input type="text" value={form.emergency_contact_relationship} onChange={(e) => setForm((p) => ({ ...p, emergency_contact_relationship: e.target.value }))} className={fieldClass('emergency_contact_relationship')} placeholder="e.g. Spouse, Parent, Sibling" />
                                 </div>
                             </div>
                             {!editId && (
