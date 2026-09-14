@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import safetyService from '@/services/safetyService';
 import projectService from '@/services/projectService';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import {
@@ -255,7 +256,7 @@ function IncidentsTable({ items, onView }) {
                             <td className="px-4 py-3 text-sm text-gray-500">{i.project?.name || '-'}</td>
                             <td className="px-4 py-3"><Badge text={i.severity} colorMap={severityColors} /></td>
                             <td className="px-4 py-3"><Badge text={i.status} colorMap={statusColors} /></td>
-                            <td className="px-4 py-3 text-sm text-gray-500">{new Date(i.incident_date).toLocaleDateString()}</td>
+                            <td className="px-4 py-3 text-sm text-gray-500">{formatDate(i.incident_date)}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{i.reporter?.first_name} {i.reporter?.last_name}</td>
                             <td className="px-4 py-3 text-right">
                                 <a href={safetyService.getIncidentPdfUrl(i.id)} target="_blank" rel="noreferrer"
@@ -331,7 +332,7 @@ function MeetingsTable({ items, onView }) {
                         <tr key={m.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => onView(m.id)}>
                             <td className="px-4 py-3 text-sm font-medium text-gray-900">{m.title}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{m.project?.name || '-'}</td>
-                            <td className="px-4 py-3 text-sm text-gray-500">{new Date(m.meeting_date).toLocaleDateString()}</td>
+                            <td className="px-4 py-3 text-sm text-gray-500">{formatDate(m.meeting_date)}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{m.conductor?.first_name} {m.conductor?.last_name}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{m.attendees_count || 0}</td>
                             <td className="px-4 py-3 text-right">
@@ -372,7 +373,7 @@ function ChecklistsTable({ items, onView }) {
                             <td className="px-4 py-3 text-sm text-gray-500">{c.project?.name || '-'}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{c.type?.replace(/_/g, ' ').toUpperCase()}</td>
                             <td className="px-4 py-3"><Badge text={c.overall_status} colorMap={checklistStatusColors} /></td>
-                            <td className="px-4 py-3 text-sm text-gray-500">{new Date(c.checklist_date).toLocaleDateString()}</td>
+                            <td className="px-4 py-3 text-sm text-gray-500">{formatDate(c.checklist_date)}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{c.items_count || 0}</td>
                             <td className="px-4 py-3 text-right">
                                 <a href={safetyService.getChecklistPdfUrl(c.id)} target="_blank" rel="noreferrer"
@@ -659,7 +660,7 @@ function IncidentDetail({ id, onBack, canManage, onUpdated }) {
                 <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <InfoRow label="Project" value={record.project?.name} />
                     <InfoRow label="Reporter" value={`${record.reporter?.first_name} ${record.reporter?.last_name}`} />
-                    <InfoRow label="Date" value={new Date(record.incident_date).toLocaleDateString()} />
+                    <InfoRow label="Date" value={formatDate(record.incident_date)} />
                     <InfoRow label="Location" value={record.location} />
                     {record.injured_person && <InfoRow label="Injured Person" value={record.injured_person} />}
                     {record.investigator && <InfoRow label="Investigator" value={`${record.investigator.first_name} ${record.investigator.last_name}`} />}
@@ -723,7 +724,7 @@ function MeetingDetail({ id, onBack }) {
                 <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <InfoRow label="Project" value={record.project?.name} />
                     <InfoRow label="Conductor" value={`${record.conductor?.first_name} ${record.conductor?.last_name}`} />
-                    <InfoRow label="Date" value={new Date(record.meeting_date).toLocaleDateString()} />
+                    <InfoRow label="Date" value={formatDate(record.meeting_date)} />
                     <InfoRow label="Duration" value={record.duration_minutes ? `${record.duration_minutes} min` : 'N/A'} />
                     <InfoRow label="Location" value={record.location} />
                 </div>
@@ -784,7 +785,7 @@ function ChecklistDetail({ id, onBack }) {
                 <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <InfoRow label="Project" value={record.project?.name} />
                     <InfoRow label="Inspector" value={`${record.inspector?.first_name} ${record.inspector?.last_name}`} />
-                    <InfoRow label="Date" value={new Date(record.checklist_date).toLocaleDateString()} />
+                    <InfoRow label="Date" value={formatDate(record.checklist_date)} />
                     <InfoRow label="Type" value={record.type?.replace(/_/g, ' ').toUpperCase()} />
                 </div>
                 <div className="mt-4 flex gap-4">

@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import qcService from '@/services/qcService';
 import { useAuth } from '@/context/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import {
     HiOutlinePlus,
     HiOutlinePencilAlt,
@@ -263,7 +264,7 @@ export default function QcRecords() {
                                 ) : (
                                     records.map((record) => (
                                         <tr key={record.id} className="hover:bg-gray-50">
-                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">{record.date}</td>
+                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">{formatDate(record.date)}</td>
                                             <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">{record.reference_no || '-'}</td>
                                             <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">{record.title}</td>
                                             <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">{record.project?.name || '-'}</td>

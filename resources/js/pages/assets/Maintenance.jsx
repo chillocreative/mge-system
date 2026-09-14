@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import maintenanceService from '@/services/maintenanceService';
 import assetService from '@/services/assetService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus,
@@ -138,7 +139,7 @@ export default function Maintenance() {
                     <div className="flex flex-wrap gap-2">
                         {upcoming.map((log) => (
                             <span key={log.id} className="rounded-full bg-white px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-200">
-                                {maintainableLabel(log)} · {cap(log.maintenance_type)} · due {log.next_due_date}
+                                {maintainableLabel(log)} · {cap(log.maintenance_type)} · due {formatDate(log.next_due_date)}
                             </span>
                         ))}
                     </div>
@@ -187,7 +188,7 @@ export default function Maintenance() {
                                         <td className="px-4 py-3 text-sm font-medium text-gray-900">{maintainableLabel(log)}</td>
                                         <td className="px-4 py-3"><span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{cap(log.maintenance_type)}</span></td>
                                         <td className="px-4 py-3 text-sm text-gray-600">{log.description}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">{log.performed_date}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-500">{formatDate(log.performed_date)}</td>
                                         <td className="px-4 py-3 text-sm text-gray-500">{log.next_due_date || '-'}</td>
                                         <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">{log.cost ? `RM ${Number(log.cost).toLocaleString('en-MY', { minimumFractionDigits: 2 })}` : '-'}</td>
                                         <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[log.status]}`}>{cap(log.status)}</span></td>

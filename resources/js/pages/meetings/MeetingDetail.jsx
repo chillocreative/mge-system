@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import meetingService from '@/services/meetingService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePencil,
@@ -86,7 +87,7 @@ export default function MeetingDetail() {
                         </span>
                     </div>
                     <div className="mt-2 flex flex-wrap gap-4 text-sm text-gray-500">
-                        <span className="flex items-center gap-1"><HiOutlineCalendar className="h-4 w-4" /> {meeting.meeting_date}</span>
+                        <span className="flex items-center gap-1"><HiOutlineCalendar className="h-4 w-4" /> {formatDate(meeting.meeting_date)}</span>
                         {meeting.meeting_time && <span className="flex items-center gap-1"><HiOutlineClock className="h-4 w-4" /> {meeting.meeting_time}</span>}
                         {meeting.location && <span className="flex items-center gap-1"><HiOutlineLocationMarker className="h-4 w-4" /> {meeting.location}</span>}
                         {meeting.project && <span>Project: {meeting.project.name}</span>}
@@ -154,7 +155,7 @@ export default function MeetingDetail() {
                                         <p className="text-sm text-gray-800">{a.item}</p>
                                         <p className="mt-0.5 text-xs text-gray-500">
                                             {a.assignee ? `${a.assignee.first_name} ${a.assignee.last_name}` : 'Unassigned'}
-                                            {a.due_date ? ` · Due ${a.due_date}` : ''}
+                                            {a.due_date ? ` · Due ${formatDate(a.due_date)}` : ''}
                                         </p>
                                     </div>
                                     <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${actionColors[a.status] || actionColors.open}`}>

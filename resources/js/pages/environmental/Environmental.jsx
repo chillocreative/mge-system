@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import environmentalService from '@/services/environmentalService';
 import projectService from '@/services/projectService';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import {
     HiOutlineGlobe, HiOutlineTrash, HiOutlineEye, HiOutlineClipboardCheck,
@@ -270,7 +271,7 @@ function InspectionsTable({ items, onView }) {
                             <td className="px-4 py-3 text-sm text-gray-500">{i.project?.name || '-'}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{i.type?.replace(/_/g, ' ')}</td>
                             <td className="px-4 py-3"><Badge text={i.overall_status} colorMap={inspStatusColors} /></td>
-                            <td className="px-4 py-3 text-sm text-gray-500">{new Date(i.inspection_date).toLocaleDateString()}</td>
+                            <td className="px-4 py-3 text-sm text-gray-500">{formatDate(i.inspection_date)}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{i.inspector?.first_name} {i.inspector?.last_name}</td>
                             <td className="px-4 py-3 text-right">
                                 <a href={environmentalService.getInspectionPdfUrl(i.id)} target="_blank" rel="noreferrer"
@@ -310,7 +311,7 @@ function AuditsTable({ items, onView }) {
                             <td className="px-4 py-3 text-sm text-gray-500">{a.project?.name || '-'}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{a.type}</td>
                             <td className="px-4 py-3"><Badge text={a.status} colorMap={auditStatusColors} /></td>
-                            <td className="px-4 py-3 text-sm text-gray-500">{new Date(a.audit_date).toLocaleDateString()}</td>
+                            <td className="px-4 py-3 text-sm text-gray-500">{formatDate(a.audit_date)}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{a.auditor?.first_name} {a.auditor?.last_name}</td>
                             <td className="px-4 py-3 text-right">
                                 <a href={environmentalService.getAuditPdfUrl(a.id)} target="_blank" rel="noreferrer"
@@ -517,10 +518,10 @@ function InspectionDetail({ id, onBack, canManage, onUpdated }) {
                 <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <InfoRow label="Project" value={record.project?.name} />
                     <InfoRow label="Inspector" value={`${record.inspector?.first_name} ${record.inspector?.last_name}`} />
-                    <InfoRow label="Date" value={new Date(record.inspection_date).toLocaleDateString()} />
+                    <InfoRow label="Date" value={formatDate(record.inspection_date)} />
                     <InfoRow label="Type" value={record.type?.replace(/_/g, ' ')} />
                     <InfoRow label="Follow-Up Required" value={record.follow_up_required ? 'Yes' : 'No'} />
-                    {record.follow_up_date && <InfoRow label="Follow-Up Date" value={new Date(record.follow_up_date).toLocaleDateString()} />}
+                    {record.follow_up_date && <InfoRow label="Follow-Up Date" value={formatDate(record.follow_up_date)} />}
                 </div>
                 <div className="mt-6 space-y-4">
                     <DetailBlock label="Findings" text={record.findings} />
@@ -585,9 +586,9 @@ function AuditDetail({ id, onBack, canManage, onUpdated }) {
                 <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <InfoRow label="Project" value={record.project?.name} />
                     <InfoRow label="Auditor" value={`${record.auditor?.first_name} ${record.auditor?.last_name}`} />
-                    <InfoRow label="Date" value={new Date(record.audit_date).toLocaleDateString()} />
+                    <InfoRow label="Date" value={formatDate(record.audit_date)} />
                     <InfoRow label="Type" value={record.type} />
-                    {record.next_audit_date && <InfoRow label="Next Audit" value={new Date(record.next_audit_date).toLocaleDateString()} />}
+                    {record.next_audit_date && <InfoRow label="Next Audit" value={formatDate(record.next_audit_date)} />}
                 </div>
                 <div className="mt-6 space-y-4">
                     {record.scope && <DetailBlock label="Scope" text={record.scope} />}

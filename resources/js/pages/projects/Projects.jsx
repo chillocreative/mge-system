@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import projectService from '@/services/projectService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import ProjectFilesPanel from '@/components/ProjectFilesPanel';
 import { HiOutlinePlus, HiOutlineSearch, HiOutlineBriefcase, HiOutlinePaperClip, HiOutlineX } from 'react-icons/hi';
 
@@ -151,7 +152,7 @@ export default function Projects() {
                                 </span>
                                 {project.end_date && (
                                     <span className="text-xs text-gray-400">
-                                        Due: {project.end_date}
+                                        Due: {formatDate(project.end_date)}
                                     </span>
                                 )}
                             </div>

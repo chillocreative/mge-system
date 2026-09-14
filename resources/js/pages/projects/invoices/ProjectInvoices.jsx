@@ -4,6 +4,7 @@ import projectInvoiceService from '@/services/projectInvoiceService';
 import projectService from '@/services/projectService';
 import ProjectFilesPanel from '@/components/ProjectFilesPanel';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus, HiOutlineSearch, HiOutlineDocumentText, HiOutlinePencil, HiOutlineTrash,
@@ -352,7 +353,7 @@ export default function ProjectInvoices() {
                                         <td className="px-4 py-3 text-sm text-gray-600">{inv.party_name || (inv.type === 'client' ? '(Client)' : '(Subcon)')}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold text-gray-900">{fmt(inv.amount)}</td>
                                         <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[inv.status]}`}>{inv.status}</span></td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{inv.invoice_date}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(inv.invoice_date)}</td>
                                         <td className="px-4 py-3">
                                             {inv.files?.length ? (
                                                 <span className="inline-flex items-center gap-1 text-xs text-gray-500"><HiOutlinePaperClip className="h-3.5 w-3.5" />{inv.files.length}</span>
@@ -552,7 +553,7 @@ export default function ProjectInvoices() {
                                                     <li key={pm.id} className="flex items-center justify-between gap-2 rounded bg-white px-2 py-1.5 text-xs text-gray-600 ring-1 ring-gray-100">
                                                         <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5">
                                                             <span className="font-semibold text-gray-900">{fmt(pm.amount)}</span>
-                                                            <span>{pm.payment_date}</span>
+                                                            <span>{formatDate(pm.payment_date)}</span>
                                                             {pm.document_no && <span className="text-gray-400">Doc: {pm.document_no}</span>}
                                                             {pm.method && <span className="text-gray-400">{paymentMethods.find((m) => m.k === pm.method)?.l || pm.method}</span>}
                                                         </span>

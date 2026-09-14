@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import financeService from '@/services/financeService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePencil,
@@ -157,8 +158,8 @@ export default function InvoiceDetail() {
                             </div>
                             <div className="text-right">
                                 <div className="text-sm text-gray-600">
-                                    <p><span className="font-medium">Issue Date:</span> {invoice.issue_date}</p>
-                                    <p><span className="font-medium">Due Date:</span> {invoice.due_date}</p>
+                                    <p><span className="font-medium">Issue Date:</span> {formatDate(invoice.issue_date)}</p>
+                                    <p><span className="font-medium">Due Date:</span> {formatDate(invoice.due_date)}</p>
                                     {invoice.project && <p><span className="font-medium">Project:</span> {invoice.project.name}</p>}
                                 </div>
                             </div>
@@ -215,7 +216,7 @@ export default function InvoiceDetail() {
                                 <tbody className="divide-y divide-gray-100">
                                     {invoice.payments.map((p) => (
                                         <tr key={p.id}>
-                                            <td className="px-4 py-2.5 text-sm text-gray-700">{p.payment_date}</td>
+                                            <td className="px-4 py-2.5 text-sm text-gray-700">{formatDate(p.payment_date)}</td>
                                             <td className="px-4 py-2.5 text-sm text-gray-600">{p.method?.replace('_', ' ')}</td>
                                             <td className="px-4 py-2.5 text-sm text-gray-500">{p.reference || '-'}</td>
                                             <td className="px-4 py-2.5 text-right text-sm font-medium text-green-600">

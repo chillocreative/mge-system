@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import financeService from '@/services/financeService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus,
@@ -170,7 +171,7 @@ export default function Invoices() {
                                             )}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
-                                            {inv.due_date}
+                                            {formatDate(inv.due_date)}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right">
                                             <div className="flex items-center justify-end gap-1">

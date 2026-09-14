@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import contractService from '@/services/contractService';
 import projectService from '@/services/projectService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus,
@@ -283,8 +284,8 @@ export default function Contracts() {
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-gray-900">
                                             {formatCurrency(c.contract_value)}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{c.start_date ? String(c.start_date).split('T')[0] : '-'}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{c.end_date ? String(c.end_date).split('T')[0] : '-'}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(c.start_date)}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(c.end_date)}</td>
                                         <td className="px-4 py-3 text-sm text-gray-600">
                                             {c.pics?.length
                                                 ? <>{c.pics[0].name}{c.pics.length > 1 && <span className="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500">+{c.pics.length - 1}</span>}</>

@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import dashboardService from '@/services/dashboardService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import SearchableSelect from '@/components/SearchableSelect';
+import { formatDate } from '@/utils/date';
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -384,7 +385,7 @@ export default function Dashboard() {
                     <div key={task.id} className="flex items-center justify-between px-6 py-3.5 transition-colors hover:bg-gray-50">
                         <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium text-gray-900">{task.title}</p>
-                            <p className="mt-0.5 text-xs text-gray-400">{task.project?.name}{task.due_date && <span className="ml-2">Due {task.due_date}</span>}</p>
+                            <p className="mt-0.5 text-xs text-gray-400">{task.project?.name}{task.due_date && <span className="ml-2">Due {formatDate(task.due_date)}</span>}</p>
                         </div>
                         <div className="ml-4 flex shrink-0 items-center gap-2">
                             <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${priorityColors[task.priority]}`}>{task.priority}</span>
@@ -403,7 +404,7 @@ export default function Dashboard() {
                         <div key={l.id} className="flex items-center justify-between px-6 py-3.5">
                             <div className="min-w-0 flex-1">
                                 <p className="truncate text-sm font-medium text-gray-900">{l.employee} · {l.type}</p>
-                                <p className="mt-0.5 text-xs text-gray-400">{l.start_date} → {l.end_date}</p>
+                                <p className="mt-0.5 text-xs text-gray-400">{formatDate(l.start_date)} → {formatDate(l.end_date)}</p>
                             </div>
                             <span className="ml-3 shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">{l.stage}</span>
                         </div>

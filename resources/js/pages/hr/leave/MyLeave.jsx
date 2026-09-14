@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import leaveService from '@/services/leaveService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus,
@@ -206,7 +207,7 @@ export default function MyLeave() {
                                                         </span>
                                                     </td>
                                                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                                                        {req.start_date} &rarr; {req.end_date}
+                                                        {formatDate(req.start_date)} &rarr; {formatDate(req.end_date)}
                                                     </td>
                                                     <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-gray-900">{req.days_count}</td>
                                                     <td className="px-4 py-3">

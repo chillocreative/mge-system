@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import contractService from '@/services/contractService';
 import drawingService from '@/services/drawingService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import {
     HiOutlineArrowLeft,
@@ -112,14 +113,14 @@ export default function ContractDetail() {
                     <p className="text-xs font-medium text-gray-400">Start Date</p>
                     <p className="mt-1 flex items-center gap-1 text-sm text-gray-900">
                         <HiOutlineCalendar className="h-4 w-4 text-gray-400" />
-                        {contract.start_date ? String(contract.start_date).split('T')[0] : '-'}
+                        {formatDate(contract.start_date)}
                     </p>
                 </div>
                 <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
                     <p className="text-xs font-medium text-gray-400">End Date</p>
                     <p className="mt-1 flex items-center gap-1 text-sm text-gray-900">
                         <HiOutlineCalendar className="h-4 w-4 text-gray-400" />
-                        {contract.end_date ? String(contract.end_date).split('T')[0] : '-'}
+                        {formatDate(contract.end_date)}
                     </p>
                 </div>
                 <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200">

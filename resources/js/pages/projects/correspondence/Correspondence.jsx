@@ -5,6 +5,7 @@ import projectService from '@/services/projectService';
 import projectSiteService from '@/services/projectSiteService';
 import ProjectFilesPanel from '@/components/ProjectFilesPanel';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import CorrespondenceWorkflowDrawer from './CorrespondenceWorkflowDrawer';
 import toast from 'react-hot-toast';
 import {
@@ -310,8 +311,8 @@ export default function Correspondence() {
                                         </td>
                                         <td className="px-4 py-3 text-sm text-gray-600">{item.project?.name || '-'}</td>
                                         <td className="px-4 py-3"><span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[item.status] || 'bg-gray-100 text-gray-600'}`}>{item.status}</span></td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{item.raised_date ? String(item.raised_date).split('T')[0] : '-'}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{item.due_date ? String(item.due_date).split('T')[0] : '-'}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(item.raised_date)}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(item.due_date)}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{item.creator ? `${item.creator.first_name} ${item.creator.last_name}` : '-'}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right">
                                             <div className="flex items-center justify-end gap-1">
@@ -424,7 +425,7 @@ export default function Correspondence() {
                                         const days = dayDiff(form.raised_date, endDate);
                                         return endDate ? (
                                             <p className="text-sm text-gray-700">
-                                                {form.raised_date} <span className="text-gray-400">&rarr;</span> {endDate}
+                                                {formatDate(form.raised_date)} <span className="text-gray-400">&rarr;</span> {formatDate(endDate)}
                                                 {days !== null && <span className="ml-2 text-xs text-gray-500">({days} day{days === 1 ? '' : 's'}, {closed ? 'closed' : 'open'})</span>}
                                             </p>
                                         ) : (

@@ -5,6 +5,7 @@ import assetService from '@/services/assetService';
 import projectService from '@/services/projectService';
 import maintenanceService from '@/services/maintenanceService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import {
     HiOutlineArrowLeft,
@@ -239,7 +240,7 @@ export default function VehicleDetail() {
                                         <span className="rounded-lg bg-primary-50 p-2 text-primary-600"><HiOutlineDocumentText className="h-5 w-5" /></span>
                                         <div>
                                             <p className="text-sm font-medium text-gray-900">{cap(doc.doc_type)}{doc.provider ? ` · ${doc.provider}` : ''}</p>
-                                            <p className="text-xs text-gray-500">{doc.policy_or_ref_no || ''}{doc.expiry_date ? ` · expires ${doc.expiry_date}` : ''}</p>
+                                            <p className="text-xs text-gray-500">{doc.policy_or_ref_no || ''}{doc.expiry_date ? ` · expires ${formatDate(doc.expiry_date)}` : ''}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -281,9 +282,9 @@ export default function VehicleDetail() {
                                 <div className="flex items-start gap-3">
                                     <span className="rounded-lg bg-gray-100 p-2 text-gray-600"><HiOutlineCog className="h-5 w-5" /></span>
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900">{cap(log.maintenance_type)} · {log.performed_date}</p>
+                                        <p className="text-sm font-medium text-gray-900">{cap(log.maintenance_type)} · {formatDate(log.performed_date)}</p>
                                         <p className="text-xs text-gray-500">{log.description}</p>
-                                        {log.next_due_date && <p className="text-xs text-amber-600">Next due: {log.next_due_date}</p>}
+                                        {log.next_due_date && <p className="text-xs text-amber-600">Next due: {formatDate(log.next_due_date)}</p>}
                                     </div>
                                 </div>
                                 <div className="text-right">

@@ -5,6 +5,7 @@ import projectSiteService from '@/services/projectSiteService';
 import assetService from '@/services/assetService';
 import taskService from '@/services/taskService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import ProjectDiscussions from '@/components/ProjectDiscussions';
 import ProjectSitesPanel from '@/components/ProjectSitesPanel';
 import { useAuth } from '@/context/AuthContext';
@@ -190,7 +191,7 @@ function OverviewTab({ project }) {
                             <DetailRow icon={HiOutlineUser} label="Project Manager" value={project.manager.full_name} />
                         )}
                         {(project.start_date || project.end_date) && (
-                            <DetailRow icon={HiOutlineCalendar} label="Timeline" value={`${project.start_date || 'TBD'} - ${project.end_date || 'TBD'}`} />
+                            <DetailRow icon={HiOutlineCalendar} label="Timeline" value={`${project.start_date ? formatDate(project.start_date) : 'TBD'} - ${project.end_date ? formatDate(project.end_date) : 'TBD'}`} />
                         )}
                         {project.budget > 0 && (
                             <div className="flex items-start gap-3">
@@ -319,7 +320,7 @@ function TasksTab({ project, canEdit, onRefresh }) {
                                 <p className="text-sm font-medium text-gray-900">{task.title}</p>
                                 <p className="text-xs text-gray-500">
                                     {task.assignees?.length ? task.assignees.map((a) => a.full_name).join(', ') : 'Unassigned'}
-                                    {task.due_date && <span className="ml-2">Due: {task.due_date}</span>}
+                                    {task.due_date && <span className="ml-2">Due: {formatDate(task.due_date)}</span>}
                                 </p>
                             </div>
                             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[task.status]}`}>
@@ -427,8 +428,8 @@ function MilestonesTab({ project, canEdit, onRefresh }) {
                                     </div>
                                     {ms.description && <p className="mt-1 text-xs text-gray-500">{ms.description}</p>}
                                     <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                                        {ms.due_date && <span>Due: {ms.due_date}</span>}
-                                        {ms.completed_date && <span>Completed: {ms.completed_date}</span>}
+                                        {ms.due_date && <span>Due: {formatDate(ms.due_date)}</span>}
+                                        {ms.completed_date && <span>Completed: {formatDate(ms.completed_date)}</span>}
                                         <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${statusColors[ms.status] || 'bg-gray-100 text-gray-600'}`}>
                                             {String(ms.status).replace('_', ' ')}
                                         </span>
@@ -896,7 +897,7 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                         <div key={log.id} className="rounded-lg border border-gray-200 p-4">
                             <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-3 text-xs text-gray-500">
-                                    <span className="text-sm font-semibold text-gray-900">{log.log_date}</span>
+                                    <span className="text-sm font-semibold text-gray-900">{formatDate(log.log_date)}</span>
                                     {log.weather && <span>{weatherIcons[log.weather] || ''} {log.weather}</span>}
                                     {log.workers_count > 0 && <span>{log.workers_count} workers</span>}
                                     {log.site?.name && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-700">{log.site.name}</span>}

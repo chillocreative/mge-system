@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import trainingService from '@/services/trainingService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import { HiOutlineAcademicCap, HiOutlinePlus, HiOutlineX } from 'react-icons/hi';
 
@@ -117,7 +118,7 @@ export default function MyTraining() {
                                                         <p className="text-sm font-medium text-gray-900">{rec.title}</p>
                                                         <p className="text-xs text-gray-500">{[rec.provider, rec.category].filter(Boolean).join(' · ')}</p>
                                                     </td>
-                                                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{rec.training_date}</td>
+                                                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{formatDate(rec.training_date)}</td>
                                                     <td className="px-4 py-3 text-right text-sm text-gray-600">{rec.duration_days ?? '-'}</td>
                                                     <td className="px-4 py-3 text-center">
                                                         {rec.hrdf_claimable

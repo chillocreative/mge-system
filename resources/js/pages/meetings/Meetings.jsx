@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import meetingService from '@/services/meetingService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus,
@@ -134,7 +135,7 @@ export default function Meetings() {
                                 <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
                                     <span className="flex items-center gap-1.5">
                                         <HiOutlineCalendar className="h-4 w-4 text-gray-400" />
-                                        {m.meeting_date}{m.meeting_time ? ` · ${m.meeting_time}` : ''}
+                                        {formatDate(m.meeting_date)}{m.meeting_time ? ` · ${m.meeting_time}` : ''}
                                     </span>
                                     {m.location && (
                                         <span className="flex items-center gap-1.5">

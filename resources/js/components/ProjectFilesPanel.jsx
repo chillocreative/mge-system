@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import projectService from '@/services/projectService';
 import toast from 'react-hot-toast';
+import { formatDate } from '@/utils/date';
 import { HiOutlineDocumentText, HiOutlineDownload, HiOutlineTrash, HiOutlinePaperClip } from 'react-icons/hi';
 
 const fmtSize = (b) => {
@@ -96,7 +97,7 @@ export default function ProjectFilesPanel({ projectId, readOnly = false }) {
                                 <p className="text-xs text-gray-400">
                                     {fmtSize(f.file_size)}
                                     {f.uploader ? ` · ${f.uploader.first_name} ${f.uploader.last_name}` : ''}
-                                    {f.created_at ? ` · ${String(f.created_at).split('T')[0]}` : ''}
+                                    {f.created_at ? ` · ${formatDate(f.created_at)}` : ''}
                                 </p>
                             </div>
                             <a href={projectService.getDocumentDownloadUrl(projectId, f.id)} target="_blank" rel="noreferrer"

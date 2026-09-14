@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import inventoryService from '@/services/inventoryService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import {
     HiOutlineArrowLeft,
@@ -142,7 +143,7 @@ export default function ItemDetail() {
                             <tbody className="divide-y divide-gray-100">
                                 {transactions.map((t) => (
                                     <tr key={t.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-3 text-sm text-gray-500">{t.transaction_date}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-500">{formatDate(t.transaction_date)}</td>
                                         <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${txnColors[t.type]}`}>{cap(t.type)}</span></td>
                                         <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">{formatQty(t.quantity)}</td>
                                         <td className="px-4 py-3 text-sm text-gray-600">{t.reference || '-'}</td>

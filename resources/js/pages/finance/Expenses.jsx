@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import financeService from '@/services/financeService';
 import projectService from '@/services/projectService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus,
@@ -221,7 +222,7 @@ export default function Expenses() {
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-gray-900">
                                             {formatCurrency(exp.amount)}
                                         </td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{exp.expense_date}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(exp.expense_date)}</td>
                                         <td className="px-4 py-3">
                                             <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[exp.status]}`}>
                                                 {exp.status}

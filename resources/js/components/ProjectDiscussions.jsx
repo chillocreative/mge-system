@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import discussionService from '@/services/discussionService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { formatDate } from '@/utils/date';
 import {
     HiOutlineChatAlt2,
     HiOutlinePaperAirplane,
@@ -30,7 +31,7 @@ function relativeTime(value) {
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-    return date.toLocaleDateString();
+    return formatDate(date);
 }
 
 function Avatar({ author }) {

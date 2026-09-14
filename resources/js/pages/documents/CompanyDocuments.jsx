@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import documentService from '@/services/documentService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus,
@@ -195,7 +196,7 @@ export default function CompanyDocuments() {
                                         <td className="px-4 py-3 text-sm text-gray-600">{doc.reference_no || '-'}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatSize(doc.file_size)}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
-                                            {doc.created_at?.split('T')[0]}
+                                            {formatDate(doc.created_at)}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right">
                                             <div className="flex items-center justify-end gap-1">

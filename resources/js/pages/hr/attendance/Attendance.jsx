@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import attendanceService from '@/services/attendanceService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import { HiOutlineUpload, HiOutlineSearch, HiOutlineClock, HiOutlineTrash } from 'react-icons/hi';
 
@@ -127,7 +128,7 @@ export default function Attendance() {
                                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
                                             {r.user ? `${r.user.first_name} ${r.user.last_name || ''}` : (r.employee?.full_name || `#${r.user_id}`)}
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{r.date}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">{formatDate(r.date)}</td>
                                         <td className="px-4 py-3 text-sm text-gray-600">{r.clock_in ? new Date(r.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                                         <td className="px-4 py-3 text-sm text-gray-600">{r.clock_out ? new Date(r.clock_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                                         <td className="px-4 py-3 text-right text-sm text-gray-600">{r.working_hours}</td>

@@ -4,6 +4,7 @@ import taskService from '@/services/taskService';
 import projectService from '@/services/projectService';
 import apiClient from '@/services/apiClient';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus, HiOutlineClipboardList, HiOutlineSearch, HiOutlineX,
@@ -360,7 +361,7 @@ export default function Tasks() {
                                 <div className="mb-4 flex flex-wrap gap-2">
                                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[detail.status]}`}>{detail.status?.replace('_', ' ')}</span>
                                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${priorityColors[detail.priority]}`}>{detail.priority}</span>
-                                    {detail.due_date && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">Due {detail.due_date}</span>}
+                                    {detail.due_date && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">Due {formatDate(detail.due_date)}</span>}
                                 </div>
 
                                 {detail.description && <p className="mb-4 text-sm text-gray-600">{detail.description}</p>}

@@ -5,6 +5,7 @@ import memoService from '@/services/memoService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { HiOutlineDocumentDuplicate, HiOutlinePlus, HiOutlineX, HiOutlinePaperClip, HiOutlineDownload } from 'react-icons/hi';
+import { formatDate } from '@/utils/date';
 
 const audienceLabel = {
     all_users: 'All staff',
@@ -15,7 +16,7 @@ const audienceLabel = {
 function fmt(dt) {
     if (!dt) return '';
     const d = new Date(dt);
-    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return formatDate(d) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 export default function Memo() {

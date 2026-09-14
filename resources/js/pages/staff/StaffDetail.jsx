@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import staffService from '@/services/staffService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatDate } from '@/utils/date';
 import StaffLeaveBalanceCard from './StaffLeaveBalanceCard';
 import StaffProjectsCard from './StaffProjectsCard';
 import toast from 'react-hot-toast';
@@ -113,7 +114,7 @@ export default function StaffDetail() {
                     <Row label="Email" value={emp.email} />
                     <Row label="Phone" value={emp.phone} />
                     <Row label="Gender" value={labelize(emp.gender)} />
-                    <Row label="Date of Birth" value={emp.dob} />
+                    <Row label="Date of Birth" value={formatDate(emp.dob)} />
                     <Row label="Address" value={emp.address} />
                 </Card>
 
@@ -123,8 +124,8 @@ export default function StaffDetail() {
                     <Row label="Employment Type" value={labelize(emp.employment_type)} />
                     <Row label="Category" value={labelize(emp.category)} />
                     <Row label="Reporting Manager" value={emp.manager?.full_name} />
-                    <Row label="Hire Date" value={emp.hire_date} />
-                    <Row label="Resign Date" value={emp.resign_date} />
+                    <Row label="Hire Date" value={formatDate(emp.hire_date)} />
+                    <Row label="Resign Date" value={formatDate(emp.resign_date)} />
                     <Row
                         label="Base Salary"
                         value={emp.base_salary ? `RM ${Number(emp.base_salary).toLocaleString('en-MY', { minimumFractionDigits: 2 })}` : null}

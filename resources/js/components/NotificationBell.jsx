@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import notificationService from '@/services/notificationService';
 import { HiOutlineBell, HiOutlineCheck, HiOutlineTrash } from 'react-icons/hi';
+import { formatDate } from '@/utils/date';
 
 function relativeTime(value) {
     if (!value) return '';
@@ -10,7 +11,7 @@ function relativeTime(value) {
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-    return new Date(value).toLocaleDateString();
+    return formatDate(value);
 }
 
 export default function NotificationBell() {
