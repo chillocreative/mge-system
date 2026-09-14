@@ -67,3 +67,14 @@ Widening an enforcement boundary is the one edit an orchestrator should not be t
 ## Tests
 
 No automated tests exist for the hook; the branch matrix above was run by hand and is reproducible from this file. If a fourth gate change is ever needed, worth promoting it into a `tests/` shell fixture rather than trusting another ad-hoc sweep.
+
+## Addendum — second widening the same day: `~/.qwen/memories/**`
+
+The fix above whitelisted only the **project-scoped** store (`~/.qwen/projects/*/memory/**`). Cross-project user memory lives at `~/.qwen/memories/`, which the same rule still refused — so a correction to a user-level memory could not be written, and the defect resurfaced one directory over. Same shape, same class, missed by me.
+
+Approved explicitly by the user ("ya, benarkan juga") before the edit. `parts[0] in ("agents", "memories")` now covers both; `~/.qwen/settings.json` stays denied.
+
+Re-run of the matrix after the change (11 cases): user memory file **ALLOW**, user `MEMORY.md` **ALLOW**, project memory **ALLOW**, `~/.qwen/agents` **ALLOW**, `~/.qwen/settings.json` **DENY**, `~/.qwen/tmp` **DENY**, `~/.ssh/id_rsa` **DENY**, `~/Desktop` **DENY**, in-repo `app/` **DENY**, in-repo `.qwen/` **ALLOW**, `git commit` **ALLOW**. Script parses (246 lines).
+
+Editing mistake caught in the process, recorded because it is the kind that survives review: the first `edit` supplied a whole-function replacement whose `old_string` covered only the docstring, leaving the previous body behind as unreachable dead code after `return False`. It parsed cleanly and passed a naive review — caught by reading the returned diff, then removed. An edit tool that reports success does not mean the result is correct.
+

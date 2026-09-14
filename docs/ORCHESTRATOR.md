@@ -131,7 +131,7 @@ Proven live on 2026-09-15 (attempting either of the first two from the main sess
 |---|---|
 | `.qwen/**`, `docs/**` inside the repo | allowed — the orchestrator's own deliverables |
 | any other in-repo path (`app/`, `routes/`, `resources/`, `.gitignore`, …) | **denied** → it must become a SPEC for the writer |
-| `~/.qwen/agents/**`, `~/.qwen/projects/*/memory/**` | allowed — harness and auto-memory, not application code |
+| `~/.qwen/agents/**`, `~/.qwen/memories/**`, `~/.qwen/projects/*/memory/**` | allowed — harness and auto-memory (user-scope and project-scope), not application code |
 | anything else outside the repo (`~/.qwen/settings.json`, `~/Desktop/…`, `/etc/hosts`) | **denied** |
 
 The out-of-repo distinction was itself a bug fix: the first revision called the memory directory "application code", which blocked updates the runtime instructs the agent to make. Editing the hook is separately blocked by Qwen Code's own self-modification policy, which is the right backstop — it needs an explicit user approval for that exact edit, and routing the change through the writer to dodge it would be laundering, not delegating.

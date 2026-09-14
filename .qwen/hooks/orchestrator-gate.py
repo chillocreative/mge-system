@@ -77,16 +77,19 @@ def external_allowed(target):
     """True for out-of-repo paths that belong to the orchestrator's own harness.
 
     Anything outside the project is not application code, but it is also not
-    automatically safe to write. Two areas are legitimate orchestrator state and
-    are whitelisted by shape, not by convenience:
+    automatically safe to write. These areas are legitimate orchestrator state
+    and are whitelisted by shape, not by convenience:
 
       ~/.qwen/agents/**                 user-level agent definitions
-      ~/.qwen/projects/*/memory/**      the auto-memory system's own store
+      ~/.qwen/memories/**               user (cross-project) auto-memory
+      ~/.qwen/projects/*/memory/**      project auto-memory
 
     An earlier revision denied them as "application code", which blocked memory
-    updates the runtime instructs the agent to perform (observed 2026-09-15,
-    unblocked by explicit user approval). Everything else outside the repo is
-    still refused.
+    updates the runtime instructs the agent to perform (observed 2026-09-15;
+    `memories/` added the same day with explicit user approval — the first fix
+    covered only the project-scoped store, so cross-project memory stayed
+    blocked). Everything else outside the repo is still refused, including
+    ~/.qwen/settings.json, which holds provider and permission config.
     """
     if not target:
         return False
@@ -102,7 +105,7 @@ def external_allowed(target):
     if rel.startswith(".."):
         return False
     parts = rel.split(os.sep)
-    if parts[0] == "agents":
+    if parts[0] in ("agents", "memories"):
         return True
     if parts[0] == "projects" and "memory" in parts:
         return True
