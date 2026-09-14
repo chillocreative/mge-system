@@ -2,9 +2,16 @@
 
 > **Project:** MGE-PMS — Construction Project Management System
 > **Stack:** Laravel 12 (PHP 8.2+) · React 19 · Vite 7 · Tailwind CSS 4 · MySQL · Sanctum · Spatie Permission
-> **Concept:** Qwen 3.8-Flash as brain, Qwen 3.7-Flash as hands.
-> **Version:** 1.1 (2026-09-15) — rewritten against the real Qwen Code sub-agent contract.
+> **Concept:** Qwen 3.8-Flash as brain, Qwen 3.5-Flash as hands.
+> **Version:** 1.2 (2026-09-15) — rewritten against the real Qwen Code sub-agent contract.
 > **Supersedes:** v1.0 (2026-09-14), which described an agent config format that Qwen Code does not implement.
+
+---
+
+## Changelog
+
+- **v1.2** — writer moved to `qwen3.5-flash` at the user's request: 3.8-Flash leads, one cheaper model writes 100% of the code. `qwen3.5-flash` is **not** in the local `modelProviders` list; it resolves because the agent's request goes to the same DashScope endpoint (verified 2026-09-15: `HTTP 200`). If the picker ever refuses it, register the ID in `~/.qwen/settings.json` rather than changing the workflow.
+- **v1.1** — mechanics corrected against the real sub-agent contract (below).
 
 ---
 
@@ -19,7 +26,7 @@ v1.0 was sound as a division of labour but wrong on mechanics. Corrected here:
 | `resources/js/Pages/Jprn/Members.vue` | This project is **React**, not Vue, and has no Inertia. Pages live in `resources/js/pages/` (lowercase `.jsx`). |
 | Writer "asks before guessing" | Sub-agents get **no interactive question tool**. A writer cannot prompt the user mid-run; it must return a `BLOCKED` report instead. |
 | Approval mode implies a sandbox | A permissive parent overrides a restrictive child: with the parent in `yolo`, a sub-agent declared `approvalMode: plan` still runs `yolo`. |
-| No bound on the REJECT loop | Unbounded 3.8→3.7→3.8 loops are the obvious failure mode. Capped in [Loop control](#loop-control). |
+| No bound on the REJECT loop | Unbounded 3.8→3.5→3.8 loops are the obvious failure mode. Capped in [Loop control](#loop-control). |
 | Nothing about two writers sharing one working tree | Concurrent agents on the same checkout overwrite each other. Now addressed in [Concurrency](#concurrency). |
 
 ---
@@ -34,7 +41,7 @@ Architect, auditor, planner, reviewer, gatekeeper. Does not author application c
 
 **Write access (enforced):** `.qwen/**` and `docs/**` only. Everything else in the tree requires a work order.
 
-### Qwen 3.7-Flash — **Code Writer** (sub-agent)
+### Qwen 3.5-Flash — **Code Writer** (sub-agent)
 
 Executor. Authors 100% of application code, fixes, migrations, factories, seeders, tests. Never deviates from the SPEC, never invents patterns, never refactors outside scope.
 
@@ -51,7 +58,7 @@ User request
 3.8 Orchestrator ── explores (read_file / grep / git log) ── writes .qwen/specs/SPEC-NNN-<slug>.md
     │ SPEC path + one-line objective
     ▼
-3.7 Writer (background sub-agent) ── implements ── runs verification ── writes .qwen/runs/RUN-NNN.md
+3.5 Writer (background sub-agent) ── implements ── runs verification ── writes .qwen/runs/RUN-NNN.md
     │ completion notification (result arrives in a later turn)
     ▼
 3.8 Orchestrator ── git diff, line by line ── re-runs tests independently ── writes .qwen/reviews/REVIEW-NNN-<slug>.md
@@ -68,9 +75,39 @@ A background sub-agent's result is **not** visible inline. It is delivered as a 
 
 Files live in `.qwen/agents/` (project, highest precedence) or `~/.qwen/agents/` (user). Managed with `/agents create` and `/agents manage`. Body = the system prompt. Supported frontmatter: `name`, `description`, `model`, `approvalMode`, `tools`, `disallowedTools`, `maxTurns` (plus Claude-Code compat fields `permissionMode`, `color`, `mcpServers`, `hooks`).
 
-This project ships `.qwen/agents/writer.md` and `.qwen/agents/orchestrator.md`. Model IDs are resolved against the provider already configured in `~/.qwen/settings.json` (`qwen3.8-flash`, `qwen3.7-flash`).
+This project ships `.qwen/agents/writer.md` and `.qwen/agents/orchestrator.md`. Model IDs are resolved against the provider already configured in `~/.qwen/settings.json` (`qwen3.8-flash`, `qwen3.5-flash`).
 
 To let the model pick a tier without hard-coding IDs, `agents.modelGrades` + `agents.allowedGrades` are available in `settings.json`.
+
+### Proving which model actually ran
+
+Do not ask the agent what model it is — it will guess. The usage ledger records every request with its serving model and the agent that issued it:
+
+```bash
+python3 - <<'PY'
+import json, os, collections
+f = os.path.expanduser('~/.qwen/usage/token-usage-%s.jsonl' % __import__('time').strftime('%Y-%m'))
+rows = [json.loads(l) for l in open(f, errors='replace') if l.strip()]
+for r in rows[-20:]:
+    print(r['timestamp'], r.get('source'), r.get('model'), r.get('inputTokens'), r.get('outputTokens'))
+PY
+```
+
+`source` is the agent name (`main`, `writer`, `Explore`). Two readings matter for review:
+
+- **`source: writer` + the expected `model`** ⇒ the definition is being honored. A model ID that is absent from `modelProviders` still resolves if the endpoint accepts it (that is how `qwen3.5-flash` works here).
+- **A writer request with a high `inputTokens` and tiny `outputTokens`, or a transcript with zero `functionCall` parts** ⇒ the agent answered without working. That is a fabricated report; reject the run regardless of whether the answer looks right.
+
+```bash
+# tool events in the newest writer transcript (0 = it never touched anything)
+python3 - <<'PY'
+import json, glob, os
+f = max(glob.glob(os.path.expanduser('~/.qwen/projects/*/subagents/*/agent-writer-*.jsonl')), key=os.path.getmtime)
+n = sum(1 for l in open(f, errors='replace') for p in (json.loads(l).get('message') or {}).get('parts') or []
+        if isinstance(p, dict) and 'functionCall' in p)
+print(f, '->', n, 'tool calls')
+PY
+```
 
 ---
 
@@ -103,7 +140,7 @@ Remaining, accepted gap: an orchestrator that writes code and *never commits it*
 
 ---
 
-## SPEC format (3.8 → 3.7)
+## SPEC format (3.8 → 3.5)
 
 ```markdown
 ## SPEC-<NNN> — <slug>
@@ -127,7 +164,7 @@ Remaining, accepted gap: an orchestrator that writes code and *never commits it*
 
 ### Verification
 - [ ] `php artisan test --filter=<X>` passes
-- [ ] `vendor/bin/pint --dirty` clean
+- [ ] `php vendor/bin/pint --dirty` clean
 - [ ] `npm run build` clean (only if `resources/js/**` touched)
 - [ ] <behavioural check, stated as an observable result>
 
@@ -140,11 +177,11 @@ Remaining, accepted gap: an orchestrator that writes code and *never commits it*
 <authz gate, validation boundary, data exposure, mass assignment, file upload path>
 ```
 
-`3.7` never edits the SPEC. When a directive is genuinely ambiguous, `3.8` amends the SPEC and re-issues — an ambiguous SPEC is an orchestrator defect, not a writer error.
+`3.5` never edits the SPEC. When a directive is genuinely ambiguous, `3.8` amends the SPEC and re-issues — an ambiguous SPEC is an orchestrator defect, not a writer error.
 
 ---
 
-## REVIEW format (3.8 → user / 3.7)
+## REVIEW format (3.8 → user / 3.5)
 
 ```markdown
 ## REVIEW-<NNN> (SPEC-<NNN>)
@@ -185,7 +222,7 @@ A verdict of APPROVE with an empty "Independent verification" section is not an 
 9. May write only under `.qwen/**` and `docs/**`.
 10. Never push. Pushing is the user's action.
 
-### Writer (3.7)
+### Writer (3.5)
 1. Never invent architecture. Undecided in the SPEC ⇒ return `BLOCKED` with the exact question.
 2. Never refactor outside the SPEC — unrequested fixes are defects.
 3. Follow project rules (`CLAUDE.md`, existing conventions in the file's neighbourhood).
@@ -201,7 +238,7 @@ A verdict of APPROVE with an empty "Independent verification" section is not an 
 
 1. `3.8` writes `.qwen/specs/SPEC-<NNN>-<slug>.md`; `NNN` is monotonic — take it from the highest number already on disk, never reuse.
 2. `3.8` launches the writer: `Agent(subagent_type="writer", prompt="Read /abs/path/.qwen/specs/SPEC-007-x.md and implement EXACTLY. Write your report to /abs/path/.qwen/runs/RUN-007.md. Do not commit. Do not edit the SPEC.")`, background.
-3. `3.7` implements, verifies, writes `runs/RUN-<NNN>.md`, lists changed files, stops. **No commit.**
+3. `3.5` implements, verifies, writes `runs/RUN-<NNN>.md`, lists changed files, stops. **No commit.**
 4. `3.8` reviews, writes `reviews/REVIEW-<NNN>-<slug>.md`.
 5. REJECT → append `## Round <k>` directives to the SPEC, then `send_message(task_id, "Re-read SPEC-<NNN>, section Round <k>; apply the directives and update RUN-<NNN>.md")`. Reusing the agent keeps its context; relaunching discards it.
 6. APPROVE → `git add` the SPEC's paths only (never `-A`), commit, report the commit SHA.
@@ -224,7 +261,7 @@ For genuinely parallel work, isolate: `Agent(..., isolation="worktree")` gives a
 ├── agents/       # writer.md, orchestrator.md      — committed
 ├── specs/        # SPEC-NNN-<slug>.md   (3.8 owns) — committed
 ├── reviews/      # REVIEW-NNN-<slug>.md (3.8 owns) — committed
-├── runs/         # RUN-NNN.md  (3.7 owns)          — gitignored, ephemeral
+├── runs/         # RUN-NNN.md  (3.5 owns)          — gitignored, ephemeral
 ├── hooks/        # orchestrator-gate.py           — committed
 │   └── GATE_OFF  # sentinel, bypasses the gate    — gitignored
 └── settings.json # model, permissions, hook wiring — committed (holds no secrets)
@@ -256,7 +293,7 @@ Frontend: `resources/js/pages/*.jsx`, services in `resources/js/services/*Servic
 
 ## Relationship to the existing `qwen-agent` package
 
-`chillocreative/qwen-agent` (in `require-dev`, path repo at `../qwen-agent`) implements the same idea one layer down: `php artisan qwen:agent task.txt --context=<files> --out=<out>.md` runs `qwen3.7-flash` in a **read-only** CLI, writing nothing, and the lead applies the patch. Scratch space is `storage/app/qwen-tasks/` (gitignored).
+`chillocreative/qwen-agent` (in `require-dev`, path repo at `../qwen-agent`) implements the same idea one layer down: `php artisan qwen:agent task.txt --context=<files> --out=<out>.md` runs a **read-only** CLI (its `QWEN_MODEL` default is `qwen3.7-flash`, set in `.env`), writing nothing, while the lead applies the patch. Scratch space is `storage/app/qwen-tasks/` (gitignored).
 
 Keep both: this document is the default flow; `qwen:agent` remains useful for a one-shot diff proposal with no file access, and for non-Qwen-Code contexts.
 
@@ -283,8 +320,8 @@ Keep both: this document is the default flow; `qwen:agent` remains useful for a 
 
 ## Summary
 
-- **3.8 thinks, reviews, commits. 3.7 types.**
+- **3.8 thinks, reviews, commits. 3.5 types.**
 - Every change needs a written SPEC *and* a written REVIEW before it can exist in git history — the second is machine-enforced, the first is the plan of record.
 - Do not trust a report; run the command.
 
-**File authored:** 2026-09-14 · **v1.1 revised:** 2026-09-15 · MGE-PMS · Orchestrator concept v1.1
+**File authored:** 2026-09-14 · **v1.2 revised:** 2026-09-15 · MGE-PMS · Orchestrator concept v1.2
