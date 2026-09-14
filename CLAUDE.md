@@ -225,6 +225,17 @@ Four project facts this workflow already paid to discover:
    execute, and answering a three-step read-only check with zero tool calls and two invented
    facts. Treat every writer report as a claim to re-run, not evidence. Per-request
    `source`/`model`/token counts are auditable in `~/.qwen/usage/token-usage-YYYY-MM.jsonl`.
+5. **Production PHP is missing the `fileinfo` extension.** Any code path that stores an
+   uploaded file — even `mimes:`/`extensions:` validation aside — crashes with
+   `Error: Class "finfo" not found` inside `league/mime-type-detection` the moment Laravel's
+   local Flysystem driver is constructed (`UploadedFile::store()`/`storeAs()`). This is a
+   server PHP-config issue, not fixable from application code: enable `fileinfo` in cPanel →
+   **Select PHP Version → Extensions** (or **MultiPHP INI Editor**) for the app's PHP version.
+   As defense-in-depth (2026-09-15), all `mimes:` validation rules across the codebase were
+   also switched to `extensions:` (filename-extension check only, no MIME sniffing), since
+   `mimes:` independently throws its own unhandled `LogicException` when no MIME guesser is
+   available — same underlying `fileinfo` gap, different code path. If a fresh "Server Error"
+   appears on any upload feature, check `fileinfo` first before re-diagnosing from scratch.
 
 Deploy is unchanged: `git pull` then `bash deploy.sh` in the cPanel terminal (that is where
 `artisan migrate --force` runs).
