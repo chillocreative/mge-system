@@ -44,7 +44,7 @@ class CorrespondenceController extends Controller
             'expected_close_date' => ['nullable', 'date'],
             'response' => ['nullable', 'string'],
             'files' => ['nullable', 'array', 'max:10'],
-            'files.*' => ['file', 'max:25600', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
+            'files.*' => ['file', 'max:25600', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
         ]);
 
         $files = $request->file('files', []);
@@ -79,7 +79,7 @@ class CorrespondenceController extends Controller
             'expected_close_date' => ['nullable', 'date'],
             'response' => ['nullable', 'string'],
             'files' => ['nullable', 'array', 'max:10'],
-            'files.*' => ['file', 'max:25600', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
+            'files.*' => ['file', 'max:25600', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
         ]);
 
         $files = $request->file('files', []);
@@ -104,7 +104,7 @@ class CorrespondenceController extends Controller
     {
         $request->validate([
             'files' => ['required', 'array', 'min:1', 'max:10'],
-            'files.*' => ['file', 'max:25600', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
+            'files.*' => ['file', 'max:25600', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
         ]);
 
         $correspondence = $this->correspondenceService->update($id, [], $request->file('files'));

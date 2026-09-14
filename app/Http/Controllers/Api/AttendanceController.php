@@ -23,7 +23,7 @@ class AttendanceController extends Controller
     public function upload(Request $request): JsonResponse
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:10240'],
+            'file' => ['required', 'file', 'extensions:xlsx,xls,csv', 'max:10240'],
         ]);
 
         $result = $this->attendanceService->importFromExcel(

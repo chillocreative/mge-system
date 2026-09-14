@@ -60,7 +60,7 @@ class MeetingController extends Controller
     {
         $request->validate([
             'files' => ['required', 'array', 'min:1', 'max:10'],
-            'files.*' => ['file', 'max:25600', 'mimes:pdf,doc,docx'],
+            'files.*' => ['file', 'max:25600', 'extensions:pdf,doc,docx'],
         ]);
 
         $meeting = $this->meetingService->addFiles($id, $request->file('files', []));
@@ -106,7 +106,7 @@ class MeetingController extends Controller
             'action_items.*.due_date' => ['nullable', 'date'],
             'action_items.*.status' => ['nullable', 'in:open,in_progress,done'],
             'files' => ['nullable', 'array', 'max:10'],
-            'files.*' => ['file', 'max:25600', 'mimes:pdf,doc,docx'],
+            'files.*' => ['file', 'max:25600', 'extensions:pdf,doc,docx'],
             // Multipart form submissions omit an array field entirely when it's empty
             // (e.g. "attendees[0][...]" simply isn't sent once the last row is removed),
             // so there's no way to distinguish "untouched" from "cleared out" once the

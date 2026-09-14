@@ -61,7 +61,7 @@ class ContractController extends Controller
     {
         $request->validate([
             'files' => ['required', 'array', 'min:1', 'max:10'],
-            'files.*' => ['file', 'max:51200', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
+            'files.*' => ['file', 'max:51200', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
         ]);
 
         $contract = $this->contractService->addFiles($id, $request->file('files', []));
@@ -144,7 +144,7 @@ class ContractController extends Controller
     public function importBoq(Request $request, int $id): JsonResponse
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:20480'],
+            'file' => ['required', 'file', 'extensions:xlsx,xls,csv', 'max:20480'],
         ]);
 
         $result = $this->contractService->importBoq($id, $request->file('file'), $request->user()->id);
@@ -187,7 +187,7 @@ class ContractController extends Controller
             'status' => ['nullable', 'in:active,completed,terminated'],
             'notes' => ['nullable', 'string'],
             'files' => ['nullable', 'array', 'max:10'],
-            'files.*' => ['file', 'max:51200', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
+            'files.*' => ['file', 'max:51200', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
         ]);
     }
 }

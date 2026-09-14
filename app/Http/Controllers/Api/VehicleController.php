@@ -123,7 +123,7 @@ class VehicleController extends Controller
             'start_date' => ['nullable', 'date'],
             'expiry_date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
-            'file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'file' => ['nullable', 'file', 'extensions:pdf,jpg,jpeg,png', 'max:10240'],
         ]);
 
         $file = $request->file('file');

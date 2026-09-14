@@ -32,7 +32,7 @@ class DrawingController extends Controller
             'project_id' => ['nullable', 'exists:projects,id'],
             'contract_id' => ['nullable', 'exists:project_contracts,id'],
             'status' => ['nullable', 'in:draft,published,archived'],
-            'file' => ['required', 'file', 'mimes:dwg,dxf,pdf,png,jpg,jpeg', 'max:102400'],
+            'file' => ['required', 'file', 'extensions:dwg,dxf,pdf,png,jpg,jpeg', 'max:102400'],
         ]);
 
         $drawing = $this->documentLibraryService->createDrawing(
@@ -63,7 +63,7 @@ class DrawingController extends Controller
             'project_id' => ['nullable', 'exists:projects,id'],
             'contract_id' => ['nullable', 'exists:project_contracts,id'],
             'status' => ['sometimes', 'in:draft,published,archived'],
-            'file' => ['nullable', 'file', 'mimes:dwg,dxf,pdf,png,jpg,jpeg', 'max:102400'],
+            'file' => ['nullable', 'file', 'extensions:dwg,dxf,pdf,png,jpg,jpeg', 'max:102400'],
         ]);
 
         unset($validated['file']);

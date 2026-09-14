@@ -21,7 +21,7 @@ class StoreTaskRequest extends FormRequest
             'assignee_ids' => ['nullable', 'array'],
             'assignee_ids.*' => ['integer', 'exists:users,id'],
             'attachments' => ['nullable', 'array', 'max:10'],
-            'attachments.*' => ['file', 'max:25600', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg,zip'],
+            'attachments.*' => ['file', 'max:25600', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg,zip'],
             'parent_id' => ['nullable', 'exists:tasks,id'],
             'status' => ['nullable', 'in:pending,in_progress,in_review,completed,cancelled'],
             'priority' => ['nullable', 'in:low,medium,high,critical'],

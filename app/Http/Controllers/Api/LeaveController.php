@@ -43,7 +43,7 @@ class LeaveController extends Controller
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'half_day' => ['nullable', 'boolean'],
             'reason' => ['nullable', 'string'],
-            'attachment' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'attachment' => ['nullable', 'file', 'extensions:pdf,jpg,jpeg,png', 'max:5120'],
         ]);
 
         // Maternity leave is only available to female staff.

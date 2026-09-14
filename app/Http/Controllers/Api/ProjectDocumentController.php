@@ -61,7 +61,7 @@ class ProjectDocumentController extends Controller
 
         $request->validate([
             'files' => ['required', 'array', 'min:1', 'max:20'],
-            'files.*' => ['file', 'max:5242880', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg,gif,dwg,dxf,zip,txt,csv'],
+            'files.*' => ['file', 'max:5242880', 'extensions:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg,gif,dwg,dxf,zip,txt,csv'],
             'category' => ['nullable', 'in:drawing,contract,permit,report,photo,specification,invoice,monthly_report,minute_meeting,progress_tracking,other'],
         ]);
 

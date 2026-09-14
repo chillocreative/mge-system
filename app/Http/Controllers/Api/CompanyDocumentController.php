@@ -28,7 +28,7 @@ class CompanyDocumentController extends Controller
             'doc_type' => ['nullable', 'in:contract,tender,sst,policy,procedure,other'],
             'reference_no' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:draft,published,archived'],
-            'file' => ['required', 'file', 'mimes:pdf,doc,docx,xls,xlsx', 'max:51200'],
+            'file' => ['required', 'file', 'extensions:pdf,doc,docx,xls,xlsx', 'max:51200'],
         ]);
 
         $document = $this->documentLibraryService->create(
@@ -55,7 +55,7 @@ class CompanyDocumentController extends Controller
             'doc_type' => ['sometimes', 'in:contract,tender,sst,policy,procedure,other'],
             'reference_no' => ['nullable', 'string', 'max:255'],
             'status' => ['sometimes', 'in:draft,published,archived'],
-            'file' => ['nullable', 'file', 'mimes:pdf,doc,docx,xls,xlsx', 'max:51200'],
+            'file' => ['nullable', 'file', 'extensions:pdf,doc,docx,xls,xlsx', 'max:51200'],
         ]);
 
         unset($validated['file']);
