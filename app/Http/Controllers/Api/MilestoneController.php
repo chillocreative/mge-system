@@ -36,10 +36,20 @@ class MilestoneController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'due_date' => ['nullable', 'date'],
+            'completed_date' => ['nullable', 'date'],
             'status' => ['nullable', 'in:pending,in_progress,completed,overdue'],
             'progress' => ['nullable', 'integer', 'min:0', 'max:100'],
         ]);
         $validated['created_by'] = $request->user()->id;
+
+        if (isset($validated['status']) && $validated['status'] === 'completed') {
+            if (! array_key_exists('completed_date', $validated)) {
+                $validated['completed_date'] = now()->toDateString();
+            }
+            if (! array_key_exists('progress', $validated)) {
+                $validated['progress'] = 100;
+            }
+        }
 
         $validated = $this->dropNullColumns($validated, ['status', 'progress', 'sort_order']);
         $milestone = Milestone::create($validated);
@@ -58,13 +68,18 @@ class MilestoneController extends Controller
             'title' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'due_date' => ['nullable', 'date'],
+            'completed_date' => ['nullable', 'date'],
             'status' => ['nullable', 'in:pending,in_progress,completed,overdue'],
             'progress' => ['nullable', 'integer', 'min:0', 'max:100'],
         ]);
 
-        if (isset($validated['status']) && $validated['status'] === 'completed' && ! $milestone->completed_date) {
-            $validated['completed_date'] = now()->toDateString();
-            $validated['progress'] = 100;
+        if (isset($validated['status']) && $validated['status'] === 'completed') {
+            if (! array_key_exists('completed_date', $validated) && ! $milestone->completed_date) {
+                $validated['completed_date'] = now()->toDateString();
+            }
+            if (! array_key_exists('progress', $validated)) {
+                $validated['progress'] = 100;
+            }
         }
 
         $validated = $this->dropNullColumns($validated, ['status', 'progress', 'sort_order']);
@@ -103,6 +118,7 @@ class MilestoneController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'due_date' => ['nullable', 'date'],
+            'completed_date' => ['nullable', 'date'],
             'status' => ['nullable', 'in:pending,in_progress,completed,overdue'],
             'progress' => ['nullable', 'integer', 'min:0', 'max:100'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -110,6 +126,15 @@ class MilestoneController extends Controller
 
         $validated['project_id'] = $project->id;
         $validated['created_by'] = $request->user()->id;
+
+        if (isset($validated['status']) && $validated['status'] === 'completed') {
+            if (! array_key_exists('completed_date', $validated)) {
+                $validated['completed_date'] = now()->toDateString();
+            }
+            if (! array_key_exists('progress', $validated)) {
+                $validated['progress'] = 100;
+            }
+        }
 
         $validated = $this->dropNullColumns($validated, ['status', 'progress', 'sort_order']);
         $milestone = Milestone::create($validated);
@@ -140,9 +165,13 @@ class MilestoneController extends Controller
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        if (isset($validated['status']) && $validated['status'] === 'completed' && ! $milestone->completed_date) {
-            $validated['completed_date'] = now()->toDateString();
-            $validated['progress'] = 100;
+        if (isset($validated['status']) && $validated['status'] === 'completed') {
+            if (! array_key_exists('completed_date', $validated) && ! $milestone->completed_date) {
+                $validated['completed_date'] = now()->toDateString();
+            }
+            if (! array_key_exists('progress', $validated)) {
+                $validated['progress'] = 100;
+            }
         }
 
         $validated = $this->dropNullColumns($validated, ['status', 'progress', 'sort_order']);

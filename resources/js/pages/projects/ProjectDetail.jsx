@@ -334,34 +334,71 @@ function TasksTab({ project, canEdit, onRefresh }) {
 }
 
 // ─── Milestones Tab ────────────────────────────────────────────
+const emptyMilestoneForm = () => ({ title: '', description: '', due_date: '', completed_date: '', status: 'pending', progress: 0 });
+
 function MilestonesTab({ project, canEdit, onRefresh }) {
     const [showForm, setShowForm] = useState(false);
-    const [form, setForm] = useState({ title: '', description: '', due_date: '' });
+    const [editingId, setEditingId] = useState(null);
+    const [form, setForm] = useState(emptyMilestoneForm());
     const [saving, setSaving] = useState(false);
 
-    const handleCreate = async (e) => {
+    const openCreate = () => {
+        setEditingId(null);
+        setForm(emptyMilestoneForm());
+        setShowForm(true);
+    };
+
+    const openEdit = (ms) => {
+        setEditingId(ms.id);
+        setForm({
+            title: ms.title || '',
+            description: ms.description || '',
+            due_date: ms.due_date || '',
+            completed_date: ms.completed_date || '',
+            status: ms.status || 'pending',
+            progress: ms.progress ?? 0,
+        });
+        setShowForm(true);
+    };
+
+    const closeForm = () => {
+        setShowForm(false);
+        setEditingId(null);
+        setForm(emptyMilestoneForm());
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
+        const payload = {
+            ...form,
+            progress: form.progress === '' ? 0 : Number(form.progress),
+        };
         try {
-            await projectService.createMilestone(project.id, form);
-            toast.success('Milestone created');
-            setShowForm(false);
-            setForm({ title: '', description: '', due_date: '' });
+            if (editingId) {
+                await projectService.updateMilestone(project.id, editingId, payload);
+                toast.success('Milestone updated');
+            } else {
+                await projectService.createMilestone(project.id, payload);
+                toast.success('Milestone created');
+            }
+            closeForm();
             onRefresh();
-        } catch {
-            toast.error('Failed to create milestone');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to save milestone');
         } finally {
             setSaving(false);
         }
     };
 
-    const handleStatusChange = async (milestoneId, status) => {
+    const handleDelete = async (id) => {
+        if (!confirm('Delete this milestone?')) return;
         try {
-            await projectService.updateMilestone(project.id, milestoneId, { status });
-            toast.success('Milestone updated');
+            await projectService.deleteMilestone(project.id, id);
+            toast.success('Milestone deleted');
             onRefresh();
         } catch {
-            toast.error('Failed to update');
+            toast.error('Failed to delete milestone');
         }
     };
 
@@ -371,65 +408,97 @@ function MilestonesTab({ project, canEdit, onRefresh }) {
         <Card
             title="Milestones"
             action={canEdit && (
-                <button onClick={() => setShowForm(!showForm)} className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700">
+                <button onClick={openCreate} className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700">
                     <HiOutlinePlus className="h-4 w-4" /> Add Milestone
                 </button>
             )}
         >
-            {showForm && (
-                <form onSubmit={handleCreate} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                        <input type="text" placeholder="Milestone title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required className="sm:col-span-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                        <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                        <textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="sm:col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                    </div>
-                    <div className="mt-3 flex justify-end gap-2">
-                        <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
-                        <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Saving...' : 'Create'}</button>
-                    </div>
-                </form>
-            )}
-            {milestones.length === 0 ? (
+            {milestones.length === 0 && !showForm ? (
                 <p className="py-6 text-center text-sm text-gray-400">No milestones yet</p>
             ) : (
                 <div className="space-y-3">
                     {milestones.map((ms) => (
                         <div key={ms.id} className="rounded-lg border border-gray-200 p-4">
-                            <div className="flex items-start justify-between">
-                                <div className="flex-1">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
                                         <HiOutlineFlag className={`h-4 w-4 ${ms.status === 'completed' ? 'text-green-500' : ms.status === 'overdue' ? 'text-red-500' : 'text-gray-400'}`} />
                                         <h4 className="text-sm font-semibold text-gray-900">{ms.title}</h4>
                                     </div>
                                     {ms.description && <p className="mt-1 text-xs text-gray-500">{ms.description}</p>}
-                                    <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+                                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
                                         {ms.due_date && <span>Due: {ms.due_date}</span>}
                                         {ms.completed_date && <span>Completed: {ms.completed_date}</span>}
+                                        <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${statusColors[ms.status] || 'bg-gray-100 text-gray-600'}`}>
+                                            {String(ms.status).replace('_', ' ')}
+                                        </span>
                                     </div>
                                 </div>
                                 {canEdit && (
-                                    <select
-                                        value={ms.status}
-                                        onChange={(e) => handleStatusChange(ms.id, e.target.value)}
-                                        className="rounded border border-gray-300 px-2 py-1 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                                    >
-                                        <option value="pending">Pending</option>
-                                        <option value="in_progress">In Progress</option>
-                                        <option value="completed">Completed</option>
-                                    </select>
+                                    <div className="flex items-center gap-1">
+                                        <button onClick={() => openEdit(ms)} className="rounded p-1 text-gray-400 hover:bg-blue-50 hover:text-blue-600" title="Edit"><HiOutlinePencil className="h-4 w-4" /></button>
+                                        <button onClick={() => handleDelete(ms.id)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600" title="Delete"><HiOutlineTrash className="h-4 w-4" /></button>
+                                    </div>
                                 )}
                             </div>
-                            <div className="mt-2">
+                            <div className="mt-3">
                                 <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
                                     <span>Progress</span>
-                                    <span>{ms.progress}%</span>
+                                    <span>{ms.progress ?? 0}%</span>
                                 </div>
                                 <div className="h-1.5 w-full rounded-full bg-gray-200">
-                                    <div className={`h-1.5 rounded-full transition-all ${ms.status === 'completed' ? 'bg-green-500' : 'bg-primary-500'}`} style={{ width: `${ms.progress}%` }} />
+                                    <div className={`h-1.5 rounded-full transition-all ${ms.status === 'completed' ? 'bg-green-500' : 'bg-primary-500'}`} style={{ width: `${ms.progress ?? 0}%` }} />
                                 </div>
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {showForm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeForm}>
+                    <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="mb-4 text-lg font-semibold text-gray-900">{editingId ? 'Edit Milestone' : 'Add Milestone'}</h3>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Title *</label>
+                                <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Description</label>
+                                <textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                            </div>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Due Date</label>
+                                    <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Completed Date</label>
+                                    <input type="date" value={form.completed_date} onChange={(e) => setForm({ ...form, completed_date: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
+                                    <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                                        <option value="pending">Pending</option>
+                                        <option value="in_progress">In Progress</option>
+                                        <option value="completed">Completed</option>
+                                        <option value="overdue">Overdue</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Progress %</label>
+                                    <input type="number" min="0" max="100" value={form.progress} onChange={(e) => setForm({ ...form, progress: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button type="button" onClick={closeForm} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                                <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Saving...' : editingId ? 'Update' : 'Create'}</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
         </Card>
