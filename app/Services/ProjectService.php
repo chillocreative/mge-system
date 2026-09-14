@@ -27,6 +27,7 @@ class ProjectService
             'manager',
             'members',
             'tasks.assignee:id,first_name,last_name',
+            'tasks.assignees:id,first_name,last_name',
             'milestones.creator:id,first_name,last_name',
             'siteLogs.logger:id,first_name,last_name',
             'siteLogs.machinery',

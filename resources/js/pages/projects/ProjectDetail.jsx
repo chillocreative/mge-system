@@ -229,17 +229,17 @@ function OverviewTab({ project }) {
 // ─── Tasks Tab ─────────────────────────────────────────────────
 function TasksTab({ project, canEdit, onRefresh }) {
     const [showForm, setShowForm] = useState(false);
-    const [form, setForm] = useState({ title: '', description: '', priority: 'medium', due_date: '', assigned_to: '' });
+    const [form, setForm] = useState({ title: '', description: '', priority: 'medium', due_date: '', assignee_ids: [] });
     const [saving, setSaving] = useState(false);
 
     const handleCreate = async (e) => {
         e.preventDefault();
         setSaving(true);
         try {
-            await taskService.create({ ...form, project_id: project.id, assigned_to: form.assigned_to || null });
+            await taskService.create({ ...form, project_id: project.id });
             toast.success('Task created');
             setShowForm(false);
-            setForm({ title: '', description: '', priority: 'medium', due_date: '', assigned_to: '' });
+            setForm({ title: '', description: '', priority: 'medium', due_date: '', assignee_ids: [] });
             onRefresh();
         } catch {
             toast.error('Failed to create task');
@@ -279,16 +279,27 @@ function TasksTab({ project, canEdit, onRefresh }) {
                             <option value="critical">Critical</option>
                         </select>
                         <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                        <select
-                            value={form.assigned_to}
-                            onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
-                            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                        >
-                            <option value="">Assign to...</option>
-                            {project.members?.map((m) => (
-                                <option key={m.id} value={m.id}>{m.full_name}</option>
-                            ))}
-                        </select>
+                        <div className="sm:col-span-2">
+                            <p className="mb-1 text-xs font-medium text-gray-600">Assign to</p>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2">
+                                {project.members?.length ? project.members.map((m) => (
+                                    <label key={m.id} className="flex items-center gap-1.5 text-sm text-gray-700">
+                                        <input
+                                            type="checkbox"
+                                            checked={form.assignee_ids.includes(m.id)}
+                                            onChange={(e) => setForm((p) => ({
+                                                ...p,
+                                                assignee_ids: e.target.checked
+                                                    ? [...p.assignee_ids, m.id]
+                                                    : p.assignee_ids.filter((id) => id !== m.id),
+                                            }))}
+                                            className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                        />
+                                        {m.full_name}
+                                    </label>
+                                )) : <p className="text-xs text-gray-400">No project members</p>}
+                            </div>
+                        </div>
                     </div>
                     <div className="mt-3 flex justify-end gap-2">
                         <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
@@ -307,7 +318,7 @@ function TasksTab({ project, canEdit, onRefresh }) {
                             <div>
                                 <p className="text-sm font-medium text-gray-900">{task.title}</p>
                                 <p className="text-xs text-gray-500">
-                                    {task.assignee?.first_name ? `${task.assignee.first_name} ${task.assignee.last_name}` : 'Unassigned'}
+                                    {task.assignees?.length ? task.assignees.map((a) => a.full_name).join(', ') : 'Unassigned'}
                                     {task.due_date && <span className="ml-2">Due: {task.due_date}</span>}
                                 </p>
                             </div>
