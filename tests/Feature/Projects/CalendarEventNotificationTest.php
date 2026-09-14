@@ -10,8 +10,8 @@ use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 /**
- * Ciri 4 — notify project team members when a calendar event is created,
- * excluding the creator and handling empty recipient lists gracefully.
+ * Ciri 4 — notify selected attendees when a project calendar event is created,
+ * but only if they are project members. The creator is never notified.
  */
 class CalendarEventNotificationTest extends TestCase
 {
@@ -65,20 +65,39 @@ class CalendarEventNotificationTest extends TestCase
         return $project;
     }
 
-    public function test_project_members_are_notified_when_an_event_is_created(): void
+    public function test_attendees_who_are_project_members_are_notified(): void
     {
         Notification::fake();
         $actor = $this->actor();
-        $member = $this->member();
-        $project = $this->projectWithMembers([$actor->id, $member->id]);
+        $attendee = $this->member();
+        $project = $this->projectWithMembers([$actor->id, $attendee->id]);
 
         $this->actingAs($actor)->postJson("/api/projects/{$project->id}/events", [
             'title' => 'Safety Inspection',
             'start_datetime' => now()->addDay()->toDateTimeString(),
+            'attendees' => [$attendee->id],
         ])->assertCreated();
 
-        Notification::assertSentTo($member, \App\Notifications\SystemNotification::class);
-        $this->assertDatabaseHas('notification_logs', ['user_id' => $member->id, 'type' => 'calendar']);
+        Notification::assertSentTo($attendee, \App\Notifications\SystemNotification::class);
+        $this->assertDatabaseHas('notification_logs', ['user_id' => $attendee->id, 'type' => 'calendar']);
+    }
+
+    public function test_non_attendee_project_members_are_not_notified(): void
+    {
+        Notification::fake();
+        $actor = $this->actor();
+        $attendee = $this->member();
+        $nonAttendee = $this->member();
+        $project = $this->projectWithMembers([$actor->id, $attendee->id, $nonAttendee->id]);
+
+        $this->actingAs($actor)->postJson("/api/projects/{$project->id}/events", [
+            'title' => 'Safety Inspection',
+            'start_datetime' => now()->addDay()->toDateTimeString(),
+            'attendees' => [$attendee->id],
+        ])->assertCreated();
+
+        Notification::assertSentTo($attendee, \App\Notifications\SystemNotification::class);
+        Notification::assertNotSentTo($nonAttendee, \App\Notifications\SystemNotification::class);
     }
 
     public function test_the_event_creator_is_not_notified_of_their_own_event(): void
@@ -91,13 +110,14 @@ class CalendarEventNotificationTest extends TestCase
         $this->actingAs($actor)->postJson("/api/projects/{$project->id}/events", [
             'title' => 'Team Standup',
             'start_datetime' => now()->addDay()->toDateTimeString(),
+            'attendees' => [$actor->id, $other->id],
         ]);
 
         Notification::assertNotSentTo($actor, \App\Notifications\SystemNotification::class);
         Notification::assertSentTo($other, \App\Notifications\SystemNotification::class);
     }
 
-    public function test_no_recipients_means_no_notification_and_no_error(): void
+    public function test_no_attendees_means_no_notification_and_no_error(): void
     {
         Notification::fake();
         $actor = $this->actor();
@@ -106,6 +126,7 @@ class CalendarEventNotificationTest extends TestCase
         $this->actingAs($actor)->postJson("/api/projects/{$project->id}/events", [
             'title' => 'Solo Planning',
             'start_datetime' => now()->addDay()->toDateTimeString(),
+            'attendees' => [],
         ])->assertCreated();
 
         Notification::assertNothingSent();

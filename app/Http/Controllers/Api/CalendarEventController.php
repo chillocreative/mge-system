@@ -61,7 +61,9 @@ class CalendarEventController extends Controller
         $event = CalendarEvent::create($validated);
 
         $actorId = $request->user()->id;
-        $recipients = $project->members()->pluck('users.id')
+        $recipients = $project->members()
+            ->whereIn('users.id', $validated['attendees'] ?? [])
+            ->pluck('users.id')
             ->reject(fn ($id) => $id === $actorId)
             ->values()
             ->all();
