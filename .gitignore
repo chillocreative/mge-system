@@ -25,3 +25,8 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /storage/app/qwen-tasks
+
+# Orchestrator workflow scratch (docs/ORCHESTRATOR.md)
+/.qwen/runs/
+/.qwen/worktrees/
+/.qwen/hooks/GATE_OFF

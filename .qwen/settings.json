@@ -1,0 +1,47 @@
+{
+  // Project settings for the MGE-PMS orchestrator/writer workflow.
+  // See docs/ORCHESTRATOR.md. Contains no secrets; safe to commit.
+  "model": {
+    "name": "qwen3.8-flash"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(php artisan test*)",
+      "Bash(php artisan config:clear)",
+      "Bash(vendor/bin/pint*)",
+      "Bash(npm run build)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)"
+    ],
+    "ask": [
+      "Bash(php artisan migrate*)",
+      "Bash(php artisan db:seed*)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Bash(git push*)",
+      "Bash(rm -rf /*)",
+      "Bash(php artisan migrate --force*)",
+      "Bash(php artisan db:seed --force*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^(edit|write_file|notebook_edit|run_shell_command)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$QWEN_PROJECT_DIR/.qwen/hooks/orchestrator-gate.py",
+            "name": "orchestrator-gate",
+            "description": "Blocks orchestrator writes outside .qwen/docs and any commit without an APPROVE review",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}
