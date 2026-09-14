@@ -22,7 +22,6 @@
     "deny": [
       "Read(.env)",
       "Read(.env.*)",
-      "Bash(git push*)",
       "Bash(rm -rf /*)",
       "Bash(php artisan migrate --force*)",
       "Bash(php artisan db:seed --force*)"
