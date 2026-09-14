@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CalendarEvent;
 use App\Models\Project;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CalendarEventController extends Controller
 {
+    public function __construct(private NotificationService $notifications) {}
+
     public function index(int $projectId, Request $request): JsonResponse
     {
         $query = CalendarEvent::where('project_id', $projectId)
@@ -56,6 +59,22 @@ class CalendarEventController extends Controller
         $validated['created_by'] = $request->user()->id;
 
         $event = CalendarEvent::create($validated);
+
+        $actorId = $request->user()->id;
+        $recipients = $project->members()->pluck('users.id')
+            ->reject(fn ($id) => $id === $actorId)
+            ->values()
+            ->all();
+
+        $this->notifications->notifyUserIds(
+            $recipients,
+            'New event: '.$event->title,
+            $request->user()->first_name.' scheduled "'.$event->title.'" on '.$event->start_datetime->format('d M Y, g:ia').'.',
+            'calendar',
+            "/projects/{$project->id}?tab=calendar",
+            ['project_id' => $project->id, 'event_id' => $event->id],
+            'calendar',
+        );
 
         return $this->created($event->load('creator:id,first_name,last_name'), 'Event created.');
     }
