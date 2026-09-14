@@ -1027,6 +1027,7 @@ function DocumentsTab({ project, canEdit, onRefresh }) {
     const [uploading, setUploading] = useState(false);
     const [showUpload, setShowUpload] = useState(false);
     const [form, setForm] = useState({ title: '', category: 'other', file: null });
+    const [activeCategory, setActiveCategory] = useState('');
 
     const handleUpload = async (e) => {
         e.preventDefault();
@@ -1061,8 +1062,26 @@ function DocumentsTab({ project, canEdit, onRefresh }) {
     };
 
     const docs = project.documents || [];
-    const categoryLabels = { drawing: 'Drawing', contract: 'Contract', permit: 'Permit', report: 'Report', photo: 'Photo', specification: 'Spec', invoice: 'Invoice', other: 'Other' };
-    const categoryColors = { drawing: 'bg-blue-100 text-blue-700', contract: 'bg-purple-100 text-purple-700', permit: 'bg-green-100 text-green-700', report: 'bg-yellow-100 text-yellow-700', photo: 'bg-pink-100 text-pink-700', specification: 'bg-indigo-100 text-indigo-700', invoice: 'bg-orange-100 text-orange-700', other: 'bg-gray-100 text-gray-700' };
+    const categoryLabels = { drawing: 'Drawing', contract: 'Contract', permit: 'Permit', report: 'Report', photo: 'Photo', specification: 'Spec', invoice: 'Invoice', other: 'Other', monthly_report: 'Monthly Report', minute_meeting: 'Minute Meeting', progress_tracking: 'Progress Tracking' };
+    const categoryColors = { drawing: 'bg-blue-100 text-blue-700', contract: 'bg-purple-100 text-purple-700', permit: 'bg-green-100 text-green-700', report: 'bg-yellow-100 text-yellow-700', photo: 'bg-pink-100 text-pink-700', specification: 'bg-indigo-100 text-indigo-700', invoice: 'bg-orange-100 text-orange-700', other: 'bg-gray-100 text-gray-700', monthly_report: 'bg-teal-100 text-teal-700', minute_meeting: 'bg-cyan-100 text-cyan-700', progress_tracking: 'bg-lime-100 text-lime-700' };
+
+    const tabDefs = [
+        { key: '', label: 'All' },
+        { key: 'drawing', label: 'Drawing' },
+        { key: 'monthly_report', label: 'Monthly Report' },
+        { key: 'minute_meeting', label: 'Minute Meeting' },
+        { key: 'progress_tracking', label: 'Progress Tracking' },
+        { key: 'other', label: 'Other' },
+    ];
+    const tabs = tabDefs.map((t) => ({
+        ...t,
+        count: t.key === '' ? docs.length
+            : t.key === 'other' ? docs.filter((d) => !['drawing', 'monthly_report', 'minute_meeting', 'progress_tracking'].includes(d.category)).length
+            : docs.filter((d) => d.category === t.key).length,
+    }));
+    const filteredDocs = activeCategory === '' ? docs
+        : activeCategory === 'other' ? docs.filter((d) => !['drawing', 'monthly_report', 'minute_meeting', 'progress_tracking'].includes(d.category))
+        : docs.filter((d) => d.category === activeCategory);
 
     return (
         <Card
@@ -1088,11 +1107,19 @@ function DocumentsTab({ project, canEdit, onRefresh }) {
                     </div>
                 </form>
             )}
-            {docs.length === 0 ? (
-                <p className="py-6 text-center text-sm text-gray-400">No documents yet</p>
+            <div className="mb-4 flex flex-wrap gap-1 rounded-lg bg-gray-100 p-1">
+                {tabs.map((tab) => (
+                    <button key={tab.key} onClick={() => setActiveCategory(tab.key)}
+                        className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${activeCategory === tab.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                        {tab.label} ({tab.count})
+                    </button>
+                ))}
+            </div>
+            {filteredDocs.length === 0 ? (
+                <p className="py-6 text-center text-sm text-gray-400">{activeCategory ? 'No documents in this category' : 'No documents yet'}</p>
             ) : (
                 <div className="divide-y">
-                    {docs.map((doc) => (
+                    {filteredDocs.map((doc) => (
                         <div key={doc.id} className="flex items-center justify-between py-3">
                             <div className="flex items-center gap-3 min-w-0">
                                 <HiOutlineDocumentText className="h-8 w-8 text-gray-400 shrink-0" />
