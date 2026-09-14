@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Milestone;
+use App\Observers\MilestoneObserver;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -28,5 +30,10 @@ class AppServiceProvider extends ServiceProvider
                 return true;
             }
         });
+
+        // Keep a project's overall completion in sync with the average
+        // progress of its milestones, regardless of which entry point
+        // creates/updates/deletes a milestone.
+        Milestone::observe(MilestoneObserver::class);
     }
 }
