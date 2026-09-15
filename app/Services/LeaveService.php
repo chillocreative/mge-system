@@ -337,7 +337,15 @@ class LeaveService
             $user?->notify(new LeaveStatusNotification($title, $message, $action, $leaveId));
         } catch (\Throwable $e) {
             // Never let a notification/mail failure (e.g. SMTP not configured) break the workflow.
-            Log::warning('Leave notification failed: '.$e->getMessage());
+            // The in-app (database channel) notification is attempted first in
+            // LeaveStatusNotification::via(), so it still lands even if the mail channel here
+            // fails — this only means the email leg didn't go out.
+            Log::error('Leave notification failed', [
+                'user_id' => $userId,
+                'leave_request_id' => $leaveId,
+                'action' => $action,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

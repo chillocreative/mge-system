@@ -17,6 +17,27 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Apply DB-stored SMTP settings over the .env mail config, when present and enabled.
+        // Wrapped in try/catch: this runs on every request boot, including before migrations
+        // have run on a fresh install, so a missing table must never break the app.
+        try {
+            $mailSetting = \App\Models\MailSetting::first();
+            if ($mailSetting && $mailSetting->enabled) {
+                config([
+                    'mail.default' => 'smtp',
+                    'mail.mailers.smtp.host' => $mailSetting->host,
+                    'mail.mailers.smtp.port' => $mailSetting->port,
+                    'mail.mailers.smtp.username' => $mailSetting->username,
+                    'mail.mailers.smtp.password' => $mailSetting->password,
+                    'mail.mailers.smtp.encryption' => $mailSetting->encryption,
+                    'mail.from.address' => $mailSetting->from_address,
+                    'mail.from.name' => $mailSetting->from_name,
+                ]);
+            }
+        } catch (\Throwable) {
+            // Table doesn't exist yet (fresh install/migrating) — fall back to .env mail config.
+        }
+
         // Point the "forgot password" email's reset link at the SPA route
         // (this API-only backend has no Blade 'password.reset' view/route).
         ResetPassword::createUrlUsing(function ($notifiable, string $token) {

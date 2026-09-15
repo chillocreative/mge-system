@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\LeaveController;
 use App\Http\Controllers\Api\LeavePolicyController;
+use App\Http\Controllers\Api\MailSettingController;
 use App\Http\Controllers\Api\MaintenanceController;
 use App\Http\Controllers\Api\MeetingController;
 use App\Http\Controllers\Api\MemoController;
@@ -389,6 +390,20 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middleware('permission:designations.edit');
         Route::delete('/{designation}', [DesignationController::class, 'destroy'])
             ->middleware('permission:designations.delete');
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | Mail Settings — SMTP configuration, admin-only
+    |----------------------------------------------------------------------
+    */
+    Route::prefix('settings/mail')->group(function () {
+        Route::get('/', [MailSettingController::class, 'show'])
+            ->middleware('permission:settings.view');
+        Route::put('/', [MailSettingController::class, 'update'])
+            ->middleware('permission:settings.manage');
+        Route::post('/test', [MailSettingController::class, 'test'])
+            ->middleware('permission:settings.manage');
     });
 
     /*
