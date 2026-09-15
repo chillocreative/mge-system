@@ -226,6 +226,20 @@ class CorrespondenceWorkflowTest extends TestCase
         $this->assertStringContainsString('application/pdf', $res->headers->get('content-type'));
     }
 
+    public function test_pdf_export_renders_for_an_others_status_correspondence_with_both_close_dates(): void
+    {
+        [, $c] = $this->correspondence();
+        $c->update([
+            'status' => 'others', 'other_status_text' => 'Awaiting site visit',
+            'client_closed_date' => '2026-09-20', 'consultant_closed_date' => '2026-09-25',
+        ]);
+        CorrespondenceEvent::create(['project_correspondence_id' => $c->id, 'event_type' => 'raised', 'to_status' => 'open']);
+
+        $res = $this->actingAs($this->user(['projects.view']))->get("/api/correspondence/{$c->id}/pdf");
+        $res->assertOk();
+        $this->assertStringContainsString('application/pdf', $res->headers->get('content-type'));
+    }
+
     public function test_parties_are_scoped_to_a_project(): void
     {
         $p1 = Project::create(['name' => 'One', 'code' => 'ONE', 'status' => 'in_progress']);

@@ -16,6 +16,8 @@
         .badge-pending { background: #fef3c7; color: #92400e; }
         .badge-closed { background: #d1fae5; color: #065f46; }
         .badge-declined { background: #fee2e2; color: #991b1b; }
+        .badge-forwarded { background: #e0e7ff; color: #3730a3; }
+        .badge-others { background: #f3f4f6; color: #374151; }
         .section { margin-bottom: 20px; }
         .section-title { font-size: 12px; font-weight: bold; text-transform: uppercase; color: #2563eb; letter-spacing: 0.5px; margin-bottom: 8px; padding-bottom: 3px; border-bottom: 1px solid #dbeafe; }
         .grid { display: table; width: 100%; }
@@ -43,13 +45,19 @@
         <div class="section-title">Details</div>
         <div class="grid">
             <div class="row"><div class="label">Project</div><div class="value">{{ $c->project?->name }}{{ $c->project?->code ? ' ('.$c->project->code.')' : '' }}</div></div>
-            <div class="row"><div class="label">Status</div><div class="value"><span class="badge badge-{{ $c->status }}">{{ $c->status }}</span></div></div>
+            <div class="row"><div class="label">Status</div><div class="value"><span class="badge badge-{{ $c->status }}">{{ $c->status === 'others' ? $c->other_status_text : $c->status }}</span></div></div>
             <div class="row"><div class="label">Currently at</div><div class="value">{{ $c->currentParty?->name ?? '—' }}</div></div>
             <div class="row"><div class="label">Site</div><div class="value">{{ $c->site?->name ?? '—' }}</div></div>
             <div class="row"><div class="label">Raised</div><div class="value">{{ optional($c->raised_date)->format('d M Y') }} by {{ trim(($c->creator?->first_name ?? '').' '.($c->creator?->last_name ?? '')) ?: '—' }}</div></div>
             <div class="row"><div class="label">Due</div><div class="value">{{ optional($c->due_date)->format('d M Y') ?? '—' }}</div></div>
             <div class="row"><div class="label">Expected close</div><div class="value">{{ optional($c->expected_close_date)->format('d M Y') ?? '—' }}</div></div>
             <div class="row"><div class="label">Actual close</div><div class="value">{{ optional($c->actual_close_date)->format('d M Y') ?? '—' }}</div></div>
+            @if ($c->client_closed_date)
+            <div class="row"><div class="label">Client closed</div><div class="value">{{ $c->client_closed_date->format('d M Y') }}</div></div>
+            @endif
+            @if ($c->consultant_closed_date)
+            <div class="row"><div class="label">Consultant closed</div><div class="value">{{ $c->consultant_closed_date->format('d M Y') }}</div></div>
+            @endif
             @if ($c->closing_reference)
             <div class="row"><div class="label">Closing ref</div><div class="value">{{ $c->closing_reference }}</div></div>
             @endif
