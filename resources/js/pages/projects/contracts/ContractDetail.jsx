@@ -6,6 +6,7 @@ import contractService from '@/services/contractService';
 import drawingService from '@/services/drawingService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
+import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import {
     HiOutlineArrowLeft,
@@ -53,6 +54,7 @@ export default function ContractDetail() {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('documents');
     const [showEdit, setShowEdit] = useState(false);
+    const dragScrollRef = useDragScroll();
 
     const fetchContract = useCallback(async () => {
         try {
@@ -163,7 +165,7 @@ export default function ContractDetail() {
 
             {/* Tabs */}
             <div className="mb-6 border-b border-gray-200">
-                <nav className="-mb-px flex gap-6 overflow-x-auto">
+                <nav ref={dragScrollRef} className="-mb-px flex gap-6 overflow-x-auto cursor-grab active:cursor-grabbing">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
@@ -460,6 +462,7 @@ function BoqTab({ contract, canEdit }) {
     const [loading, setLoading] = useState(true);
     const [form, setForm] = useState(emptyBoqForm());
     const [saving, setSaving] = useState(false);
+    const dragScrollRef = useDragScroll();
 
     const fetchItems = useCallback(async () => {
         setLoading(true);
@@ -554,7 +557,7 @@ function BoqTab({ contract, canEdit }) {
             {loading ? (
                 <LoadingSpinner />
             ) : (
-                <div className="overflow-x-auto rounded-lg border border-gray-100">
+                <div ref={dragScrollRef} className="overflow-x-auto rounded-lg border border-gray-100 cursor-grab active:cursor-grabbing">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>

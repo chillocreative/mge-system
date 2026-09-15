@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import safetyService from '@/services/safetyService';
 import projectService from '@/services/projectService';
 import { formatDate } from '@/utils/date';
+import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import {
@@ -44,6 +45,7 @@ export default function Safety() {
     const [loading, setLoading] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [showDetail, setShowDetail] = useState(null);
+    const dragScrollRef = useDragScroll();
 
     useEffect(() => {
         projectService.list({ per_page: 100 }).then(r => setProjects(r.data?.data || [])).catch(() => {});
@@ -108,7 +110,7 @@ export default function Safety() {
 
             {/* Tabs */}
             <div className="border-b border-gray-200">
-                <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
+                <nav ref={dragScrollRef} className="-mb-px flex space-x-6 overflow-x-auto cursor-grab active:cursor-grabbing" aria-label="Tabs">
                     {TABS.map(t => (
                         <button key={t.key} onClick={() => { setTab(t.key); setShowDetail(null); setShowModal(false); }}
                             className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium transition-colors ${

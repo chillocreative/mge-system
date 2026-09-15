@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import leaveService from '@/services/leaveService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
+import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import {
     HiOutlineCheck,
@@ -15,6 +16,7 @@ export default function LeaveApproval() {
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [pagination, setPagination] = useState({});
+    const dragScrollRef = useDragScroll();
     const [rejectTarget, setRejectTarget] = useState(null);
     const [rejectReason, setRejectReason] = useState('');
     const [processing, setProcessing] = useState(false);
@@ -78,7 +80,7 @@ export default function LeaveApproval() {
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-                    <div className="overflow-x-auto">
+                    <div ref={dragScrollRef} className="overflow-x-auto cursor-grab active:cursor-grabbing">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>

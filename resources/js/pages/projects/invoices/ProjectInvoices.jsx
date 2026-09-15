@@ -6,6 +6,7 @@ import projectService from '@/services/projectService';
 import ProjectFilesPanel from '@/components/ProjectFilesPanel';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
+import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus, HiOutlineSearch, HiOutlineDocumentText, HiOutlinePencil, HiOutlineTrash,
@@ -43,6 +44,7 @@ export default function ProjectInvoices() {
     const confirm = useConfirm();
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
+    const dragScrollRef = useDragScroll();
     const [pagination, setPagination] = useState({});
     const [projects, setProjects] = useState([]);
     const [summary, setSummary] = useState({ total_client: 0, total_subcon: 0, profit: 0 });
@@ -331,7 +333,7 @@ export default function ProjectInvoices() {
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-                    <div className="overflow-x-auto">
+                    <div ref={dragScrollRef} className="overflow-x-auto cursor-grab active:cursor-grabbing">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>

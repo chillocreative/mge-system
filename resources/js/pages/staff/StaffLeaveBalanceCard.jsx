@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import leaveService from '@/services/leaveService';
+import useDragScroll from '@/hooks/useDragScroll';
 import { HiOutlineExternalLink } from 'react-icons/hi';
 
 /**
@@ -21,6 +22,7 @@ export default function StaffLeaveBalanceCard({ employeeId }) {
     const [balances, setBalances] = useState([]);
     const [loading, setLoading] = useState(true);
     const [failed, setFailed] = useState(false);
+    const dragScrollRef = useDragScroll();
 
     useEffect(() => {
         if (!employeeId) return;
@@ -77,7 +79,7 @@ export default function StaffLeaveBalanceCard({ employeeId }) {
 
             {!loading && !failed && balances.length > 0 && (
                 <>
-                    <div className="overflow-x-auto">
+                    <div ref={dragScrollRef} className="overflow-x-auto cursor-grab active:cursor-grabbing">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">

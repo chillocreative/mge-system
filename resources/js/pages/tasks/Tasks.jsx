@@ -5,6 +5,7 @@ import projectService from '@/services/projectService';
 import apiClient from '@/services/apiClient';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
+import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus, HiOutlineClipboardList, HiOutlineSearch, HiOutlineX,
@@ -31,6 +32,7 @@ export default function Tasks() {
     const { can } = useAuth();
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
+    const dragScrollRef = useDragScroll();
     const [statusFilter, setStatusFilter] = useState('');
     const [projects, setProjects] = useState([]);
     const [users, setUsers] = useState([]);
@@ -178,7 +180,7 @@ export default function Tasks() {
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-                    <div className="overflow-x-auto">
+                    <div ref={dragScrollRef} className="overflow-x-auto cursor-grab active:cursor-grabbing">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>

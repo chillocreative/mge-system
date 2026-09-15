@@ -3,6 +3,7 @@ import apiClient from '@/services/apiClient';
 import leaveService from '@/services/leaveService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import EmployeeSelect from '@/components/EmployeeSelect';
+import useDragScroll from '@/hooks/useDragScroll';
 import { HiOutlineScale } from 'react-icons/hi';
 
 export default function LeaveBalance() {
@@ -12,6 +13,7 @@ export default function LeaveBalance() {
     const [year, setYear] = useState(currentYear);
     const [balances, setBalances] = useState([]);
     const [loading, setLoading] = useState(false);
+    const dragScrollRef = useDragScroll();
 
     useEffect(() => {
         apiClient.get('/employees', { params: { per_page: 100 } })
@@ -72,7 +74,7 @@ export default function LeaveBalance() {
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-                    <div className="overflow-x-auto">
+                    <div ref={dragScrollRef} className="overflow-x-auto cursor-grab active:cursor-grabbing">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>

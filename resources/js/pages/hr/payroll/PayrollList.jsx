@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useConfirm } from '@/context/ConfirmContext';
 import payrollService from '@/services/payrollService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import { HiOutlineCog, HiOutlineEye, HiOutlineCheck, HiOutlineCash, HiOutlineMail, HiOutlineDocumentDownload } from 'react-icons/hi';
 
@@ -27,6 +28,7 @@ export default function PayrollList() {
     const confirm = useConfirm();
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
+    const dragScrollRef = useDragScroll();
     const [pagination, setPagination] = useState({});
     const [statusFilter, setStatusFilter] = useState('');
     const [showGen, setShowGen] = useState(false);
@@ -121,7 +123,7 @@ export default function PayrollList() {
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-                    <div className="overflow-x-auto">
+                    <div ref={dragScrollRef} className="overflow-x-auto cursor-grab active:cursor-grabbing">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>

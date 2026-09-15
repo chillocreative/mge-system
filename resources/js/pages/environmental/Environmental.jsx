@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import environmentalService from '@/services/environmentalService';
 import projectService from '@/services/projectService';
 import { formatDate } from '@/utils/date';
+import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import {
     HiOutlineGlobe, HiOutlineTrash, HiOutlineEye, HiOutlineClipboardCheck,
@@ -32,6 +33,7 @@ export default function Environmental() {
     const { can } = useAuth();
     const [tab, setTab] = useState('overview');
     const [stats, setStats] = useState(null);
+    const dragScrollRef = useDragScroll();
     const [items, setItems] = useState([]);
     const [pagination, setPagination] = useState({});
     const [page, setPage] = useState(1);
@@ -90,7 +92,7 @@ export default function Environmental() {
 
             {/* Tabs */}
             <div className="border-b border-gray-200">
-                <nav className="-mb-px flex space-x-6 overflow-x-auto">
+                <nav ref={dragScrollRef} className="-mb-px flex space-x-6 overflow-x-auto cursor-grab active:cursor-grabbing">
                     {TABS.map(t => (
                         <button key={t.key} onClick={() => { setTab(t.key); setShowDetail(null); setShowModal(false); }}
                             className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium transition-colors ${

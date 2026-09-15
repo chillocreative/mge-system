@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import inventoryService from '@/services/inventoryService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
+import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import {
     HiOutlineArrowLeft,
@@ -31,6 +32,7 @@ export default function ItemDetail() {
     const { can } = useAuth();
     const [item, setItem] = useState(null);
     const [transactions, setTransactions] = useState([]);
+    const dragScrollRef = useDragScroll();
     const [pagination, setPagination] = useState({});
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -129,7 +131,7 @@ export default function ItemDetail() {
                 {transactions.length === 0 ? (
                     <p className="py-6 text-center text-sm text-gray-500">No transactions yet</p>
                 ) : (
-                    <div className="overflow-x-auto">
+                    <div ref={dragScrollRef} className="overflow-x-auto cursor-grab active:cursor-grabbing">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useConfirm } from '@/context/ConfirmContext';
 import leaveService from '@/services/leaveService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineCalendar, HiOutlineExclamation } from 'react-icons/hi';
 
@@ -40,6 +41,7 @@ export default function PublicHolidays() {
     const [year, setYear] = useState(currentYear);
     const [holidays, setHolidays] = useState([]);
     const [loading, setLoading] = useState(true);
+    const dragScrollRef = useDragScroll();
     const [showForm, setShowForm] = useState(false);
     const [editId, setEditId] = useState(null);
     const [form, setForm] = useState(emptyForm);
@@ -202,7 +204,7 @@ export default function PublicHolidays() {
                             </button>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
+                        <div ref={dragScrollRef} className="overflow-x-auto cursor-grab active:cursor-grabbing">
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">

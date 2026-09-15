@@ -6,6 +6,7 @@ import projectService from '@/services/projectService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
 import ProjectFilesPanel from '@/components/ProjectFilesPanel';
+import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus, HiOutlineSearch, HiOutlineBriefcase, HiOutlinePaperClip, HiOutlineX,
@@ -37,6 +38,7 @@ export default function Projects() {
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const dragScrollRef = useDragScroll();
     const [statusFilter, setStatusFilter] = useState('');
     const [filesModal, setFilesModal] = useState(null);
 
@@ -154,7 +156,7 @@ export default function Projects() {
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-                    <div className="overflow-x-auto">
+                    <div ref={dragScrollRef} className="overflow-x-auto cursor-grab active:cursor-grabbing">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>

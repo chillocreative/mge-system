@@ -6,6 +6,7 @@ import contractService from '@/services/contractService';
 import projectService from '@/services/projectService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
+import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus,
@@ -63,6 +64,7 @@ export default function Contracts() {
 
     const [contracts, setContracts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const dragScrollRef = useDragScroll();
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [projectFilter, setProjectFilter] = useState('');
@@ -261,7 +263,7 @@ export default function Contracts() {
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-                    <div className="overflow-x-auto">
+                    <div ref={dragScrollRef} className="overflow-x-auto cursor-grab active:cursor-grabbing">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>

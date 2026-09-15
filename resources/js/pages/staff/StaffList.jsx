@@ -5,6 +5,7 @@ import { useConfirm } from '@/context/ConfirmContext';
 import staffService from '@/services/staffService';
 import apiClient from '@/services/apiClient';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus,
@@ -28,6 +29,7 @@ export default function StaffList() {
     const [staff, setStaff] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const dragScrollRef = useDragScroll();
     const [departmentFilter, setDepartmentFilter] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
@@ -145,7 +147,7 @@ export default function StaffList() {
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-                    <div className="overflow-x-auto">
+                    <div ref={dragScrollRef} className="overflow-x-auto cursor-grab active:cursor-grabbing">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>

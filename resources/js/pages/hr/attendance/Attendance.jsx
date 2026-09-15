@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import attendanceService from '@/services/attendanceService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
+import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import { HiOutlineUpload, HiOutlineSearch, HiOutlineClock, HiOutlineTrash } from 'react-icons/hi';
 
@@ -17,6 +18,7 @@ export default function Attendance() {
     const { can } = useAuth();
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
+    const dragScrollRef = useDragScroll();
     const [pagination, setPagination] = useState({});
     const [statusFilter, setStatusFilter] = useState('');
     const [dateFrom, setDateFrom] = useState('');
@@ -110,7 +112,7 @@ export default function Attendance() {
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-                    <div className="overflow-x-auto">
+                    <div ref={dragScrollRef} className="overflow-x-auto cursor-grab active:cursor-grabbing">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>

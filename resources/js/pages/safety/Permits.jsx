@@ -5,6 +5,7 @@ import safetyService from '@/services/safetyService';
 import projectService from '@/services/projectService';
 import projectSiteService from '@/services/projectSiteService';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlineArrowLeft, HiOutlinePencil } from 'react-icons/hi';
 
@@ -52,6 +53,7 @@ export default function Permits() {
     const canManage = can('safety.manage');
     const [list, setList] = useState([]);
     const [projects, setProjects] = useState([]);
+    const dragScrollRef = useDragScroll();
     const [sites, setSites] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -166,7 +168,7 @@ export default function Permits() {
             </div>
 
             {loading ? <LoadingSpinner /> : (
-                <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
+                <div ref={dragScrollRef} className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-gray-200 cursor-grab active:cursor-grabbing">
                     {list.length === 0 ? (
                         <p className="px-6 py-12 text-center text-sm text-gray-400">No permits yet.</p>
                     ) : (

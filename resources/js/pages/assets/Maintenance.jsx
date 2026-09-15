@@ -4,6 +4,7 @@ import maintenanceService from '@/services/maintenanceService';
 import assetService from '@/services/assetService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
+import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus,
@@ -35,6 +36,7 @@ export default function Maintenance() {
     const { can } = useAuth();
     const [logs, setLogs] = useState([]);
     const [upcoming, setUpcoming] = useState([]);
+    const dragScrollRef = useDragScroll();
     const [vehicles, setVehicles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -169,7 +171,7 @@ export default function Maintenance() {
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-                    <div className="overflow-x-auto">
+                    <div ref={dragScrollRef} className="overflow-x-auto cursor-grab active:cursor-grabbing">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>

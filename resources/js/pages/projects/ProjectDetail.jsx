@@ -10,6 +10,7 @@ import ProjectDiscussions from '@/components/ProjectDiscussions';
 import ProjectSitesPanel from '@/components/ProjectSitesPanel';
 import { useAuth } from '@/context/AuthContext';
 import { useConfirm } from '@/context/ConfirmContext';
+import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import {
     HiOutlineArrowLeft,
@@ -65,6 +66,7 @@ export default function ProjectDetail() {
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('overview');
+    const dragScrollRef = useDragScroll();
 
     const canEdit = can('projects.edit');
 
@@ -123,7 +125,7 @@ export default function ProjectDetail() {
 
             {/* Tabs */}
             <div className="mb-6 border-b border-gray-200">
-                <nav className="-mb-px flex gap-6 overflow-x-auto">
+                <nav ref={dragScrollRef} className="-mb-px flex gap-6 overflow-x-auto cursor-grab active:cursor-grabbing">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}

@@ -3,6 +3,7 @@ import apiClient from '@/services/apiClient';
 import { useAuth } from '@/context/AuthContext';
 import { useConfirm } from '@/context/ConfirmContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import useDragScroll from '@/hooks/useDragScroll';
 import { HiOutlineUserGroup, HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineLockClosed } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 
@@ -35,6 +36,7 @@ const unwrap = (r) => r.data?.data?.data || r.data?.data || [];
 export default function Users() {
     const { can, user } = useAuth();
     const confirm = useConfirm();
+    const dragScrollRef = useDragScroll();
     const canGrantSuper = !!user?.is_protected; // only the System Administrator
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -201,7 +203,7 @@ export default function Users() {
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-                    <div className="overflow-x-auto">
+                    <div ref={dragScrollRef} className="overflow-x-auto cursor-grab active:cursor-grabbing">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
