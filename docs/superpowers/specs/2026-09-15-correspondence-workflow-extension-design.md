@@ -81,11 +81,16 @@ the plain create/edit form, which writes straight through `CorrespondenceService
 contradicts requirement (e) — "every closed correspondence must have reference + attachment"
 — since it's currently possible to mark one closed with neither.
 
-Fix: remove `closed` from the validation `in:` list on `store`/`update` (validation becomes
-`in:open,pending,declined,forwarded,others` — closed excluded). Closing a correspondence must
-go through the dedicated `CorrespondenceWorkflowService::close()` action (already wired to the
-"Close…" button in the drawer), which is the only path that can set `status = closed`. If a
-request tries to set `status: closed` via store/update, it now fails validation.
+Fix: on `store`, remove `closed` from the validation `in:` list entirely (validation becomes
+`in:open,pending,declined,forwarded,others`) — a brand new correspondence can never be created
+pre-closed. On `update`, replace the flat `in:` rule with a closure rule: `closed` is only valid
+if the correspondence's *current* stored status is already `closed` (a no-op — lets someone edit
+an already-closed record's other fields, e.g. its title, without being forced through a reopen
+first); any request that tries to *transition into* `closed` via the generic update endpoint
+fails validation. Closing a correspondence for the first time must go through the dedicated
+`CorrespondenceWorkflowService::close()` action (already wired to the "Close…" button in the
+drawer), which is the only path that can move a correspondence from a non-closed status to
+`closed`.
 
 Reopening (`status` back to `open`) still goes through `CorrespondenceWorkflowService::reopen()`
 as it does today — unaffected by this change since `reopen` was never one of the directly
