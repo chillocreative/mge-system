@@ -38,6 +38,9 @@ class CorrespondenceService
     {
         return DB::transaction(function () use ($data, $userId, $files) {
             $data['created_by'] = $userId;
+            if (array_key_exists('status', $data) && $data['status'] !== 'others') {
+                $data['other_status_text'] = null;
+            }
             $correspondence = ProjectCorrespondence::create($data);
             $this->storeFiles($correspondence, $files);
 
@@ -49,6 +52,9 @@ class CorrespondenceService
     {
         return DB::transaction(function () use ($id, $data, $files) {
             $correspondence = ProjectCorrespondence::findOrFail($id);
+            if (array_key_exists('status', $data) && $data['status'] !== 'others') {
+                $data['other_status_text'] = null;
+            }
             $correspondence->update($data);
             $this->storeFiles($correspondence, $files);
 

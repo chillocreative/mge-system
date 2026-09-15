@@ -37,7 +37,8 @@ class CorrespondenceController extends Controller
             'reference_no' => ['nullable', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'status' => ['nullable', 'in:open,pending,closed,declined'],
+            'status' => ['nullable', 'in:open,pending,declined,forwarded,others'],
+            'other_status_text' => ['required_if:status,others', 'nullable', 'string', 'max:255'],
             'current_party_id' => ['nullable', 'exists:project_parties,id'],
             'raised_date' => ['required', 'date'],
             'due_date' => ['nullable', 'date'],
@@ -72,11 +73,26 @@ class CorrespondenceController extends Controller
             'reference_no' => ['nullable', 'string', 'max:255'],
             'title' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'status' => ['sometimes', 'in:open,pending,closed,declined'],
+            'status' => ['sometimes', function ($attribute, $value, $fail) use ($id) {
+                if (in_array($value, ['open', 'pending', 'declined', 'forwarded', 'others'], true)) {
+                    return;
+                }
+                if ($value !== 'closed') {
+                    $fail('The selected status is invalid.');
+
+                    return;
+                }
+                if (ProjectCorrespondence::whereKey($id)->value('status') !== 'closed') {
+                    $fail('Use the dedicated close action to close a correspondence (it requires a reference and an attachment).');
+                }
+            }],
+            'other_status_text' => ['required_if:status,others', 'nullable', 'string', 'max:255'],
             'current_party_id' => ['nullable', 'exists:project_parties,id'],
             'raised_date' => ['sometimes', 'date'],
             'due_date' => ['nullable', 'date'],
             'expected_close_date' => ['nullable', 'date'],
+            'client_closed_date' => ['nullable', 'date'],
+            'consultant_closed_date' => ['nullable', 'date'],
             'response' => ['nullable', 'string'],
             'files' => ['nullable', 'array', 'max:10'],
             'files.*' => ['file', 'max:1048576', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
@@ -157,7 +173,7 @@ class CorrespondenceController extends Controller
     public function changeStatus(Request $request, int $id): JsonResponse
     {
         $data = $request->validate([
-            'status' => ['required', 'in:open,pending,closed,declined'],
+            'status' => ['required', 'in:open,pending,closed,declined,forwarded,others'],
             'note' => ['nullable', 'string'],
         ]);
         $c = ProjectCorrespondence::findOrFail($id);

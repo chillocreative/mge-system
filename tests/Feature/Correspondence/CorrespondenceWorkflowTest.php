@@ -98,6 +98,94 @@ class CorrespondenceWorkflowTest extends TestCase
         $this->assertDatabaseHas('correspondence_events', ['project_correspondence_id' => $c->id, 'event_type' => 'closed']);
     }
 
+    public function test_others_status_requires_the_free_text_field(): void
+    {
+        [$project] = $this->correspondence();
+
+        $this->actingAs($this->user(['projects.view', 'projects.edit']))
+            ->postJson('/api/correspondence', [
+                'project_id' => $project->id, 'type' => 'ncr', 'title' => 'X',
+                'raised_date' => now()->toDateString(), 'status' => 'others',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('other_status_text');
+    }
+
+    public function test_others_status_with_text_is_accepted_and_stored(): void
+    {
+        [$project] = $this->correspondence();
+
+        $this->actingAs($this->user(['projects.view', 'projects.edit']))
+            ->postJson('/api/correspondence', [
+                'project_id' => $project->id, 'type' => 'ncr', 'title' => 'X',
+                'raised_date' => now()->toDateString(), 'status' => 'others',
+                'other_status_text' => 'Awaiting site visit',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.other_status_text', 'Awaiting site visit');
+    }
+
+    public function test_forwarded_status_is_accepted(): void
+    {
+        [$project] = $this->correspondence();
+
+        $this->actingAs($this->user(['projects.view', 'projects.edit']))
+            ->postJson('/api/correspondence', [
+                'project_id' => $project->id, 'type' => 'ncr', 'title' => 'X',
+                'raised_date' => now()->toDateString(), 'status' => 'forwarded',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'forwarded');
+    }
+
+    public function test_moving_status_away_from_others_clears_the_free_text(): void
+    {
+        [, $c] = $this->correspondence();
+        $c->update(['status' => 'others', 'other_status_text' => 'Awaiting site visit']);
+
+        $this->actingAs($this->user(['projects.view', 'projects.edit']))
+            ->postJson("/api/correspondence/{$c->id}", ['_method' => 'PUT', 'status' => 'open'])
+            ->assertOk();
+
+        $this->assertNull($c->fresh()->other_status_text);
+    }
+
+    public function test_the_generic_update_endpoint_cannot_set_status_to_closed(): void
+    {
+        [, $c] = $this->correspondence();
+
+        $this->actingAs($this->user(['projects.view', 'projects.edit']))
+            ->postJson("/api/correspondence/{$c->id}", ['_method' => 'PUT', 'status' => 'closed'])
+            ->assertStatus(422);
+
+        $this->assertSame('open', $c->fresh()->status);
+    }
+
+    public function test_updating_an_already_closed_correspondence_without_changing_its_status_still_works(): void
+    {
+        [, $c] = $this->correspondence();
+        ProjectCorrespondenceFile::create(['project_correspondence_id' => $c->id, 'file_path' => 'x/y.pdf', 'file_name' => 'y.pdf']);
+        $c->update(['status' => 'closed', 'closing_reference' => 'CLOSE-1', 'actual_close_date' => now()->toDateString()]);
+
+        $this->actingAs($this->user(['projects.view', 'projects.edit']))
+            ->postJson("/api/correspondence/{$c->id}", ['_method' => 'PUT', 'status' => 'closed', 'title' => 'Renamed'])
+            ->assertOk()
+            ->assertJsonPath('data.title', 'Renamed');
+    }
+
+    public function test_client_and_consultant_close_dates_are_settable_via_update(): void
+    {
+        [, $c] = $this->correspondence();
+
+        $this->actingAs($this->user(['projects.view', 'projects.edit']))
+            ->postJson("/api/correspondence/{$c->id}", [
+                '_method' => 'PUT', 'client_closed_date' => '2026-09-20', 'consultant_closed_date' => '2026-09-25',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.client_closed_date', '2026-09-20')
+            ->assertJsonPath('data.consultant_closed_date', '2026-09-25');
+    }
+
     public function test_the_three_new_columns_are_mass_assignable_and_cast_correctly(): void
     {
         [, $c] = $this->correspondence();
