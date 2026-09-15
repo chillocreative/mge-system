@@ -1,8 +1,13 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 
 /**
  * Hook for enabling click-and-drag to scroll horizontally-scrollable containers.
  * Attach the returned ref to a container with overflow-x-auto.
+ *
+ * Uses a callback ref (not useRef) so the attach effect re-runs when the DOM
+ * node actually mounts — many callers render the container behind a loading
+ * gate, so a plain useRef + effect-on-mount would fire while the node is
+ * still null and never re-attach once the table appears.
  *
  * Usage:
  *   const dragScrollRef = useDragScroll();
@@ -11,15 +16,19 @@ import { useRef, useEffect } from 'react';
  *   </div>
  */
 export default function useDragScroll() {
-    const containerRef = useRef(null);
+    const [node, setNode] = useState(null);
     const isDragging = useRef(false);
     const startX = useRef(0);
     const startScrollLeft = useRef(0);
     const movedPixels = useRef(0);
     const THRESHOLD = 5; // pixels before considering it a drag
 
+    const refCallback = useCallback((el) => {
+        setNode(el);
+    }, []);
+
     useEffect(() => {
-        const container = containerRef.current;
+        const container = node;
         if (!container) return;
 
         const handleMouseDown = (e) => {
@@ -76,7 +85,7 @@ export default function useDragScroll() {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, []);
+    }, [node]);
 
-    return containerRef;
+    return refCallback;
 }
