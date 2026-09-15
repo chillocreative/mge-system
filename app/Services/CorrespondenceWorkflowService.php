@@ -45,11 +45,11 @@ class CorrespondenceWorkflowService
         return $c->fresh('events');
     }
 
-    public function changeStatus(ProjectCorrespondence $c, string $status, ?string $note, ?int $userId): ProjectCorrespondence
+    public function changeStatus(ProjectCorrespondence $c, string $status, ?string $note, ?int $userId, ?string $otherStatusText = null): ProjectCorrespondence
     {
-        return DB::transaction(function () use ($c, $status, $note, $userId) {
+        return DB::transaction(function () use ($c, $status, $note, $userId, $otherStatusText) {
             $from = $c->status;
-            $c->update(['status' => $status]);
+            $c->update(['status' => $status, 'other_status_text' => $status === 'others' ? $otherStatusText : null]);
             $this->log($c, 'status_changed', ['from_status' => $from, 'to_status' => $status, 'note' => $note, 'created_by' => $userId]);
 
             return $c->fresh('events');

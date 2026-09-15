@@ -17,7 +17,7 @@
         .badge-closed { background: #d1fae5; color: #065f46; }
         .badge-declined { background: #fee2e2; color: #991b1b; }
         .badge-forwarded { background: #e0e7ff; color: #3730a3; }
-        .badge-others { background: #f3f4f6; color: #374151; }
+        .badge-others { background: #f3f4f6; color: #374151; text-transform: none; }
         .section { margin-bottom: 20px; }
         .section-title { font-size: 12px; font-weight: bold; text-transform: uppercase; color: #2563eb; letter-spacing: 0.5px; margin-bottom: 8px; padding-bottom: 3px; border-bottom: 1px solid #dbeafe; }
         .grid { display: table; width: 100%; }
@@ -45,7 +45,7 @@
         <div class="section-title">Details</div>
         <div class="grid">
             <div class="row"><div class="label">Project</div><div class="value">{{ $c->project?->name }}{{ $c->project?->code ? ' ('.$c->project->code.')' : '' }}</div></div>
-            <div class="row"><div class="label">Status</div><div class="value"><span class="badge badge-{{ $c->status }}">{{ $c->status === 'others' ? $c->other_status_text : $c->status }}</span></div></div>
+            <div class="row"><div class="label">Status</div><div class="value"><span class="badge badge-{{ $c->status }}">{{ $c->status === 'others' && $c->other_status_text ? $c->other_status_text : $c->status }}</span></div></div>
             <div class="row"><div class="label">Currently at</div><div class="value">{{ $c->currentParty?->name ?? '—' }}</div></div>
             <div class="row"><div class="label">Site</div><div class="value">{{ $c->site?->name ?? '—' }}</div></div>
             <div class="row"><div class="label">Raised</div><div class="value">{{ optional($c->raised_date)->format('d M Y') }} by {{ trim(($c->creator?->first_name ?? '').' '.($c->creator?->last_name ?? '')) ?: '—' }}</div></div>

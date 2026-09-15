@@ -402,7 +402,7 @@ export default function Correspondence() {
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
                                     <select value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
-                                        <option value="open">Open</option><option value="pending">Pending</option><option value="closed">Closed</option><option value="declined">Decline</option><option value="forwarded">Forwarded</option><option value="others">Others</option>
+                                        <option value="open">Open</option><option value="pending">Pending</option>{editingId && form.status === 'closed' && <option value="closed">Closed</option>}<option value="declined">Decline</option><option value="forwarded">Forwarded</option><option value="others">Others</option>
                                     </select>
                                     {form.status === 'others' && (
                                         <input type="text" placeholder="Describe the status *" value={form.other_status_text}

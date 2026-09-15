@@ -173,12 +173,13 @@ class CorrespondenceController extends Controller
     public function changeStatus(Request $request, int $id): JsonResponse
     {
         $data = $request->validate([
-            'status' => ['required', 'in:open,pending,closed,declined,forwarded,others'],
+            'status' => ['required', 'in:open,pending,declined,forwarded,others'],
+            'other_status_text' => ['required_if:status,others', 'nullable', 'string', 'max:255'],
             'note' => ['nullable', 'string'],
         ]);
         $c = ProjectCorrespondence::findOrFail($id);
 
-        return $this->success($this->workflow->changeStatus($c, $data['status'], $data['note'] ?? null, $request->user()->id), 'Status updated.');
+        return $this->success($this->workflow->changeStatus($c, $data['status'], $data['note'] ?? null, $request->user()->id, $data['other_status_text'] ?? null), 'Status updated.');
     }
 
     public function close(Request $request, int $id): JsonResponse

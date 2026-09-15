@@ -138,6 +138,32 @@ class CorrespondenceWorkflowTest extends TestCase
             ->assertJsonPath('data.status', 'forwarded');
     }
 
+    public function test_the_changestatus_endpoint_cannot_set_status_to_closed(): void
+    {
+        [, $c] = $this->correspondence();
+
+        $this->actingAs($this->user(['projects.view', 'projects.edit']))
+            ->postJson("/api/correspondence/{$c->id}/status", ['status' => 'closed'])
+            ->assertStatus(422);
+
+        $this->assertSame('open', $c->fresh()->status);
+    }
+
+    public function test_the_changestatus_endpoint_requires_other_status_text_for_others(): void
+    {
+        [, $c] = $this->correspondence();
+
+        $this->actingAs($this->user(['projects.view', 'projects.edit']))
+            ->postJson("/api/correspondence/{$c->id}/status", ['status' => 'others'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('other_status_text');
+
+        $this->actingAs($this->user(['projects.view', 'projects.edit']))
+            ->postJson("/api/correspondence/{$c->id}/status", ['status' => 'others', 'other_status_text' => 'Awaiting site visit'])
+            ->assertOk()
+            ->assertJsonPath('data.other_status_text', 'Awaiting site visit');
+    }
+
     public function test_moving_status_away_from_others_clears_the_free_text(): void
     {
         [, $c] = $this->correspondence();
