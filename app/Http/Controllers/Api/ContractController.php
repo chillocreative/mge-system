@@ -61,7 +61,7 @@ class ContractController extends Controller
     {
         $request->validate([
             'files' => ['required', 'array', 'min:1', 'max:10'],
-            'files.*' => ['file', 'max:51200', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
+            'files.*' => ['file', 'max:1048576', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
         ]);
 
         $contract = $this->contractService->addFiles($id, $request->file('files', []));
@@ -92,7 +92,7 @@ class ContractController extends Controller
     {
         $request->validate([
             'files' => ['required', 'array', 'min:1'],
-            'files.*' => ['file', 'max:204800'], // 200 MB per file
+            'files.*' => ['file', 'max:1048576'], // 1 GB per file
             // One relative path per file, from the browser folder picker
             // (webkitRelativePath). Sanitised in the upload engine.
             'paths' => ['nullable', 'array'],
@@ -187,7 +187,7 @@ class ContractController extends Controller
             'status' => ['nullable', 'in:active,completed,terminated'],
             'notes' => ['nullable', 'string'],
             'files' => ['nullable', 'array', 'max:10'],
-            'files.*' => ['file', 'max:51200', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
+            'files.*' => ['file', 'max:1048576', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
         ]);
     }
 }

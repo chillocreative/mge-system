@@ -102,7 +102,7 @@ class ChatController extends Controller
     public function sendFile(int $roomId, Request $request): JsonResponse
     {
         $request->validate([
-            'file' => ['required', 'file', 'max:10240'],
+            'file' => ['required', 'file', 'max:1048576'],
             'body' => ['nullable', 'string', 'max:5000'],
         ]);
 

@@ -60,7 +60,7 @@ class InternalEmailController extends Controller
             'parent_id' => ['nullable', 'exists:internal_emails,id'],
             'thread_id' => ['nullable', 'exists:internal_emails,id'],
             'attachments' => ['nullable', 'array'],
-            'attachments.*' => ['file', 'max:10240'],
+            'attachments.*' => ['file', 'max:1048576'],
         ]);
 
         $email = $this->emailService->sendEmail(
@@ -84,7 +84,7 @@ class InternalEmailController extends Controller
             'cc' => ['nullable', 'array'],
             'cc.*' => ['exists:users,id'],
             'attachments' => ['nullable', 'array'],
-            'attachments.*' => ['file', 'max:10240'],
+            'attachments.*' => ['file', 'max:1048576'],
         ]);
 
         $original = \App\Models\InternalEmail::findOrFail($id);

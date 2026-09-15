@@ -105,7 +105,7 @@ class WorkPermitController extends Controller
     public function upload(Request $request, int $id): JsonResponse
     {
         $permit = WorkPermit::findOrFail($id);
-        $request->validate(['files' => ['required', 'array'], 'files.*' => ['file', 'max:20480']]);
+        $request->validate(['files' => ['required', 'array'], 'files.*' => ['file', 'max:1048576']]);
 
         foreach ($request->file('files', []) as $file) {
             $this->files->attach($file, $permit, $request->user()->id, [

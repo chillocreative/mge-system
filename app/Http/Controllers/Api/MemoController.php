@@ -53,7 +53,7 @@ class MemoController extends Controller
             'user_ids.*' => ['exists:users,id'],
             'project_id' => ['required_if:audience,project_members', 'exists:projects,id'],
             'attachments' => ['nullable', 'array', 'max:10'],
-            'attachments.*' => ['file', 'max:10240', 'extensions:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg,gif,zip,txt,csv'],
+            'attachments.*' => ['file', 'max:1048576', 'extensions:pdf,doc,docx,xls,xlsx,ppt,pptx,png,jpg,jpeg,gif,zip,txt,csv'],
         ]);
 
         $user = $request->user();

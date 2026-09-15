@@ -52,7 +52,7 @@ class ProjectInvoiceController extends Controller
             'date_received_claim' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
             'files' => ['nullable', 'array'],
-            'files.*' => ['file', 'max:25600', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
+            'files.*' => ['file', 'max:1048576', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
         ]);
 
         $files = $request->file('files', []);
@@ -86,7 +86,7 @@ class ProjectInvoiceController extends Controller
             'date_received_claim' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
             'files' => ['nullable', 'array'],
-            'files.*' => ['file', 'max:25600', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
+            'files.*' => ['file', 'max:1048576', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
         ]);
 
         $files = $request->file('files', []);
@@ -106,7 +106,7 @@ class ProjectInvoiceController extends Controller
     {
         $request->validate([
             'files' => ['required', 'array'],
-            'files.*' => ['file', 'max:25600', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
+            'files.*' => ['file', 'max:1048576', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
         ]);
 
         $invoice = $this->service->storeFilesForInvoice($id, $request->file('files', []));

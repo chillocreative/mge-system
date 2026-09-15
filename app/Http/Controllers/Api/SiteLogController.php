@@ -166,7 +166,7 @@ class SiteLogController extends Controller
     public function upload(int $projectId, int $logId, Request $request): JsonResponse
     {
         $log = SiteLog::where('project_id', $projectId)->findOrFail($logId);
-        $request->validate(['files' => ['required', 'array'], 'files.*' => ['file', 'max:20480']]);
+        $request->validate(['files' => ['required', 'array'], 'files.*' => ['file', 'max:1048576']]);
 
         foreach ($request->file('files', []) as $file) {
             $this->files->attach($file, $log, $request->user()->id, [

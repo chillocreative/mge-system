@@ -29,7 +29,7 @@ class ExpenseController extends Controller
             'amount' => ['required', 'numeric', 'min:0.01'],
             'expense_date' => ['required', 'date'],
             'vendor' => ['nullable', 'string', 'max:255'],
-            'receipt' => ['nullable', 'file', 'max:10240'],
+            'receipt' => ['nullable', 'file', 'max:1048576'],
         ]);
 
         $expense = $this->expenseService->createExpense(
