@@ -78,6 +78,12 @@ const correspondenceService = {
         const response = await apiClient.post(`/correspondence/${id}/close`, { closing_reference, note });
         return response.data;
     },
+    async updateCloseDates(id, { client_closed_date, consultant_closed_date }) {
+        const formData = new FormData();
+        if (client_closed_date !== undefined) formData.append('client_closed_date', client_closed_date || '');
+        if (consultant_closed_date !== undefined) formData.append('consultant_closed_date', consultant_closed_date || '');
+        return this.update(id, formData);
+    },
     async reopen(id, note = null) {
         const response = await apiClient.post(`/correspondence/${id}/reopen`, { note });
         return response.data;

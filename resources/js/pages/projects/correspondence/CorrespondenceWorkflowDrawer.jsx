@@ -98,10 +98,26 @@ export default function CorrespondenceWorkflowDrawer({ correspondence, canEdit, 
                 {loading || !detail ? <div className="p-6"><LoadingSpinner /></div> : (
                     <div className="space-y-5 p-5">
                         <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-3 text-sm">
-                            <div><span className="text-xs uppercase text-gray-400">Status</span><div className="font-medium capitalize">{detail.status}</div></div>
+                            <div><span className="text-xs uppercase text-gray-400">Status</span><div className="font-medium capitalize">{detail.status === 'others' && detail.other_status_text ? detail.other_status_text : detail.status}</div></div>
                             <div><span className="text-xs uppercase text-gray-400">Currently at</span><div className="font-medium">{detail.current_party?.name || '—'}</div></div>
                             <div><span className="text-xs uppercase text-gray-400">Expected close</span><div>{detail.expected_close_date || '—'}</div></div>
                             <div><span className="text-xs uppercase text-gray-400">Actual close</span><div>{detail.actual_close_date || '—'}</div></div>
+                            <div>
+                                <span className="text-xs uppercase text-gray-400">Client closed</span>
+                                {canEdit ? (
+                                    <input type="date" defaultValue={detail.client_closed_date || ''}
+                                        onBlur={(e) => { if (e.target.value !== (detail.client_closed_date || '')) run(() => correspondenceService.updateCloseDates(id, { client_closed_date: e.target.value }), 'Client close date updated'); }}
+                                        className="mt-0.5 w-full rounded border border-gray-200 px-1.5 py-1 text-sm" />
+                                ) : <div>{detail.client_closed_date || '—'}</div>}
+                            </div>
+                            <div>
+                                <span className="text-xs uppercase text-gray-400">Consultant closed</span>
+                                {canEdit ? (
+                                    <input type="date" defaultValue={detail.consultant_closed_date || ''}
+                                        onBlur={(e) => { if (e.target.value !== (detail.consultant_closed_date || '')) run(() => correspondenceService.updateCloseDates(id, { consultant_closed_date: e.target.value }), 'Consultant close date updated'); }}
+                                        className="mt-0.5 w-full rounded border border-gray-200 px-1.5 py-1 text-sm" />
+                                ) : <div>{detail.consultant_closed_date || '—'}</div>}
+                            </div>
                             {detail.closing_reference && <div className="col-span-2"><span className="text-xs uppercase text-gray-400">Closing ref</span><div>{detail.closing_reference}</div></div>}
                         </div>
 
