@@ -98,6 +98,23 @@ class CorrespondenceWorkflowTest extends TestCase
         $this->assertDatabaseHas('correspondence_events', ['project_correspondence_id' => $c->id, 'event_type' => 'closed']);
     }
 
+    public function test_the_three_new_columns_are_mass_assignable_and_cast_correctly(): void
+    {
+        [, $c] = $this->correspondence();
+
+        $c->update([
+            'status' => 'others',
+            'other_status_text' => 'Awaiting site visit',
+            'client_closed_date' => '2026-09-20',
+            'consultant_closed_date' => '2026-09-25',
+        ]);
+
+        $fresh = $c->fresh();
+        $this->assertSame('Awaiting site visit', $fresh->other_status_text);
+        $this->assertSame('2026-09-20', $fresh->client_closed_date->format('Y-m-d'));
+        $this->assertSame('2026-09-25', $fresh->consultant_closed_date->format('Y-m-d'));
+    }
+
     public function test_events_endpoint_returns_the_timeline(): void
     {
         [$project, $c] = $this->correspondence();

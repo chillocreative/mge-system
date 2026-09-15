@@ -15,6 +15,7 @@ class ProjectCorrespondence extends Model
         'project_id', 'site_id', 'type', 'reference_no', 'title', 'description',
         'status', 'raised_date', 'due_date', 'response', 'created_by',
         'current_party_id', 'expected_close_date', 'actual_close_date', 'closing_reference', 'closed_by',
+        'other_status_text', 'client_closed_date', 'consultant_closed_date',
     ];
 
     protected function casts(): array
@@ -24,6 +25,8 @@ class ProjectCorrespondence extends Model
             'due_date' => 'date:Y-m-d',
             'expected_close_date' => 'date:Y-m-d',
             'actual_close_date' => 'date:Y-m-d',
+            'client_closed_date' => 'date:Y-m-d',
+            'consultant_closed_date' => 'date:Y-m-d',
         ];
     }
 
