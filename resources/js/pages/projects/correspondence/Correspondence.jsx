@@ -32,6 +32,8 @@ const statusColors = {
     pending: 'bg-yellow-100 text-yellow-700',
     closed: 'bg-gray-100 text-gray-600',
     declined: 'bg-red-100 text-red-700',
+    forwarded: 'bg-indigo-100 text-indigo-700',
+    others: 'bg-gray-200 text-gray-800',
 };
 
 const today = () => new Date().toISOString().split('T')[0];
@@ -43,7 +45,7 @@ const dayDiff = (from, to) => {
 
 const baseForm = {
     project_id: '', site_id: '', type: '', reference_no: '', title: '', description: '',
-    status: 'open', raised_date: new Date().toISOString().split('T')[0], due_date: '', response: '', files: [],
+    status: 'open', other_status_text: '', raised_date: new Date().toISOString().split('T')[0], due_date: '', response: '', files: [],
 };
 const emptyTypeForm = { name: '', code: '', full_name: '', color: 'gray', sort_order: 0, is_active: true };
 
@@ -131,7 +133,7 @@ export default function Correspondence() {
         setEditingId(item.id);
         setForm({
             project_id: item.project_id || '', site_id: item.site_id || '', type: item.type || '', reference_no: item.reference_no || '',
-            title: item.title || '', description: item.description || '', status: item.status || 'open',
+            title: item.title || '', description: item.description || '', status: item.status || 'open', other_status_text: item.other_status_text || '',
             raised_date: item.raised_date ? String(item.raised_date).split('T')[0] : '',
             due_date: item.due_date ? String(item.due_date).split('T')[0] : '',
             response: item.response || '', files: [],
@@ -149,6 +151,7 @@ export default function Correspondence() {
             fd.append('title', form.title);
             fd.append('status', form.status);
             fd.append('raised_date', form.raised_date);
+            if (form.status === 'others' && form.other_status_text) fd.append('other_status_text', form.other_status_text);
             if (form.site_id) fd.append('site_id', form.site_id);
             if (form.reference_no) fd.append('reference_no', form.reference_no);
             if (form.description) fd.append('description', form.description);
@@ -271,6 +274,8 @@ export default function Correspondence() {
                     <option value="pending">Pending</option>
                     <option value="closed">Closed</option>
                     <option value="declined">Decline</option>
+                    <option value="forwarded">Forwarded</option>
+                    <option value="others">Others</option>
                 </select>
             </div>
 
@@ -314,7 +319,7 @@ export default function Correspondence() {
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-sm text-gray-600">{item.project?.name || '-'}</td>
-                                        <td className="px-4 py-3"><span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[item.status] || 'bg-gray-100 text-gray-600'}`}>{item.status}</span></td>
+                                        <td className="px-4 py-3"><span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[item.status] || 'bg-gray-100 text-gray-600'}`}>{item.status === 'others' && item.other_status_text ? item.other_status_text : item.status}</span></td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(item.raised_date)}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(item.due_date)}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{item.creator ? `${item.creator.first_name} ${item.creator.last_name}` : '-'}</td>
@@ -397,8 +402,13 @@ export default function Correspondence() {
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
                                     <select value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
-                                        <option value="open">Open</option><option value="pending">Pending</option><option value="closed">Closed</option><option value="declined">Decline</option>
+                                        <option value="open">Open</option><option value="pending">Pending</option><option value="closed">Closed</option><option value="declined">Decline</option><option value="forwarded">Forwarded</option><option value="others">Others</option>
                                     </select>
+                                    {form.status === 'others' && (
+                                        <input type="text" placeholder="Describe the status *" value={form.other_status_text}
+                                            onChange={(e) => setForm((p) => ({ ...p, other_status_text: e.target.value }))}
+                                            required className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                    )}
                                 </div>
                             </div>
 
