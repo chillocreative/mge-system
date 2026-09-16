@@ -160,9 +160,7 @@ export default function Vehicles() {
         setSaving(true);
         try {
             const payload = { ...form };
-            Object.keys(payload).forEach((k) => {
-                if (payload[k] === '' || payload[k] === null) delete payload[k];
-            });
+            if (payload.status === '' || payload.status === null) delete payload.status;
 
             if (editingId) {
                 await assetService.updateVehicle(editingId, payload);
