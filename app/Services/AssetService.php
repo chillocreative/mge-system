@@ -65,6 +65,29 @@ class AssetService
         Vehicle::findOrFail($id)->delete();
     }
 
+    /**
+     * Keep the vehicle's single open project assignment in sync with $projectId.
+     * - null => release any open assignment.
+     * - set and different from the current open assignment's project => close old, open new (via assignToProject).
+     * - set and same as current open assignment => no-op.
+     * Returns the vehicle reloaded with currentProjectAssignment.project so callers can return fresh JSON.
+     */
+    public function syncProjectAssignment(Vehicle $vehicle, ?int $projectId, int $userId): Vehicle
+    {
+        $vehicle->loadMissing('currentProjectAssignment');
+        $open = $vehicle->currentProjectAssignment;
+
+        if ($projectId === null) {
+            if ($open) {
+                $this->releaseFromProject($vehicle->id, $open->id);
+            }
+        } elseif (! $open || $open->project_id !== $projectId) {
+            $this->assignToProject($vehicle->id, ['project_id' => $projectId], $userId);
+        }
+
+        return $vehicle->fresh(['assignedTo:id,first_name,last_name,employee_no', 'currentProjectAssignment.project:id,name,code']);
+    }
+
     // ── Documents ──
 
     public function listAssignments(int $vehicleId)

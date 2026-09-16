@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useConfirm } from '@/context/ConfirmContext';
 import assetService from '@/services/assetService';
-import staffService from '@/services/staffService';
+import projectService from '@/services/projectService';
 import inventoryService from '@/services/inventoryService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import useDragScroll from '@/hooks/useDragScroll';
@@ -46,7 +46,7 @@ export default function Vehicles() {
     const [pagination, setPagination] = useState({});
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    const [employees, setEmployees] = useState([]);
+    const [projects, setProjects] = useState([]);
     const [saving, setSaving] = useState(false);
     const [dashboard, setDashboard] = useState(null);
     const [lowStockCount, setLowStockCount] = useState(0);
@@ -61,7 +61,7 @@ export default function Vehicles() {
         type: 'car',
         purchase_date: '',
         current_value: '',
-        assigned_to: '',
+        project_id: '',
         status: 'active',
         notes: '',
         custom_type: '',
@@ -103,8 +103,8 @@ export default function Vehicles() {
     useEffect(() => {
         fetchVehicles();
         fetchSummary();
-        staffService.list({ per_page: 100, status: 'active' })
-            .then((r) => setEmployees(r.data?.data || []))
+        projectService.list({ per_page: 100 })
+            .then((r) => setProjects(r.data?.data || []))
             .catch(() => {});
     }, []);
 
@@ -120,7 +120,7 @@ export default function Vehicles() {
             type: vehicle.type || 'car',
             purchase_date: vehicle.purchase_date || '',
             current_value: vehicle.current_value || '',
-            assigned_to: vehicle.assigned_to?.id || '',
+            project_id: vehicle.current_project_assignment?.project_id || '',
             status: vehicle.status || 'active',
             notes: vehicle.notes || '',
             custom_type: vehicle.custom_type || '',
@@ -141,7 +141,7 @@ export default function Vehicles() {
             type: 'car',
             purchase_date: '',
             current_value: '',
-            assigned_to: '',
+            project_id: '',
             status: 'active',
             notes: '',
             custom_type: '',
@@ -299,7 +299,7 @@ export default function Vehicles() {
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Serial No</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Make / Model</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Type</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Assigned To</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Assigned To Project</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500"></th>
                                 </tr>
@@ -446,10 +446,10 @@ export default function Vehicles() {
                                 </div>
                             </div>
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Assigned To</label>
-                                <select value={form.assigned_to} onChange={(e) => setForm((p) => ({ ...p, assigned_to: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Assigned To Project</label>
+                                <select value={form.project_id} onChange={(e) => setForm((p) => ({ ...p, project_id: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
                                     <option value="">Unassigned</option>
-                                    {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.full_name || `${emp.first_name} ${emp.last_name}`}</option>)}
+                                    {projects.map((proj) => <option key={proj.id} value={proj.id}>{proj.code ? `${proj.code} — ${proj.name}` : proj.name}</option>)}
                                 </select>
                             </div>
                             <div>

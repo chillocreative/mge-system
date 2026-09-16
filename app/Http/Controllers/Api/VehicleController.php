@@ -42,10 +42,20 @@ class VehicleController extends Controller
             'assigned_to' => ['nullable', 'exists:employees,id'],
             'status' => ['nullable', 'in:active,inactive,disposed'],
             'notes' => ['nullable', 'string'],
+            'project_id' => ['nullable', 'exists:projects,id'],
         ]);
 
         $validated = $this->dropNullColumns($validated, ['status']);
+
+        $hasProjectKey = array_key_exists('project_id', $validated);
+        $projectId = $validated['project_id'] ?? null;
+        unset($validated['project_id']);
+
         $vehicle = $this->assetService->createVehicle($validated, $request->user()->id);
+
+        if ($hasProjectKey) {
+            $vehicle = $this->assetService->syncProjectAssignment($vehicle, $projectId, $request->user()->id);
+        }
 
         return $this->created($vehicle, 'Machinery added successfully.');
     }
@@ -72,11 +82,22 @@ class VehicleController extends Controller
             'assigned_to' => ['nullable', 'exists:employees,id'],
             'status' => ['sometimes', 'in:active,inactive,disposed'],
             'notes' => ['nullable', 'string'],
+            'project_id' => ['nullable', 'exists:projects,id'],
         ]);
 
         $validated = $this->dropNullColumns($validated, ['status']);
 
-        return $this->success($this->assetService->updateVehicle($id, $validated), 'Machinery updated.');
+        $hasProjectKey = array_key_exists('project_id', $validated);
+        $projectId = $validated['project_id'] ?? null;
+        unset($validated['project_id']);
+
+        $vehicle = $this->assetService->updateVehicle($id, $validated);
+
+        if ($hasProjectKey) {
+            $vehicle = $this->assetService->syncProjectAssignment($vehicle, $projectId, $request->user()->id);
+        }
+
+        return $this->success($vehicle, 'Machinery updated.');
     }
 
     public function destroy(int $id): JsonResponse
