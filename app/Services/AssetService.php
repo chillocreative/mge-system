@@ -13,7 +13,10 @@ class AssetService
 {
     public function listVehicles(array $filters, int $perPage = 15): LengthAwarePaginator
     {
-        $query = Vehicle::with(['assignedTo:id,first_name,last_name,employee_no'])
+        $query = Vehicle::with([
+            'assignedTo:id,first_name,last_name,employee_no',
+            'currentProjectAssignment.project:id,name,code',
+        ])
             ->withCount('documents')
             ->orderByDesc('created_at');
 
@@ -42,6 +45,7 @@ class AssetService
     {
         return Vehicle::with([
             'assignedTo:id,first_name,last_name,employee_no',
+            'currentProjectAssignment.project:id,name,code',
             'creator:id,first_name,last_name',
             'documents' => fn ($q) => $q->orderByDesc('expiry_date'),
             'maintenanceLogs' => fn ($q) => $q->orderByDesc('performed_date'),

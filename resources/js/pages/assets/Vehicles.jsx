@@ -298,6 +298,7 @@ export default function Vehicles() {
                             <thead className="bg-gray-50">
                                 <tr>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Registration</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Serial No</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Make / Model</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Type</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Assigned To</th>
@@ -313,13 +314,14 @@ export default function Vehicles() {
                                                 {v.registration_no}
                                             </Link>
                                         </td>
+                                        <td className="px-4 py-3 text-sm text-gray-700">{v.serial_no || '-'}</td>
                                         <td className="px-4 py-3 text-sm text-gray-700">
                                             {v.make}{v.model ? ` ${v.model}` : ''}{v.year ? ` (${v.year})` : ''}
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{typeLabel(v)}</span>
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{v.assigned_to?.full_name || '-'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">{v.current_project_assignment?.project?.name || '-'}</td>
                                         <td className="px-4 py-3">
                                             <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[v.status]}`}>{v.status}</span>
                                         </td>
