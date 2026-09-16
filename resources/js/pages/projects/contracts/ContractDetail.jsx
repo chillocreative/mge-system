@@ -508,7 +508,7 @@ function BoqTab({ contract, canEdit, onContractChange }) {
                         <a
                             href={contractService.getBqFileUrl(contract.id)}
                             target="_blank"
-                            rel="noopener noreferrer"
+                            rel="noopener"
                             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                         >
                             <HiOutlineEye className="h-4 w-4" /> View BQ
