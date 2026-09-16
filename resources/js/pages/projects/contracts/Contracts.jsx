@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useConfirm } from '@/context/ConfirmContext';
 import contractService from '@/services/contractService';
@@ -282,7 +282,7 @@ export default function Contracts() {
                                     <tr key={c.id} className="hover:bg-gray-50">
                                         <td className="px-4 py-3 text-sm text-gray-600">{c.project?.name || '-'}</td>
                                         <td className="px-4 py-3">
-                                            <p className="text-sm font-medium text-gray-900">{c.title}</p>
+                                            <Link to={`/projects/contracts/${c.id}`} className="text-sm font-medium text-primary-700 hover:underline">{c.title}</Link>
                                             {c.contract_no && <p className="text-xs text-gray-500">{c.contract_no}</p>}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-gray-900">
