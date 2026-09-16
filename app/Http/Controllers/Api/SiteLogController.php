@@ -9,6 +9,8 @@ use App\Models\ActivityLog;
 use App\Models\Project;
 use App\Models\SiteLog;
 use App\Models\SiteLogMachinery;
+use App\Models\Vehicle;
+use App\Services\AssetService;
 use App\Services\FileUploadService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
@@ -32,6 +34,7 @@ class SiteLogController extends Controller
 
     public function __construct(
         private readonly FileUploadService $files,
+        private readonly AssetService $assetService,
     ) {}
 
     public function index(int $projectId, Request $request): JsonResponse
@@ -65,7 +68,7 @@ class SiteLogController extends Controller
         }
 
         $log = SiteLog::create($validated);
-        $this->syncMachinery($log, $machinery);
+        $this->syncMachinery($log, $machinery, $request->user()->id);
         $this->syncWorkers($log, $workers);
         $this->syncWeatherEvents($log, $weatherEvents);
 
@@ -138,7 +141,7 @@ class SiteLogController extends Controller
 
         $log->update($validated);
         if ($machinery !== null) {
-            $this->syncMachinery($log, $machinery);
+            $this->syncMachinery($log, $machinery, $request->user()->id);
         }
         if ($workers !== null) {
             $this->syncWorkers($log, $workers);
@@ -282,9 +285,15 @@ class SiteLogController extends Controller
         return 'data:image/png;base64,'.base64_encode(file_get_contents($path));
     }
 
-    private function syncMachinery(SiteLog $log, array $machinery): void
+    private function syncMachinery(SiteLog $log, array $machinery, int $userId): void
     {
         $log->machinery()->delete();
+
+        $vehicleIds = collect($machinery)
+            ->pluck('vehicle_id')
+            ->filter(fn ($id) => $id !== null)
+            ->unique()
+            ->toArray();
 
         foreach ($machinery as $item) {
             if (empty($item['machinery_type'])) {
@@ -295,6 +304,15 @@ class SiteLogController extends Controller
                 'quantity' => $item['quantity'] ?? 1,
                 'vehicle_id' => $item['vehicle_id'] ?? null,
             ]);
+        }
+
+        if (! empty($vehicleIds)) {
+            $vehicles = Vehicle::whereIn('id', $vehicleIds)->get()->keyBy('id');
+            foreach ($vehicleIds as $vehicleId) {
+                if ($vehicles->has($vehicleId)) {
+                    $this->assetService->syncProjectAssignment($vehicles[$vehicleId], $log->project_id, $userId);
+                }
+            }
         }
     }
 
