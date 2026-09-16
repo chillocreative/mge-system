@@ -136,6 +136,17 @@ class ContractService
         return Storage::disk('local')->download($file->file_path, $file->file_name);
     }
 
+    public function viewFile(int $fileId)
+    {
+        $file = ProjectContractFile::findOrFail($fileId);
+
+        if (! Storage::disk('local')->exists($file->file_path)) {
+            abort(404);
+        }
+
+        return $this->inlineFileResponse(Storage::disk('local')->path($file->file_path), $file->file_name);
+    }
+
     public function listBoqItems(int $contractId)
     {
         return ProjectContract::findOrFail($contractId)->boqItems;
@@ -250,7 +261,17 @@ class ContractService
             abort(404);
         }
 
-        $ext = strtolower(pathinfo($contract->bq_file_name, PATHINFO_EXTENSION));
+        return $this->inlineFileResponse(Storage::disk('local')->path($path), $contract->bq_file_name);
+    }
+
+    /**
+     * Helper for generating inline file responses with explicit MIME mapping.
+     * Builds Content-Type from a manual extension map since production PHP
+     * is missing the fileinfo extension (Storage::response()/download() MIME-sniff via finfo).
+     */
+    private function inlineFileResponse(string $absolutePath, string $displayName)
+    {
+        $ext = strtolower(pathinfo($displayName, PATHINFO_EXTENSION));
 
         $mimeMap = [
             'pdf' => 'application/pdf',
@@ -258,13 +279,20 @@ class ContractService
             'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'doc' => 'application/msword',
             'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'png' => 'image/png',
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'txt' => 'text/plain',
+            'csv' => 'text/csv',
         ];
 
         $type = $mimeMap[$ext] ?? 'application/octet-stream';
 
-        return response()->file(Storage::disk('local')->path($path), [
+        return response()->file($absolutePath, [
             'Content-Type' => $type,
-            'Content-Disposition' => 'inline; filename="'.addslashes($contract->bq_file_name).'"',
+            'Content-Disposition' => 'inline; filename="'.addslashes($displayName).'"',
         ]);
     }
 
@@ -343,6 +371,21 @@ class ContractService
 
         return \Illuminate\Support\Facades\Storage::disk($attachment->disk)
             ->download($attachment->stored_path, $attachment->original_name);
+    }
+
+    public function viewDrawing(int $attachmentId)
+    {
+        $attachment = $this->findContractDrawing($attachmentId);
+
+        abort_unless(
+            \Illuminate\Support\Facades\Storage::disk($attachment->disk)->exists($attachment->stored_path),
+            404,
+        );
+
+        return $this->inlineFileResponse(
+            \Illuminate\Support\Facades\Storage::disk($attachment->disk)->path($attachment->stored_path),
+            $attachment->original_name
+        );
     }
 
     public function deleteDrawing(int $attachmentId): void

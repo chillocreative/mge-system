@@ -74,6 +74,11 @@ class ContractController extends Controller
         return $this->contractService->downloadFile($fileId);
     }
 
+    public function viewFile(int $fileId)
+    {
+        return $this->contractService->viewFile($fileId);
+    }
+
     public function destroyFile(int $fileId): JsonResponse
     {
         $this->contractService->deleteFile($fileId);
@@ -112,6 +117,11 @@ class ContractController extends Controller
     public function downloadDrawing(int $attachmentId)
     {
         return $this->contractService->downloadDrawing($attachmentId);
+    }
+
+    public function viewDrawing(int $attachmentId)
+    {
+        return $this->contractService->viewDrawing($attachmentId);
     }
 
     public function destroyDrawing(int $attachmentId): JsonResponse

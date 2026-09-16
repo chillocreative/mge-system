@@ -36,6 +36,9 @@ const contractService = {
     getFileDownloadUrl(fileId) {
         return `/api/project-contracts/files/${fileId}/download`;
     },
+    getFileViewUrl(fileId) {
+        return `/api/project-contracts/files/${fileId}/view`;
+    },
     async deleteFile(fileId) {
         const response = await apiClient.delete(`/project-contracts/files/${fileId}`);
         return response.data;
@@ -65,6 +68,9 @@ const contractService = {
     },
     getDrawingDownloadUrl(attachmentId) {
         return `/api/project-contracts/drawings/${attachmentId}/download`;
+    },
+    getDrawingViewUrl(attachmentId) {
+        return `/api/project-contracts/drawings/${attachmentId}/view`;
     },
     async deleteDrawing(attachmentId) {
         const response = await apiClient.delete(`/project-contracts/drawings/${attachmentId}`);

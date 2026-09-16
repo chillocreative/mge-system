@@ -255,6 +255,9 @@ function DocumentsTab({ contract, canEdit, onRefresh }) {
                                 <span className="truncate">{f.file_name}</span>
                             </span>
                             <span className="flex shrink-0 items-center gap-1">
+                                <a href={contractService.getFileViewUrl(f.id)} target="_blank" rel="noopener" className="rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600" title="View">
+                                    <HiOutlineEye className="h-4 w-4" />
+                                </a>
                                 <a href={contractService.getFileDownloadUrl(f.id)} className="rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600" title="Download">
                                     <HiOutlineDownload className="h-4 w-4" />
                                 </a>
@@ -430,6 +433,9 @@ function DrawingsTab({ contract, canEdit }) {
                                             {d.size ? <span className="shrink-0 text-xs text-gray-400">{formatSize(d.size)}</span> : null}
                                         </span>
                                         <span className="flex shrink-0 items-center gap-1">
+                                            <a href={contractService.getDrawingViewUrl(d.id)} target="_blank" rel="noopener" className="rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600" title="View">
+                                                <HiOutlineEye className="h-4 w-4" />
+                                            </a>
                                             <a href={contractService.getDrawingDownloadUrl(d.id)} className="rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600" title="Download">
                                                 <HiOutlineDownload className="h-4 w-4" />
                                             </a>
