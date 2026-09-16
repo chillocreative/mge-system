@@ -3,7 +3,7 @@
 ## Project
 **MGE-PMS** — Construction Project Management System
 **Stack:** Laravel 12 (PHP 8.2+) + React 19 + Vite 7 + Tailwind CSS 4 + MySQL
-**Dev URL:** `http://mge-pms.test`
+**Dev URL:** `http://mge-system.test` (Herd link; matches `APP_URL` in `.env`)
 
 ---
 
