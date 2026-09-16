@@ -40,13 +40,18 @@ const contractService = {
         const response = await apiClient.delete(`/project-contracts/files/${fileId}`);
         return response.data;
     },
-    async listBoqItems(contractId) {
-        const response = await apiClient.get(`/project-contracts/${contractId}/boq-items`);
+    async uploadBqFile(contractId, formData) {
+        const response = await apiClient.post(`/project-contracts/${contractId}/bq-file`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
         return response.data;
     },
-    async addBoqItem(contractId, data) {
-        const response = await apiClient.post(`/project-contracts/${contractId}/boq-items`, data);
+    async deleteBqFile(contractId) {
+        const response = await apiClient.delete(`/project-contracts/${contractId}/bq-file`);
         return response.data;
+    },
+    getBqFileUrl(contractId) {
+        return `/api/project-contracts/${contractId}/bq-file`;
     },
     async listDrawings(contractId) {
         const response = await apiClient.get(`/project-contracts/${contractId}/drawings`);
@@ -63,19 +68,6 @@ const contractService = {
     },
     async deleteDrawing(attachmentId) {
         const response = await apiClient.delete(`/project-contracts/drawings/${attachmentId}`);
-        return response.data;
-    },
-    getBoqTemplateUrl() {
-        return '/api/project-contracts/boq-template';
-    },
-    async importBoq(contractId, formData) {
-        const response = await apiClient.post(`/project-contracts/${contractId}/boq-items/import`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        return response.data;
-    },
-    async removeBoqItem(itemId) {
-        const response = await apiClient.delete(`/project-contracts/boq-items/${itemId}`);
         return response.data;
     },
 };

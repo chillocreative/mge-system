@@ -192,6 +192,82 @@ class ContractService
         ContractBoqItem::findOrFail($itemId)->delete();
     }
 
+    /**
+     * Upload a single BQ document file for the given contract.
+     * Replaces any existing file.
+     */
+    public function uploadBqFile(int $contractId, \Illuminate\Http\UploadedFile $file): ProjectContract
+    {
+        $contract = ProjectContract::findOrFail($contractId);
+
+        if (! empty($contract->bq_file_path)) {
+            Storage::disk('local')->delete($contract->bq_file_path);
+        }
+
+        $path = $file->store('contracts/bq', 'local');
+
+        $contract->update([
+            'bq_file_path' => $path,
+            'bq_file_name' => $file->getClientOriginalName(),
+        ]);
+
+        return $this->getOne($contract->id);
+    }
+
+    /**
+     * Delete the contract's associated BQ document file.
+     */
+    public function deleteBqFile(int $contractId): void
+    {
+        $contract = ProjectContract::findOrFail($contractId);
+
+        if (! empty($contract->bq_file_path)) {
+            Storage::disk('local')->delete($contract->bq_file_path);
+        }
+
+        $contract->update([
+            'bq_file_path' => null,
+            'bq_file_name' => null,
+        ]);
+    }
+
+    /**
+     * Return an inline file response for the BQ document.
+     * Builds Content-Type from a manual extension map since production PHP
+     * is missing the fileinfo extension (Storage::response()/download() MIME-sniff via finfo).
+     */
+    public function bqFileResponse(int $contractId)
+    {
+        $contract = ProjectContract::findOrFail($contractId);
+
+        if (empty($contract->bq_file_path)) {
+            abort(404);
+        }
+
+        $path = $contract->bq_file_path;
+
+        if (! Storage::disk('local')->exists($path)) {
+            abort(404);
+        }
+
+        $ext = strtolower(pathinfo($contract->bq_file_name, PATHINFO_EXTENSION));
+
+        $mimeMap = [
+            'pdf' => 'application/pdf',
+            'xls' => 'application/vnd.ms-excel',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'doc' => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ];
+
+        $type = $mimeMap[$ext] ?? 'application/octet-stream';
+
+        return response()->file(Storage::disk('local')->path($path), [
+            'Content-Type' => $type,
+            'Content-Disposition' => 'inline; filename="'.addslashes($contract->bq_file_name).'"',
+        ]);
+    }
+
     // ── Drawings folder store (Ciri 4) — bulk/folder upload via the shared engine ──
 
     public function listDrawings(int $contractId)

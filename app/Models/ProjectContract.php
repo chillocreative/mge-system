@@ -24,6 +24,8 @@ class ProjectContract extends Model
         'status',
         'notes',
         'created_by',
+        'bq_file_path',
+        'bq_file_name',
     ];
 
     protected function casts(): array

@@ -167,6 +167,29 @@ class ContractController extends Controller
         return $this->success(null, 'BOQ item removed.');
     }
 
+    public function storeBqFile(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'max:1048576', 'extensions:pdf,xls,xlsx,doc,docx'],
+        ]);
+
+        $contract = $this->contractService->uploadBqFile($id, $request->file('file'));
+
+        return $this->success($contract, 'BQ document uploaded.');
+    }
+
+    public function viewBqFile(int $id)
+    {
+        return $this->contractService->bqFileResponse($id);
+    }
+
+    public function destroyBqFile(int $id): JsonResponse
+    {
+        $this->contractService->deleteBqFile($id);
+
+        return $this->success(null, 'BQ document removed.');
+    }
+
     private function validatePayload(Request $request, bool $creating): array
     {
         $required = $creating ? 'required' : 'sometimes';

@@ -19,6 +19,7 @@ import {
     HiOutlineUpload,
     HiOutlineDocumentText,
     HiOutlineDownload,
+    HiOutlineEye,
     HiOutlineTrash,
     HiOutlinePlus,
     HiOutlineDocumentDownload,
@@ -185,7 +186,7 @@ export default function ContractDetail() {
 
             {activeTab === 'documents' && <DocumentsTab contract={contract} canEdit={canEdit} onRefresh={fetchContract} />}
             {activeTab === 'drawings' && <DrawingsTab contract={contract} canEdit={canEdit} />}
-            {activeTab === 'boq' && <BoqTab contract={contract} canEdit={canEdit} />}
+            {activeTab === 'boq' && <BoqTab contract={contract} canEdit={canEdit} onContractChange={setContract} />}
 
             {showEdit && (
                 <EditContractModal
@@ -452,184 +453,98 @@ function DrawingsTab({ contract, canEdit }) {
 }
 
 // ─── Bill of Quantity Tab ──────────────────────────────────────────────
-const emptyBoqForm = () => ({ item_no: '', description: '', unit: '', quantity: '', rate: '' });
-
-function BoqTab({ contract, canEdit }) {
+function BoqTab({ contract, canEdit, onContractChange }) {
     const confirm = useConfirm();
-    const boqFileInput = useRef(null);
-    const [importing, setImporting] = useState(false);
-    const [items, setItems] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [form, setForm] = useState(emptyBoqForm());
-    const [saving, setSaving] = useState(false);
-    const dragScrollRef = useDragScroll();
+    const bqFileInput = useRef(null);
+    const [uploading, setUploading] = useState(false);
 
-    const fetchItems = useCallback(async () => {
-        setLoading(true);
-        try {
-            const res = await contractService.listBoqItems(contract.id);
-            setItems(res.data || []);
-        } catch {
-            setItems([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [contract.id]);
-
-    const importBoqFile = async (file) => {
+    const handleUpload = async (file) => {
         if (!file) return;
-        setImporting(true);
+        setUploading(true);
         try {
             const fd = new FormData();
             fd.append('file', file);
-            const res = await contractService.importBoq(contract.id, fd);
-            const skipped = res.data?.skipped ? `, skipped ${res.data.skipped} blank row(s)` : '';
-            toast.success(`Imported ${res.data?.imported ?? 0} BQ item(s)${skipped}`);
-            fetchItems();
+            const res = await contractService.uploadBqFile(contract.id, fd);
+            onContractChange(res.data);
+            toast.success('BQ document uploaded');
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Import failed');
+            toast.error(err.response?.data?.message || 'Upload failed');
         } finally {
-            setImporting(false);
-            if (boqFileInput.current) boqFileInput.current.value = '';
+            setUploading(false);
+            if (bqFileInput.current) bqFileInput.current.value = '';
         }
     };
 
-    useEffect(() => { fetchItems(); }, [fetchItems]);
-
-    const addItem = async () => {
-        if (!form.description || form.quantity === '' || form.rate === '') return;
-        setSaving(true);
+    const handleRemove = async () => {
+        if (!(await confirm({ message: 'Remove the BQ document?', confirmText: 'Remove' }))) return;
         try {
-            const res = await contractService.addBoqItem(contract.id, form);
-            setItems((p) => [...p, res.data]);
-            setForm(emptyBoqForm());
-        } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to add item');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const removeItem = async (itemId) => {
-        if (!(await confirm({ message: 'Remove this BOQ item?', confirmText: 'Remove' }))) return;
-        try {
-            await contractService.removeBoqItem(itemId);
-            setItems((p) => p.filter((i) => i.id !== itemId));
+            await contractService.deleteBqFile(contract.id);
+            onContractChange({ ...contract, bq_file_path: null, bq_file_name: null });
+            toast.success('BQ document removed');
         } catch {
-            toast.error('Failed to remove item');
+            toast.error('Failed to remove BQ document');
         }
     };
-
-    const total = items.reduce((sum, i) => sum + Number(i.amount || 0), 0);
 
     return (
         <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-lg font-semibold text-gray-900">Bill of Quantity (BQ)</h2>
-                <div className="flex items-center gap-2">
-                    <a
-                        href={contractService.getBoqTemplateUrl()}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
-                    >
-                        <HiOutlineDownload className="h-4 w-4" /> Template
-                    </a>
-                    {canEdit && (
-                        <>
-                            <input
-                                ref={boqFileInput}
-                                type="file"
-                                accept=".xlsx,.xls,.csv"
-                                hidden
-                                onChange={(e) => importBoqFile(e.target.files?.[0])}
-                            />
-                            <button
-                                onClick={() => boqFileInput.current?.click()}
-                                disabled={importing}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-                            >
-                                <HiOutlineUpload className="h-4 w-4" /> {importing ? 'Importing…' : 'Import Excel'}
-                            </button>
-                        </>
-                    )}
-                </div>
-            </div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Bill of Quantity (BQ)</h2>
 
-            {loading ? (
-                <LoadingSpinner />
-            ) : (
-                <div ref={dragScrollRef} className="overflow-x-auto rounded-lg border border-gray-100 cursor-grab active:cursor-grabbing">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500">Item No.</th>
-                                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500">Description</th>
-                                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500">Unit</th>
-                                <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">Qty</th>
-                                <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">Rate (RM)</th>
-                                <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">Amount (RM)</th>
-                                {canEdit && <th className="px-3 py-2"></th>}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {items.map((i) => (
-                                <tr key={i.id}>
-                                    <td className="px-3 py-2 text-sm text-gray-700">{i.item_no || '-'}</td>
-                                    <td className="px-3 py-2 text-sm text-gray-700">{i.description}</td>
-                                    <td className="px-3 py-2 text-sm text-gray-500">{i.unit || '-'}</td>
-                                    <td className="px-3 py-2 text-right text-sm text-gray-700">{Number(i.quantity).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</td>
-                                    <td className="px-3 py-2 text-right text-sm text-gray-700">{Number(i.rate).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</td>
-                                    <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">{Number(i.amount).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</td>
-                                    {canEdit && (
-                                        <td className="px-3 py-2 text-right">
-                                            <button onClick={() => removeItem(i.id)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600" title="Remove">
-                                                <HiOutlineTrash className="h-4 w-4" />
-                                            </button>
-                                        </td>
-                                    )}
-                                </tr>
-                            ))}
-                            {!items.length && (
-                                <tr><td colSpan={canEdit ? 7 : 6} className="px-3 py-6 text-center text-sm text-gray-400">No BOQ items yet</td></tr>
-                            )}
-                        </tbody>
-                        {items.length > 0 && (
-                            <tfoot className="bg-gray-50">
-                                <tr>
-                                    <td colSpan={5} className="px-3 py-2 text-right text-sm font-semibold text-gray-700">Total</td>
-                                    <td className="px-3 py-2 text-right text-sm font-bold text-gray-900">{total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</td>
-                                    {canEdit && <td />}
-                                </tr>
-                            </tfoot>
+            <input
+                ref={bqFileInput}
+                type="file"
+                accept=".pdf,.xls,.xlsx,.doc,.docx"
+                hidden
+                onChange={(e) => handleUpload(e.target.files?.[0])}
+            />
+
+            {contract.bq_file_name ? (
+                <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
+                    <span className="flex items-center gap-2 text-sm text-gray-700">
+                        <HiOutlineDocumentText className="h-4 w-4 text-gray-400" />
+                        <span>{contract.bq_file_name}</span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <a
+                            href={contractService.getBqFileUrl(contract.id)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                            <HiOutlineEye className="h-4 w-4" /> View BQ
+                        </a>
+                        {canEdit && (
+                            <>
+                                <button
+                                    onClick={() => bqFileInput.current?.click()}
+                                    disabled={uploading}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                    <HiOutlineUpload className="h-4 w-4" /> {uploading ? 'Uploading…' : 'Replace'}
+                                </button>
+                                <button
+                                    onClick={handleRemove}
+                                    className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                                    title="Remove BQ"
+                                >
+                                    <HiOutlineTrash className="h-4 w-4" />
+                                </button>
+                            </>
                         )}
-                    </table>
+                    </div>
                 </div>
-            )}
-
-            {canEdit && (
-                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-6 sm:items-end">
-                    <div className="col-span-1">
-                        <label className="mb-1 block text-[11px] font-medium text-gray-500">Item No.</label>
-                        <input type="text" value={form.item_no} onChange={(e) => setForm((p) => ({ ...p, item_no: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                    </div>
-                    <div className="col-span-2 sm:col-span-1">
-                        <label className="mb-1 block text-[11px] font-medium text-gray-500">Description</label>
-                        <input type="text" value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                    </div>
-                    <div className="col-span-1">
-                        <label className="mb-1 block text-[11px] font-medium text-gray-500">Unit</label>
-                        <input type="text" value={form.unit} onChange={(e) => setForm((p) => ({ ...p, unit: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                    </div>
-                    <div className="col-span-1">
-                        <label className="mb-1 block text-[11px] font-medium text-gray-500">Qty</label>
-                        <input type="number" step="0.01" min="0" value={form.quantity} onChange={(e) => setForm((p) => ({ ...p, quantity: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                    </div>
-                    <div className="col-span-1">
-                        <label className="mb-1 block text-[11px] font-medium text-gray-500">Rate (RM)</label>
-                        <input type="number" step="0.01" min="0" value={form.rate} onChange={(e) => setForm((p) => ({ ...p, rate: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                    </div>
-                    <div className="col-span-2 sm:col-span-1">
-                        <button type="button" disabled={saving || !form.description || form.quantity === '' || form.rate === ''} onClick={addItem} className="w-full rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Adding...' : 'Add Item'}</button>
-                    </div>
+            ) : (
+                <div className="text-center py-8">
+                    <p className="text-gray-400">No BQ document uploaded yet</p>
+                    {canEdit && (
+                        <button
+                            onClick={() => bqFileInput.current?.click()}
+                            disabled={uploading}
+                            className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+                        >
+                            <HiOutlineUpload className="h-4 w-4" /> {uploading ? 'Uploading…' : 'Upload BQ'}
+                        </button>
+                    )}
                 </div>
             )}
         </div>

@@ -280,6 +280,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{id}', [ContractController::class, 'update'])->middleware('permission:projects.edit');
         Route::delete('/{id}', [ContractController::class, 'destroy'])->middleware('permission:projects.edit');
         Route::post('/{id}/files', [ContractController::class, 'storeFiles'])->middleware('permission:projects.edit');
+        Route::post('/{id}/bq-file', [ContractController::class, 'storeBqFile'])->middleware('permission:projects.edit');
+        Route::get('/{id}/bq-file', [ContractController::class, 'viewBqFile'])->middleware('permission:projects.view');
+        Route::delete('/{id}/bq-file', [ContractController::class, 'destroyBqFile'])->middleware('permission:projects.edit');
         // Drawings folder store (Ciri 4) — bulk/folder upload
         Route::get('/{id}/drawings', [ContractController::class, 'indexDrawings'])->middleware('permission:projects.view');
         Route::post('/{id}/drawings', [ContractController::class, 'storeDrawings'])->middleware('permission:projects.edit');
