@@ -43,6 +43,7 @@ use App\Http\Controllers\Api\ReportData\DelayNoticeController;
 use App\Http\Controllers\Api\ReportData\OrgChartController;
 use App\Http\Controllers\Api\ReportData\ProgressPeriodController;
 use App\Http\Controllers\Api\ReportData\ProjectTestController;
+use App\Http\Controllers\Api\ReportData\ReportImageController;
 use App\Http\Controllers\Api\ReportData\ReportPartyController;
 use App\Http\Controllers\Api\ReportData\ResourceCategoryController;
 use App\Http\Controllers\Api\ReportData\ScheduleBaselineController;
@@ -206,6 +207,15 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', [ResourceCategoryController::class, 'index']);
             Route::put('/', [ResourceCategoryController::class, 'replace'])->middleware('permission:projects.edit');
             Route::post('/seed-defaults', [ResourceCategoryController::class, 'seedDefaults'])->middleware('permission:projects.edit');
+        });
+
+        // Report images — location, site access and progress photos for the monthly report
+        Route::prefix('{project}/report-images')->middleware('permission:projects.view')->group(function () {
+            Route::get('/', [ReportImageController::class, 'index']);
+            Route::post('/', [ReportImageController::class, 'store'])->middleware('permission:projects.edit');
+            Route::put('/{image}', [ReportImageController::class, 'update'])->middleware('permission:projects.edit');
+            Route::delete('/{image}', [ReportImageController::class, 'destroy'])->middleware('permission:projects.edit');
+            Route::get('/{image}/view', [ReportImageController::class, 'view']);
         });
 
         // Report parties — nested under projects; extends the existing project_parties table
