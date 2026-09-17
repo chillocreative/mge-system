@@ -21,6 +21,7 @@ import TableSection from './editor/TableSection';
 import TextSection from './editor/TextSection';
 import ImageSection from './editor/ImageSection';
 import SectionNotes from './editor/SectionNotes';
+import applyDraft from './editor/applyDraft';
 
 const statusColors = {
     draft: 'bg-gray-100 text-gray-600',
@@ -114,27 +115,35 @@ export default function MonthlyReportEditor() {
         setReportDraft((prev) => ({ ...prev, [field]: value }));
     };
 
+    // Persists every dirty section (and the report-level fields, if dirty)
+    // without reloading/toasting — shared by `saveAll` and by the regenerate
+    // actions, which must save unsaved edits first so they aren't discarded
+    // by the `applyReport` that follows a regenerate response.
+    const persistDirty = async () => {
+        if (reportDirty) {
+            await monthlyReportService.update(report.id, {
+                title: reportDraft.title,
+                month_label: reportDraft.month_label,
+                evaluation_date: reportDraft.evaluation_date || null,
+                signatories: reportDraft.signatories,
+            });
+        }
+        for (const key of dirtyKeys) {
+            const draft = sectionDrafts[key];
+            // eslint-disable-next-line no-await-in-loop
+            await monthlyReportService.saveSection(report.id, key, {
+                overrides: draft.overrides,
+                notes: draft.notes,
+                include: draft.include,
+            });
+        }
+    };
+
     const saveAll = async () => {
         if (!report) return;
         setSaving(true);
         try {
-            if (reportDirty) {
-                await monthlyReportService.update(report.id, {
-                    title: reportDraft.title,
-                    month_label: reportDraft.month_label,
-                    evaluation_date: reportDraft.evaluation_date || null,
-                    signatories: reportDraft.signatories,
-                });
-            }
-            for (const key of dirtyKeys) {
-                const draft = sectionDrafts[key];
-                // eslint-disable-next-line no-await-in-loop
-                await monthlyReportService.saveSection(report.id, key, {
-                    overrides: draft.overrides,
-                    notes: draft.notes,
-                    include: draft.include,
-                });
-            }
+            await persistDirty();
             const res = await monthlyReportService.get(report.id);
             applyReport(res.data);
             toast.success('Report saved');
@@ -146,19 +155,21 @@ export default function MonthlyReportEditor() {
     };
 
     const regenerateAll = async () => {
-        if (!(await confirm({
-            title: 'Regenerate all sections?',
-            message: 'Every section’s data will be rebuilt from source records. Saved overrides are kept and re-applied on top.',
-            danger: false,
-            confirmText: 'Regenerate',
-        }))) return;
+        const hasDirty = anyDirty;
+        const message = hasDirty
+            ? 'Unsaved edits will be saved first. Every section’s data will then be rebuilt from source records — saved overrides are kept and re-applied on top.'
+            : 'Every section’s data will be rebuilt from source records. Saved overrides are kept and re-applied on top.';
+        if (!(await confirm({ title: 'Regenerate all sections?', message, danger: false, confirmText: 'Regenerate' }))) return;
         setRegeneratingAll(true);
         try {
+            if (hasDirty) {
+                await persistDirty();
+            }
             const res = await monthlyReportService.regenerate(report.id);
             applyReport(res.data);
             toast.success('Report regenerated');
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to regenerate report');
+            toast.error(err.response?.data?.message || (hasDirty ? 'Failed to save changes before regenerating' : 'Failed to regenerate report'));
         } finally {
             setRegeneratingAll(false);
         }
@@ -166,19 +177,26 @@ export default function MonthlyReportEditor() {
 
     const regenerateSection = async (section) => {
         const hasOverrides = section.overrides && Object.keys(section.overrides).length > 0;
-        if (hasOverrides && !(await confirm({
-            title: 'Regenerate this section?',
-            message: 'This section’s data will be rebuilt from source records. Your saved overrides are kept and re-applied on top.',
-            danger: false,
-            confirmText: 'Regenerate',
-        }))) return;
+        const hasDirty = anyDirty;
+        let message;
+        if (hasDirty && hasOverrides) {
+            message = 'Unsaved edits will be saved first. This section’s data will then be rebuilt from source records — your saved overrides are kept and re-applied on top.';
+        } else if (hasDirty) {
+            message = 'Unsaved edits will be saved first, then this section’s data will be rebuilt from source records.';
+        } else {
+            message = 'This section’s data will be rebuilt from source records. Your saved overrides are kept and re-applied on top.';
+        }
+        if ((hasOverrides || hasDirty) && !(await confirm({ title: 'Regenerate this section?', message, danger: false, confirmText: 'Regenerate' }))) return;
         setRegeneratingKey(section.key);
         try {
+            if (hasDirty) {
+                await persistDirty();
+            }
             const res = await monthlyReportService.regenerate(report.id, section.key);
             applyReport(res.data);
             toast.success(`${section.title} regenerated`);
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to regenerate section');
+            toast.error(err.response?.data?.message || (hasDirty ? 'Failed to save changes before regenerating' : 'Failed to regenerate section'));
         } finally {
             setRegeneratingKey(null);
         }
@@ -233,6 +251,12 @@ export default function MonthlyReportEditor() {
     const activeSection = report.sections.find((s) => s.key === activeKey) || report.sections[0];
     const config = SECTION_EDITORS[activeSection.key] || { type: 'text' };
     const draft = sectionDrafts[activeSection.key] || { overrides: {}, notes: '', include: activeSection.include };
+    // Seed editors from `merged` with the in-progress draft overrides layered
+    // on top (not raw `merged`), so switching sections and back — which
+    // remounts the editor via the `key` below — doesn't visually revert
+    // unsaved edits, and the next edit doesn't push stale data back into
+    // `sectionDrafts`. See applyDraft.js.
+    const effectiveMerged = applyDraft(activeSection.merged, draft.overrides);
 
     const renderEditor = () => {
         const onOverridesChange = (patch) => setSectionOverrides(activeSection.key, patch);
@@ -241,7 +265,7 @@ export default function MonthlyReportEditor() {
                 return (
                     <ValueSection
                         config={config}
-                        merged={activeSection.merged}
+                        merged={effectiveMerged}
                         canEdit={canEdit}
                         onOverridesChange={onOverridesChange}
                         reportDraft={reportDraft}
@@ -249,13 +273,13 @@ export default function MonthlyReportEditor() {
                     />
                 );
             case 'text':
-                return <TextSection data={activeSection.merged} />;
+                return <TextSection data={effectiveMerged} />;
             case 'image':
                 return (
                     <ImageSection
                         config={config}
                         projectId={report.project_id}
-                        merged={activeSection.merged}
+                        merged={effectiveMerged}
                         canEdit={canEdit}
                         onOverridesChange={onOverridesChange}
                     />
@@ -265,7 +289,7 @@ export default function MonthlyReportEditor() {
                     <TableSection
                         config={config}
                         data={activeSection.data}
-                        merged={activeSection.merged}
+                        merged={effectiveMerged}
                         canEdit={canEdit}
                         onOverridesChange={onOverridesChange}
                     />

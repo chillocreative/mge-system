@@ -114,6 +114,7 @@ export const SECTION_EDITORS = {
     },
     '3.6': {
         type: 'table',
+        fixedRows: true,
         columns: [
             { key: 'no', label: 'No.', readOnly: true },
             { key: 'drawing_no', label: 'Drawing No.', readOnly: true },
@@ -129,8 +130,8 @@ export const SECTION_EDITORS = {
             { key: 'location', label: 'Location' },
         ],
     },
-    '4.1': { type: 'matrix', grouped: true, rowsKey: 'groups' },
-    '4.2': { type: 'matrix', grouped: false, rowsKey: 'rows' },
+    '4.1': { type: 'matrix', grouped: true },
+    '4.2': { type: 'matrix', grouped: false },
     '4.3': { type: 'text' },
     '5.0': { type: 'image', collections: ['site_access', 'key_plan', 'pairs'] },
 };

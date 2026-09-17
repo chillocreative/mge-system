@@ -12,6 +12,23 @@ function emptyRowFor(columns) {
     return row;
 }
 
+// Rows need a stable identity for React keys across add/remove/reorder —
+// indexes shift on reorder/removal and cause input focus/state to jump to
+// the wrong row. `_cid` is a client-only id, assigned on seed/add and
+// stripped before the row is sent to the server.
+let cidSeq = 0;
+function makeCid() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    cidSeq += 1;
+    return `cid-${Date.now()}-${cidSeq}`;
+}
+function withCids(rows) {
+    return (rows || []).map((r) => (r._cid ? r : { ...r, _cid: makeCid() }));
+}
+function stripCids(rows) {
+    return (rows || []).map(({ _cid, ...rest }) => rest);
+}
+
 function ContactsEditor({ contacts, onChange, disabled }) {
     const list = contacts || [];
     const update = (idx, key, val) => onChange(list.map((c, i) => (i === idx ? { ...c, [key]: val } : c)));
@@ -70,7 +87,7 @@ function Cell({ column, value, onChange, disabled }) {
 // (see SectionMerger's `_rows` override semantics).
 function RowsTable({ columns, rows, onChange, disabled, fixedRows }) {
     const updateCell = (idx, key, val) => onChange(rows.map((r, i) => (i === idx ? { ...r, [key]: val } : r)));
-    const addRow = () => onChange([...rows, emptyRowFor(columns)]);
+    const addRow = () => onChange([...rows, { ...emptyRowFor(columns), _cid: makeCid() }]);
     const removeRow = (idx) => onChange(rows.filter((_, i) => i !== idx));
     const move = (idx, dir) => {
         const other = idx + dir;
@@ -95,7 +112,7 @@ function RowsTable({ columns, rows, onChange, disabled, fixedRows }) {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                     {rows.map((row, idx) => (
-                        <tr key={idx}>
+                        <tr key={row._cid ?? idx}>
                             {columns.map((c) => (
                                 <td key={c.key} className="px-3 py-2 align-top">
                                     <Cell column={c} value={row[c.key]} onChange={(v) => updateCell(idx, c.key, v)} disabled={disabled} />
@@ -137,15 +154,15 @@ function RowsTable({ columns, rows, onChange, disabled, fixedRows }) {
 }
 
 function PlainTable({ config, data, merged, canEdit, onOverridesChange }) {
-    const [rows, setRows] = useState(() => merged?.rows || []);
+    const [rows, setRows] = useState(() => withCids(merged?.rows || []));
 
     const handleChange = (next) => {
         setRows(next);
-        onOverridesChange({ _rows: next });
+        onOverridesChange({ _rows: stripCids(next) });
     };
 
     const resetToSystem = () => {
-        const original = data?.rows || [];
+        const original = withCids(data?.rows || []);
         setRows(original);
         onOverridesChange({});
     };
@@ -163,12 +180,12 @@ function PlainTable({ config, data, merged, canEdit, onOverridesChange }) {
 }
 
 function GroupsTable({ config, merged, canEdit, onOverridesChange }) {
-    const [groups, setGroups] = useState(() => merged?.groups || []);
+    const [groups, setGroups] = useState(() => (merged?.groups || []).map((g) => ({ ...g, rows: withCids(g.rows) })));
 
     const updateGroupRows = (gIdx, rows) => {
         const next = groups.map((g, i) => (i === gIdx ? { ...g, rows } : g));
         setGroups(next);
-        onOverridesChange({ groups: next });
+        onOverridesChange({ groups: next.map((g) => ({ ...g, rows: stripCids(g.rows) })) });
     };
 
     return (
