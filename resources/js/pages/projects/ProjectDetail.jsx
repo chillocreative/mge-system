@@ -46,6 +46,13 @@ const statusColors = {
     scheduled: 'bg-blue-100 text-blue-700',
 };
 
+const priorityColors = {
+    low: 'bg-gray-100 text-gray-600',
+    medium: 'bg-blue-100 text-blue-700',
+    high: 'bg-amber-100 text-amber-700',
+    critical: 'bg-red-100 text-red-700',
+};
+
 const weatherIcons = { sunny: '☀️', cloudy: '☁️', rainy: '🌧️', stormy: '⛈️', windy: '💨', other: '🌤️' };
 
 const tabs = [
@@ -231,24 +238,85 @@ function OverviewTab({ project }) {
 }
 
 // ─── Tasks Tab ─────────────────────────────────────────────────
+const emptyTaskForm = () => ({ title: '', description: '', priority: 'medium', due_date: '', assignee_ids: [] });
+
 function TasksTab({ project, canEdit, onRefresh }) {
+    const confirm = useConfirm();
     const [showForm, setShowForm] = useState(false);
-    const [form, setForm] = useState({ title: '', description: '', priority: 'medium', due_date: '', assignee_ids: [] });
+    const [editingId, setEditingId] = useState(null);
+    const [form, setForm] = useState(emptyTaskForm());
     const [saving, setSaving] = useState(false);
 
-    const handleCreate = async (e) => {
+    const openCreate = () => {
+        setEditingId(null);
+        setForm(emptyTaskForm());
+        setShowForm(true);
+    };
+
+    const openEdit = (task) => {
+        setEditingId(task.id);
+        setForm({
+            title: task.title || '',
+            description: task.description || '',
+            priority: task.priority || 'medium',
+            due_date: task.due_date || '',
+            assignee_ids: task.assignees?.map((a) => a.id) || [],
+        });
+        setShowForm(true);
+    };
+
+    const closeForm = () => {
+        setShowForm(false);
+        setEditingId(null);
+        setForm(emptyTaskForm());
+    };
+
+    const handleToggleAdd = () => {
+        if (showForm) {
+            closeForm();
+        } else {
+            openCreate();
+        }
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
         try {
-            await taskService.create({ ...form, project_id: project.id });
-            toast.success('Task created');
-            setShowForm(false);
-            setForm({ title: '', description: '', priority: 'medium', due_date: '', assignee_ids: [] });
+            if (editingId) {
+                await taskService.update(editingId, form);
+                toast.success('Task updated');
+            } else {
+                await taskService.create({ ...form, project_id: project.id });
+                toast.success('Task created');
+            }
+            closeForm();
             onRefresh();
         } catch {
-            toast.error('Failed to create task');
+            toast.error(editingId ? 'Failed to update task' : 'Failed to create task');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleDelete = async (taskId) => {
+        if (!(await confirm({ title: 'Delete task?', message: 'This action cannot be undone.' }))) return;
+        try {
+            await taskService.delete(taskId);
+            toast.success('Task deleted');
+            onRefresh();
+        } catch {
+            toast.error('Failed to delete task');
+        }
+    };
+
+    const handleStatusChange = async (taskId, status) => {
+        try {
+            await taskService.update(taskId, { status });
+            toast.success('Status updated');
+            onRefresh();
+        } catch {
+            toast.error('Failed to update status');
         }
     };
 
@@ -256,13 +324,13 @@ function TasksTab({ project, canEdit, onRefresh }) {
         <Card
             title="Tasks"
             action={canEdit && (
-                <button onClick={() => setShowForm(!showForm)} className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700">
+                <button onClick={handleToggleAdd} className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700">
                     <HiOutlinePlus className="h-4 w-4" /> Add Task
                 </button>
             )}
         >
             {showForm && (
-                <form onSubmit={handleCreate} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
+                <form onSubmit={handleSubmit} className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4">
                     <div className="grid gap-3 sm:grid-cols-2">
                         <input
                             type="text"
@@ -306,9 +374,9 @@ function TasksTab({ project, canEdit, onRefresh }) {
                         </div>
                     </div>
                     <div className="mt-3 flex justify-end gap-2">
-                        <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
+                        <button type="button" onClick={closeForm} className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
                         <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">
-                            {saving ? 'Creating...' : 'Create'}
+                            {saving ? 'Saving...' : editingId ? 'Update' : 'Create'}
                         </button>
                     </div>
                 </form>
@@ -318,17 +386,42 @@ function TasksTab({ project, canEdit, onRefresh }) {
             ) : (
                 <div className="divide-y">
                     {project.tasks.map((task) => (
-                        <div key={task.id} className="flex items-center justify-between py-3">
-                            <div>
+                        <div key={task.id} className="flex items-center justify-between py-3 gap-3">
+                            <div className="min-w-0">
                                 <p className="text-sm font-medium text-gray-900">{task.title}</p>
                                 <p className="text-xs text-gray-500">
                                     {task.assignees?.length ? task.assignees.map((a) => a.full_name).join(', ') : 'Unassigned'}
                                     {task.due_date && <span className="ml-2">Due: {formatDate(task.due_date)}</span>}
                                 </p>
                             </div>
-                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[task.status]}`}>
-                                {task.status?.replace('_', ' ')}
-                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                                {canEdit ? (
+                                    <select
+                                        value={task.status}
+                                        onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                                        className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                    >
+                                        <option value="pending">Pending</option>
+                                        <option value="in_progress">In progress</option>
+                                        <option value="in_review">In review</option>
+                                        <option value="completed">Completed</option>
+                                        <option value="cancelled">Cancelled</option>
+                                    </select>
+                                ) : (
+                                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[task.status]}`}>
+                                        {task.status?.replace('_', ' ')}
+                                    </span>
+                                )}
+                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${priorityColors[task.priority] || 'bg-gray-100 text-gray-600'}`}>
+                                    {task.priority}
+                                </span>
+                                {canEdit && (
+                                    <div className="flex items-center gap-1">
+                                        <button onClick={() => openEdit(task)} className="rounded p-1 text-gray-400 hover:bg-blue-50 hover:text-blue-600" title="Edit"><HiOutlinePencil className="h-4 w-4" /></button>
+                                        <button onClick={() => handleDelete(task.id)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600" title="Delete"><HiOutlineTrash className="h-4 w-4" /></button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -514,12 +607,6 @@ function MilestonesTab({ project, canEdit, onRefresh }) {
 function TimelineTab({ project }) {
     const items = useMemo(() => {
         const all = [];
-        // Add tasks
-        (project.tasks || []).forEach((t) => {
-            if (t.start_date || t.due_date) {
-                all.push({ type: 'task', id: t.id, title: t.title, start: t.start_date, end: t.due_date, status: t.status });
-            }
-        });
         // Add milestones
         (project.milestones || []).forEach((m) => {
             if (m.due_date) {
@@ -538,7 +625,7 @@ function TimelineTab({ project }) {
     const projectEnd = project.end_date || items[items.length - 1]?.end;
 
     if (!projectStart || !projectEnd || items.length === 0) {
-        return <Card title="Timeline"><p className="py-6 text-center text-sm text-gray-400">No timeline data available. Add tasks or milestones with dates.</p></Card>;
+        return <Card title="Timeline"><p className="py-6 text-center text-sm text-gray-400">No timeline data available. Add milestones with dates.</p></Card>;
     }
 
     const startDate = new Date(projectStart);
@@ -547,8 +634,8 @@ function TimelineTab({ project }) {
     const todayOffset = Math.ceil((new Date() - startDate) / (1000 * 60 * 60 * 24));
     const todayPercent = Math.min(100, Math.max(0, (todayOffset / totalDays) * 100));
 
-    const typeColors = { task: 'bg-primary-400', milestone: 'bg-amber-400', event: 'bg-purple-400' };
-    const typeBadge = { task: 'Task', milestone: 'Milestone', event: 'Event' };
+    const typeColors = { milestone: 'bg-amber-400', event: 'bg-purple-400' };
+    const typeBadge = { milestone: 'Milestone', event: 'Event' };
 
     return (
         <Card title="Timeline">
