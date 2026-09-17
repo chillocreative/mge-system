@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import ContractParticularsPanel from './ContractParticularsPanel';
+import PartiesPanel from './PartiesPanel';
+import OrgChartPanel from './OrgChartPanel';
 
 const PANELS = [
     { id: 'particulars', label: 'Contract Particulars', component: ContractParticularsPanel },
-    // Later tasks append: parties, org-chart, progress, registers, categories, images
+    { id: 'parties', label: 'Parties & Contacts', component: PartiesPanel },
+    { id: 'org-chart', label: 'Organisation Chart', component: OrgChartPanel },
+    // Later tasks append: progress, registers, categories, images
 ];
 
 export default function ReportDataTab({ project, canEdit }) {
