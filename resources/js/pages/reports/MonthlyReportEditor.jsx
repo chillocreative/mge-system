@@ -385,7 +385,7 @@ export default function MonthlyReportEditor() {
                             </button>
                         </>
                     )}
-                    {canManage && (
+                    {canManage && !isFinal && (
                         <button
                             type="button"
                             onClick={() => setShowOptions(true)}
