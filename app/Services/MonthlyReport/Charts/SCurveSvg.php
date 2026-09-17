@@ -63,12 +63,22 @@ class SCurveSvg
         $plotHeight = $plotBottom - $plotTop;
 
         $isPercent = $unit !== 'RM';
-        $yMax = isset($opts['y_max'])
-            ? (float) $opts['y_max']
-            : ($isPercent ? 100.0 : $this->niceMax(max(array_merge($scheduled, $actual, [0]))));
+
+        if (isset($opts['y_max'])) {
+            $yMax = (float) $opts['y_max'];
+            $step = $isPercent ? 25.0 : self::niceScale($yMax)['step'];
+        } elseif ($isPercent) {
+            $yMax = 100.0;
+            $step = 25.0;
+        } else {
+            $scale = self::niceScale(max(array_merge($scheduled, $actual, [0])));
+            $yMax = $scale['max'];
+            $step = $scale['step'];
+        }
 
         if ($yMax <= 0) {
             $yMax = $isPercent ? 100.0 : 1.0;
+            $step = $isPercent ? 25.0 : 1.0;
         }
 
         // Background.
@@ -85,11 +95,11 @@ class SCurveSvg
             ]);
         }
 
-        // Horizontal gridlines + Y labels.
-        $gridLines = 5;
-        for ($i = 0; $i < $gridLines; $i++) {
-            $fraction = $i / ($gridLines - 1);
-            $value = $yMax * $fraction;
+        // Horizontal gridlines + Y labels — one per $step from 0 to $yMax (count varies).
+        $gridSteps = (int) round($yMax / $step);
+        for ($i = 0; $i <= $gridSteps; $i++) {
+            $value = $i * $step;
+            $fraction = $yMax > 0 ? $value / $yMax : 0;
             $y = $plotBottom - $fraction * $plotHeight;
 
             $canvas->line($plotLeft, $y, $plotRight, $y, [
@@ -133,7 +143,7 @@ class SCurveSvg
                 'font-size' => 9,
                 'fill' => self::AXIS_COLOR,
                 'text-anchor' => 'end',
-                'transform' => sprintf('rotate(-45 %s %s)', $x, $plotBottom + 14),
+                'transform' => sprintf('rotate(-45 %s %s)', SvgCanvas::num($x), SvgCanvas::num($plotBottom + 14)),
             ]);
         }
 
@@ -230,17 +240,32 @@ class SCurveSvg
     }
 
     /**
-     * Ceil `$max` to the next whole unit at its own order of magnitude,
-     * e.g. 288,000,000 -> 300,000,000.
+     * Compute a "nice" gridline step and axis maximum for an RM-denominated
+     * series: rawStep = max/4, rounded up to the next value in
+     * [1, 2, 2.5, 5, 10] x 10^n, then yMax = ceil(max/step) * step.
+     *
+     * @return array{step: float, max: float}
      */
-    private function niceMax(float $max): float
+    public static function niceScale(float $max): array
     {
         if ($max <= 0) {
-            return 1.0;
+            return ['step' => 1.0, 'max' => 1.0];
         }
 
-        $magnitude = 10 ** floor(log10($max));
+        $rawStep = $max / 4;
+        $magnitude = 10 ** floor(log10($rawStep) + 1e-9);
 
-        return ceil($max / $magnitude) * $magnitude;
+        $step = $magnitude * 10;
+        foreach ([1, 2, 2.5, 5, 10] as $candidate) {
+            $candidateStep = $candidate * $magnitude;
+            if ($candidateStep >= $rawStep - 1e-9) {
+                $step = $candidateStep;
+                break;
+            }
+        }
+
+        $yMax = ceil($max / $step - 1e-9) * $step;
+
+        return ['step' => $step, 'max' => $yMax];
     }
 }

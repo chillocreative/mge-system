@@ -18,13 +18,25 @@ class SvgCanvas
     }
 
     /**
+     * Locale-independent numeric formatting for coordinates and lengths.
+     * `%F` (capital) is unaffected by LC_NUMERIC, unlike `%f` or an implicit
+     * (string) cast of a float, both of which can render a comma decimal
+     * separator under locales such as de_DE.
+     */
+    public static function num(float $v): string
+    {
+        return sprintf('%.2F', $v);
+    }
+
+    /**
      * @param  array<string,string|int|float>  $attrs
      */
     private static function attrsToString(array $attrs): string
     {
         $out = '';
         foreach ($attrs as $key => $value) {
-            $out .= sprintf(' %s="%s"', self::esc((string) $key), self::esc((string) $value));
+            $str = is_int($value) || is_float($value) ? self::num((float) $value) : (string) $value;
+            $out .= sprintf(' %s="%s"', self::esc((string) $key), self::esc($str));
         }
 
         return $out;
@@ -52,7 +64,7 @@ class SvgCanvas
     public function polyline(array $points, string $stroke, float $width, ?string $dash = null): static
     {
         $pointsStr = implode(' ', array_map(
-            static fn (array $p) => $p[0].','.$p[1],
+            static fn (array $p) => self::num((float) $p[0]).','.self::num((float) $p[1]),
             $points
         ));
 
