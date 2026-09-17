@@ -23,7 +23,8 @@ final class MonthlyReportService
         return DB::transaction(function () use ($projectId, $attrs, $userId) {
             $period = $this->resolvePeriod($projectId, $attrs);
 
-            $reportNo = $attrs['report_no'] ?? ((int) MonthlyReport::where('project_id', $projectId)->max('report_no') + 1);
+            $reportNo = $attrs['report_no']
+                ?? ((int) MonthlyReport::where('project_id', $projectId)->lockForUpdate()->max('report_no') + 1);
             $monthLabel = $attrs['month_label'] ?? $period->period_end->format('F Y');
 
             $report = MonthlyReport::create([
@@ -52,7 +53,7 @@ final class MonthlyReportService
             }
 
             if (! empty($attrs['copy_from_report_id'])) {
-                $from = MonthlyReport::find($attrs['copy_from_report_id']);
+                $from = MonthlyReport::where('project_id', $projectId)->find($attrs['copy_from_report_id']);
                 if ($from) {
                     $this->duplicateStatic($from, $report);
                 }

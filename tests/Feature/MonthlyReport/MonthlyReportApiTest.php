@@ -138,6 +138,40 @@ class MonthlyReportApiTest extends TestCase
         ])->assertStatus(403);
     }
 
+    public function test_copy_from_report_id_must_belong_to_the_same_project(): void
+    {
+        [$project, $period] = $this->seedProject();
+        [$otherProject, $otherPeriod] = $this->seedProject();
+
+        $otherReportId = $this->actingAs($this->manager)->postJson("/api/projects/{$otherProject->id}/monthly-reports", ['period_id' => $otherPeriod->id])->json('data.id');
+
+        $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", [
+            'period_id' => $period->id,
+            'copy_from_report_id' => $otherReportId,
+        ])->assertStatus(422);
+    }
+
+    public function test_duplicate_report_no_within_a_project_is_rejected(): void
+    {
+        [$project, $period] = $this->seedProject();
+
+        $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", [
+            'period_id' => $period->id,
+            'report_no' => 5,
+        ])->assertCreated();
+
+        $period2 = $period->replicate();
+        $period2->period_no = $period->period_no + 1;
+        $period2->period_start = '2026-01-16';
+        $period2->period_end = '2026-02-15';
+        $period2->save();
+
+        $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", [
+            'period_id' => $period2->id,
+            'report_no' => 5,
+        ])->assertStatus(422);
+    }
+
     public function test_list_is_filterable_by_project(): void
     {
         [$project, $period] = $this->seedProject();

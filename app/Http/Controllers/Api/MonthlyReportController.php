@@ -7,6 +7,7 @@ use App\Models\MonthlyReport;
 use App\Services\MonthlyReport\MonthlyReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class MonthlyReportController extends Controller
 {
@@ -40,13 +41,13 @@ class MonthlyReportController extends Controller
     public function store(int $projectId, Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'report_no' => ['nullable', 'integer', 'min:1'],
+            'report_no' => ['nullable', 'integer', 'min:1', Rule::unique('monthly_reports', 'report_no')->where('project_id', $projectId)],
             'period_id' => ['nullable', 'integer', 'exists:project_progress_periods,id'],
             'period_start' => ['required_without:period_id', 'date'],
             'period_end' => ['required_without:period_id', 'date'],
             'month_label' => ['nullable', 'string', 'max:40'],
             'evaluation_date' => ['nullable', 'date'],
-            'copy_from_report_id' => ['nullable', 'integer', 'exists:monthly_reports,id'],
+            'copy_from_report_id' => ['nullable', 'integer', Rule::exists('monthly_reports', 'id')->where('project_id', $projectId)],
         ]);
 
         $report = $this->service->create($projectId, $validated, $request->user()->id);
