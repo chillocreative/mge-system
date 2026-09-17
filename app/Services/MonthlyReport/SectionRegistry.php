@@ -38,7 +38,7 @@ final class SectionRegistry
             'cover' => S\CoverBuilder::class,
             '1.1' => S\ProjectInformationBuilder::class,
             '1.2' => S\ContractCorrespondenceBuilder::class,
-            '1.3' => S\PlaceholderBuilder::class,
+            '1.3' => S\ProjectLocationBuilder::class,
             '1.4' => S\OrganisationChartBuilder::class,
             '1.5' => S\ResourcePlanningBuilder::class,
             '2.1' => S\WorkProgressBuilder::class,
@@ -52,10 +52,10 @@ final class SectionRegistry
             '3.4' => S\TestingBuilder::class,
             '3.6' => S\TenderDrawingBuilder::class,
             '3.7' => S\MeetingListBuilder::class,
-            '4.1' => S\PlaceholderBuilder::class,
-            '4.2' => S\PlaceholderBuilder::class,
-            '4.3' => S\PlaceholderBuilder::class,
-            '5.0' => S\PlaceholderBuilder::class,
+            '4.1' => S\TradeWorkerBuilder::class,
+            '4.2' => S\MachineryBuilder::class,
+            '4.3' => S\WeatherBuilder::class,
+            '5.0' => S\ProgressPhotoBuilder::class,
         ];
     }
 
