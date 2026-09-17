@@ -1512,11 +1512,11 @@ class ReportColumnsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        foreach (['projects.view', 'projects.edit', 'finance.view', 'finance.manage'] as $p) {
+        foreach (['projects.view', 'projects.edit', 'drawings.view'] as $p) {
             Permission::findOrCreate($p, 'web');
         }
         $this->editor = User::create(['first_name' => 'A', 'last_name' => 'B', 'email' => 'u-'.uniqid().'@mge-eng.com', 'password' => bcrypt('x'), 'status' => 'active']);
-        $this->editor->givePermissionTo(['projects.view', 'projects.edit', 'finance.view', 'finance.manage']);
+        $this->editor->givePermissionTo(['projects.view', 'projects.edit', 'drawings.view']);
     }
 
     public function test_claim_report_columns_are_saved(): void
@@ -1544,8 +1544,8 @@ class ReportColumnsTest extends TestCase
     public function test_tender_drawings_can_be_flagged_and_filtered(): void
     {
         $project = Project::create(['name' => 'P', 'code' => 'P'.random_int(1000, 9999), 'status' => 'in_progress']);
-        $tender = Drawing::create(['title' => 'KEY PLAN', 'drawing_no' => 'JPS/IP/BPB/10/2025/GEN/03', 'project_id' => $project->id, 'is_tender' => true, 'status' => 'published']);
-        Drawing::create(['title' => 'Shop', 'drawing_no' => 'SD/01', 'project_id' => $project->id, 'status' => 'published']);
+        $tender = Drawing::create(['title' => 'KEY PLAN', 'drawing_no' => 'JPS/IP/BPB/10/2025/GEN/03', 'project_id' => $project->id, 'is_tender' => true, 'status' => 'published', 'file_path' => 'drawings/a.pdf', 'file_name' => 'a.pdf']);
+        Drawing::create(['title' => 'Shop', 'drawing_no' => 'SD/01', 'project_id' => $project->id, 'status' => 'published', 'file_path' => 'drawings/b.pdf', 'file_name' => 'b.pdf']);
 
         $res = $this->actingAs($this->editor)->getJson("/api/drawings?project_id={$project->id}&is_tender=1")->assertOk();
         $ids = collect($res->json('data.data') ?? $res->json('data'))->pluck('id')->all();
@@ -1553,7 +1553,7 @@ class ReportColumnsTest extends TestCase
     }
 }
 ```
-(Adjust the invoice route/permission names to what `routes/api.php` actually uses for `ProjectInvoiceController@update`; check with `grep -n "project-invoices" routes/api.php`. Adjust `Drawing::create` required columns after reading the drawings migration.)
+(Verified: `PUT /api/project-invoices/{id}` is gated by `permission:projects.edit`; `GET /api/drawings` by `permission:drawings.view`; drawings require `file_path` and `file_name`. The drawings list filter lives in `App\Services\DocumentLibraryService::listDrawings()` — add the `is_tender` `when()` there, next to the `tag` filter.)
 
 - [ ] **Step 2: Run** — Expected: FAIL (unknown columns / missing rows).
 
@@ -1612,7 +1612,7 @@ Schema::table('drawings', function (Blueprint $table) {
 - `ProjectInvoice::$fillable` += the 5 columns; cast `evaluation_date => 'date:Y-m-d'`. In `ProjectInvoiceController` store/update validation add
   `'wjp_current' => ['nullable','numeric','min:0'], 'wjp_cumulative' => [...same], 'certified_current' => [...], 'certified_cumulative' => [...], 'evaluation_date' => ['nullable','date']`.
 - `CorrespondenceType::$fillable` += `report_group`.
-- `Drawing::$fillable` += `is_tender`; cast boolean. `DrawingController` store/update: `'is_tender' => ['nullable', 'boolean']`; index: add `'is_tender'` to `$request->only([...])` and in the service/query `->when($filters['is_tender'] ?? null, fn ($q) => $q->where('is_tender', true))`.
+- `Drawing::$fillable` += `is_tender`; cast boolean. `DrawingController` store/update: `'is_tender' => ['nullable', 'boolean']`; index: add `'is_tender'` to `$request->only([...])` and in `DocumentLibraryService::listDrawings()` add `if (! empty($filters['is_tender'])) { $query->where('is_tender', true); }` beside the existing `tag` filter.
 
 - [ ] **Step 5: Migrate, test, lint, commit**
 
