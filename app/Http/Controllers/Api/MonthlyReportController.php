@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\MonthlyReport;
+use App\Services\MonthlyReport\Charts\SCurveSvg;
 use App\Services\MonthlyReport\Export\PdfExporter;
 use App\Services\MonthlyReport\MonthlyReportService;
 use App\Services\MonthlyReport\SectionRegistry;
@@ -129,6 +130,25 @@ class MonthlyReportController extends Controller
         return response($bytes, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
+    public function chart(MonthlyReport $report, string $key)
+    {
+        $options = SCurveSvg::optionsFor($key);
+        abort_unless($options !== null, 404);
+
+        $report->loadMissing('sections');
+        $section = $report->sections->firstWhere('key', $key);
+        abort_unless($section !== null, 404);
+
+        $series = $section->merged['series'] ?? [];
+
+        $svg = (new SCurveSvg)->render($series, $options);
+
+        return response($svg, 200, [
+            'Content-Type' => 'image/svg+xml',
+            'Cache-Control' => 'no-store',
         ]);
     }
 

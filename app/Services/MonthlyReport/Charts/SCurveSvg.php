@@ -210,6 +210,21 @@ class SCurveSvg
     }
 
     /**
+     * Shared title/unit options for the S-curve sections, used by both the PDF
+     * exporter and the chart preview endpoint so they stay in sync.
+     *
+     * @return array{title:string,unit:string}|null
+     */
+    public static function optionsFor(string $key): ?array
+    {
+        return match ($key) {
+            '2.2' => ['title' => '2.2 PHYSICAL S-CURVE', 'unit' => '%'],
+            '2.4' => ['title' => '2.4 FINANCIAL S-CURVE', 'unit' => 'RM'],
+            default => null,
+        };
+    }
+
+    /**
      * @param  array<int,mixed>  $values
      * @return array<int,float|null>
      */

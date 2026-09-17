@@ -321,4 +321,49 @@ class MonthlyReportApiTest extends TestCase
         $this->assertSame($beforeCount + 1, $afterCount);
         $this->assertSame($first->json('data.period.id'), $second->json('data.period.id'));
     }
+
+    public function test_chart_endpoint_returns_svg_for_s_curve_sections(): void
+    {
+        [$project, $period] = $this->seedProject();
+        $reportId = $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", ['period_id' => $period->id])->json('data.id');
+
+        $res = $this->actingAs($this->manager)->get("/api/monthly-reports/{$reportId}/charts/2.2")
+            ->assertOk()->assertHeader('Content-Type', 'image/svg+xml');
+        $this->assertStringContainsString('no-store', $res->headers->get('Cache-Control'));
+        $this->actingAs($this->manager)->get("/api/monthly-reports/{$reportId}/charts/2.4")
+            ->assertOk()->assertHeader('Content-Type', 'image/svg+xml');
+
+        $this->actingAs($this->manager)->get("/api/monthly-reports/{$reportId}/charts/1.1")->assertNotFound();
+    }
+
+    public function test_chart_endpoint_returns_no_data_svg_when_series_is_empty(): void
+    {
+        $project = $this->project();
+        ProjectContract::create(['project_id' => $project->id, 'title' => 'Main', 'is_main' => true, 'contract_sum' => 288000000]);
+        ProjectParty::create(['project_id' => $project->id, 'name' => 'MULTI GREEN ENGINEERING SDN BHD', 'type' => 'main_contractor', 'report_role' => 'contractor', 'address' => 'No. 35, Segamat', 'sort_order' => 6]);
+        $period = ProjectProgressPeriod::create([
+            'project_id' => $project->id, 'period_no' => 1, 'period_start' => '2026-01-01', 'period_end' => '2026-01-31',
+        ]);
+
+        $reportId = $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", ['period_id' => $period->id])->json('data.id');
+
+        $res = $this->actingAs($this->manager)->get("/api/monthly-reports/{$reportId}/charts/2.2")->assertOk();
+        $this->assertStringContainsString('No data', $res->getContent());
+    }
+
+    public function test_chart_endpoint_allows_reports_view_only_user(): void
+    {
+        [$project, $period] = $this->seedProject();
+        $reportId = $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", ['period_id' => $period->id])->json('data.id');
+
+        $this->actingAs($this->viewer)->get("/api/monthly-reports/{$reportId}/charts/2.2")->assertOk();
+    }
+
+    public function test_chart_endpoint_requires_authentication(): void
+    {
+        [$project, $period] = $this->seedProject();
+        $report = app(MonthlyReportService::class)->create($project->id, ['period_id' => $period->id], $this->manager->id);
+
+        $this->getJson("/api/monthly-reports/{$report->id}/charts/2.2")->assertUnauthorized();
+    }
 }

@@ -135,7 +135,7 @@ final class PdfExporter
             $notes[$section->key] = $section->notes;
         }
 
-        foreach (['2.2' => '2.2 PHYSICAL S-CURVE', '2.4' => '2.4 FINANCIAL S-CURVE'] as $key => $chartTitle) {
+        foreach (['2.2', '2.4'] as $key) {
             if (! isset($sections[$key])) {
                 continue;
             }
@@ -146,10 +146,7 @@ final class PdfExporter
             }
             // A malformed override must degrade to "no chart", never abort the whole PDF.
             try {
-                $sections[$key]['chart_svg_uri'] = SCurveSvg::dataUri((new SCurveSvg)->render($series, [
-                    'title' => $chartTitle,
-                    'unit' => $key === '2.4' ? 'RM' : '%',
-                ]));
+                $sections[$key]['chart_svg_uri'] = SCurveSvg::dataUri((new SCurveSvg)->render($series, SCurveSvg::optionsFor($key) ?? []));
             } catch (\Throwable $e) {
                 Log::warning("Monthly report chart {$key} could not be rendered: {$e->getMessage()}", ['report_id' => $report->id]);
             }
