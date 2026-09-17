@@ -41,8 +41,21 @@
     <p class="placeholder">No data.</p>
 @else
     @foreach($chunks as $chunk)
-        @php $no = 1; @endphp
+        @php
+            $no = 1;
+            // Fixed table-layout needs explicit column widths, or the Description column
+            // collapses and its text overlaps the day cells. 8mm (No.) + 42mm (Description),
+            // the remaining ~223mm of the ~273mm landscape printable width split across days.
+            $dayWidth = $isLandscape && count($chunk) > 0 ? (273 - 50) / count($chunk) : 0;
+        @endphp
         <table class="grid small avoid" @if($isLandscape) style="table-layout:fixed;" @endif>
+            @if($isLandscape)
+                <colgroup>
+                    <col style="width:8mm;">
+                    <col style="width:42mm;">
+                    @foreach($chunk as $i)<col style="width:{{ $dayWidth }}mm;">@endforeach
+                </colgroup>
+            @endif
             <tr>
                 <th rowspan="2" style="{{ $cellStyle }}">No.</th><th rowspan="2" style="{{ $cellStyle }}">Description</th>
                 @foreach($monthRunsFor($chunk) as $run)<th colspan="{{ $run['span'] }}" style="{{ $cellStyle }}">{{ $run['month'] }}</th>@endforeach

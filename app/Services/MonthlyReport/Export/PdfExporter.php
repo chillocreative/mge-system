@@ -10,6 +10,7 @@ use App\Services\MonthlyReport\SectionRegistry;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 final class PdfExporter
 {
@@ -55,6 +56,11 @@ final class PdfExporter
     public function render(MonthlyReport $report): string
     {
         $keys = $report->sections->where('include', true)->sortBy('sort_order')->pluck('key')->values()->all();
+
+        if ($keys === []) {
+            throw ValidationException::withMessages(['sections' => 'Include at least one section before exporting.']);
+        }
+
         $chunks = OrientationPlanner::plan($keys, $report->options['landscape_sections'] ?? null);
 
         $parts = [];

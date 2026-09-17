@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\MonthlyReport\Export\PdfExporter;
 use App\Services\MonthlyReport\MonthlyReportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -126,5 +127,15 @@ class PdfExportTest extends TestCase
         $this->assertMatchesRegularExpression('/MediaBox \[0 0 841\.\d+ 595\.\d+\]/', $bytes); // at least one landscape page
         $this->assertMatchesRegularExpression('/MediaBox \[0 0 595\.\d+ 841\.\d+\]/', $bytes); // and a portrait one
         $this->assertStringContainsString('Page 1 of ', $bytes);
+    }
+
+    public function test_render_throws_a_validation_exception_when_no_sections_are_included(): void
+    {
+        $report = $this->makeReport();
+        $report->sections()->update(['include' => false]);
+
+        $this->expectException(ValidationException::class);
+
+        app(PdfExporter::class)->render($report->fresh(['sections', 'project', 'period']));
     }
 }

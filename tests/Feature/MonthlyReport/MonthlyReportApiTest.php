@@ -9,6 +9,7 @@ use App\Models\ProjectParty;
 use App\Models\ProjectProgressPeriod;
 use App\Models\User;
 use App\Services\MonthlyReport\Export\PdfExporter;
+use App\Services\MonthlyReport\MonthlyReportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -150,6 +151,54 @@ class MonthlyReportApiTest extends TestCase
             'period_id' => $period->id,
             'copy_from_report_id' => $otherReportId,
         ])->assertStatus(422);
+    }
+
+    public function test_copy_from_report_id_also_copies_landscape_options(): void
+    {
+        [$project, $period] = $this->seedProject();
+
+        $sourceId = $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", ['period_id' => $period->id])->json('data.id');
+        $this->actingAs($this->manager)->putJson("/api/monthly-reports/{$sourceId}", [
+            'options' => ['landscape_sections' => ['1.1', '2.1']],
+        ])->assertOk();
+
+        $period2 = ProjectProgressPeriod::create([
+            'project_id' => $project->id, 'period_no' => 4, 'period_start' => '2026-01-16', 'period_end' => '2026-02-15',
+        ]);
+        $newId = $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", [
+            'period_id' => $period2->id,
+            'copy_from_report_id' => $sourceId,
+        ])->assertCreated()->json('data.id');
+
+        $this->assertSame(['1.1', '2.1'], MonthlyReport::find($newId)->options['landscape_sections']);
+    }
+
+    public function test_update_merges_options_instead_of_overwriting_and_null_clears_a_key(): void
+    {
+        // Exercised at the service layer directly: the controller's `options.*` validation only
+        // whitelists `landscape_sections` today, so an arbitrary second option key would be
+        // stripped by validate() before it ever reaches the service — this test is about the
+        // service's merge behaviour, not the controller's field whitelist.
+        [$project, $period] = $this->seedProject();
+        $reportId = $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", ['period_id' => $period->id])->json('data.id');
+
+        /** @var MonthlyReportService $service */
+        $service = app(MonthlyReportService::class);
+        $report = MonthlyReport::find($reportId);
+
+        $service->update($report, ['options' => ['landscape_sections' => ['1.1'], 'other_flag' => true]]);
+
+        // A partial update that omits landscape_sections must not drop it.
+        $service->update($report->fresh(), ['options' => ['other_flag' => false]]);
+        $options = MonthlyReport::find($reportId)->options;
+        $this->assertSame(['1.1'], $options['landscape_sections']);
+        $this->assertFalse($options['other_flag']);
+
+        // An explicit null for landscape_sections must still clear it.
+        $service->update($report->fresh(), ['options' => ['landscape_sections' => null]]);
+        $options = MonthlyReport::find($reportId)->options;
+        $this->assertNull($options['landscape_sections']);
+        $this->assertFalse($options['other_flag']);
     }
 
     public function test_duplicate_report_no_within_a_project_is_rejected(): void

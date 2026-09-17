@@ -98,6 +98,16 @@ final class MonthlyReportService
             throw ValidationException::withMessages(['report' => ['Report is finalised and cannot be edited.']]);
         }
 
+        if (array_key_exists('options', $attrs)) {
+            // Merge onto the existing JSON rather than overwriting it wholesale, so e.g. saving
+            // `signatories` via a different endpoint doesn't get clobbered by a partial options
+            // update. An explicit `null` for a given key (e.g. landscape_sections) still clears
+            // it, since array_merge lets the incoming value (including null) win for that key.
+            $attrs['options'] = is_array($attrs['options'])
+                ? array_merge($r->options ?? [], $attrs['options'])
+                : null;
+        }
+
         $r->update($attrs);
 
         return $r->fresh(['sections', 'project', 'period']);
@@ -184,6 +194,11 @@ final class MonthlyReportService
                 'overrides' => $source->overrides,
                 'notes' => $source->notes,
             ]);
+        }
+
+        $sourceLandscape = $from->options['landscape_sections'] ?? null;
+        if ($sourceLandscape !== null && empty($to->options['landscape_sections'] ?? null)) {
+            $to->update(['options' => array_merge($to->options ?? [], ['landscape_sections' => $sourceLandscape])]);
         }
     }
 

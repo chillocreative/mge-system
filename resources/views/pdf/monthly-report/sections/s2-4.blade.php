@@ -4,13 +4,14 @@
     $scheduledPct = $data['series']['scheduled_pct'] ?? [];
     $actual = $data['series']['actual'] ?? [];
     $actualPct = $data['series']['actual_pct'] ?? [];
-    $chunks = array_chunk(array_keys($months), 6);
+    $isLandscape = ($orientation ?? 'portrait') === 'landscape';
+    $chunks = array_chunk(array_keys($months), $isLandscape ? 13 : 6);
 @endphp
 @if(empty($months))
     <p class="placeholder">No data.</p>
 @else
     @if(!empty($data['chart_svg_uri']))
-        <img src="{{ $data['chart_svg_uri'] }}" style="width: 100%; height: auto; display:block; margin: 0 0 4mm 0;">
+        <img src="{{ $data['chart_svg_uri'] }}" style="width: {{ $isLandscape ? '88%' : '100%' }}; height: auto; display:block; margin: 0 0 4mm 0;">
     @endif
     @foreach($chunks as $chunk)
         <table class="grid small avoid" style="table-layout: fixed; width: 100%; word-wrap: break-word;">
