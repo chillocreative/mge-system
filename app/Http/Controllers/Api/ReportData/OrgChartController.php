@@ -7,6 +7,7 @@ use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class OrgChartController extends Controller
 {
@@ -21,21 +22,57 @@ class OrgChartController extends Controller
             'org_sort' => (int) $u->pivot->org_sort,
         ])->sortBy('org_sort')->values();
 
-        return $this->success($this->tree($rows, null));
+        // A member whose manager is not among the active rows (e.g. the manager
+        // left the project) is rendered as a root instead of silently vanishing.
+        // This only affects the response tree; the stored pivot value is untouched.
+        $activeIds = $rows->pluck('user_id')->all();
+        $renderRows = $rows->map(function ($r) use ($activeIds) {
+            if ($r['reports_to_user_id'] !== null && ! in_array($r['reports_to_user_id'], $activeIds, true)) {
+                $r['reports_to_user_id'] = null;
+            }
+
+            return $r;
+        });
+
+        return $this->success($this->tree($renderRows, null, []));
     }
 
     public function update(int $projectId, Request $request): JsonResponse
     {
         $project = Project::findOrFail($projectId);
         $memberIds = $project->members()->pluck('users.id')->all();
+        $activeMemberIds = $project->members()->whereNull('project_members.left_at')->pluck('users.id')->all();
 
         $validated = $request->validate([
             'members' => ['required', 'array'],
             'members.*.user_id' => ['required', 'integer', 'in:'.implode(',', $memberIds ?: [0])],
             'members.*.designation' => ['nullable', 'string', 'max:255'],
-            'members.*.reports_to_user_id' => ['nullable', 'integer', 'different:members.*.user_id', 'in:'.implode(',', $memberIds ?: [0])],
+            'members.*.reports_to_user_id' => ['nullable', 'integer', 'different:members.*.user_id', 'in:'.implode(',', $activeMemberIds ?: [0])],
             'members.*.org_sort' => ['nullable', 'integer', 'min:0'],
         ]);
+
+        // Build the full manager map that would result from this update — payload
+        // entries override, members not present in the payload keep their stored
+        // manager — and reject the whole update if any chain cycles.
+        $currentManagers = $project->members()->pluck('project_members.reports_to_user_id', 'users.id');
+        $managerMap = $currentManagers->all();
+        foreach ($validated['members'] as $m) {
+            $managerMap[$m['user_id']] = $m['reports_to_user_id'] ?? null;
+        }
+
+        foreach (array_keys($managerMap) as $startId) {
+            $visited = [];
+            $current = $startId;
+            while ($current !== null) {
+                if (isset($visited[$current])) {
+                    throw ValidationException::withMessages([
+                        'members' => 'Reporting lines must not form a cycle.',
+                    ]);
+                }
+                $visited[$current] = true;
+                $current = $managerMap[$current] ?? null;
+            }
+        }
 
         DB::transaction(function () use ($project, $validated) {
             foreach ($validated['members'] as $m) {
@@ -50,8 +87,14 @@ class OrgChartController extends Controller
         return $this->show($projectId);
     }
 
-    private function tree($rows, ?int $parentId): array
+    private function tree($rows, ?int $parentId, array $visited): array
     {
-        return $rows->where('reports_to_user_id', $parentId)->map(fn ($r) => $r + ['children' => $this->tree($rows, $r['user_id'])])->values()->all();
+        return $rows->where('reports_to_user_id', $parentId)
+            ->reject(fn ($r) => isset($visited[$r['user_id']]))
+            ->map(function ($r) use ($rows, $visited) {
+                $visited[$r['user_id']] = true;
+
+                return $r + ['children' => $this->tree($rows, $r['user_id'], $visited)];
+            })->values()->all();
     }
 }
