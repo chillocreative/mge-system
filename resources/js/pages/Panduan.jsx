@@ -54,14 +54,24 @@ const SECTIONS = [
                 heading: 'Tab dalam projek',
                 steps: [
                     'Overview — ringkasan projek dan pasukan.',
-                    'Tasks — senarai tugasan projek.',
+                    'Tasks — senarai tugasan projek, boleh tambah/edit/padam terus.',
                     'Milestones — pencapaian penting projek.',
-                    'Timeline — garis masa projek.',
+                    'Timeline — garis masa milestone dan acara kalendar (tugasan tidak dipaparkan di sini).',
                     'Site Logs — log kerja harian di tapak.',
                     'Sites — senarai tapak/zon dalam projek (untuk projek berbilang tapak).',
                     'Documents — fail dan dokumen projek.',
                     'Calendar — acara projek.',
                     'Discussions — perbincangan pasukan.',
+                ],
+            },
+            {
+                heading: 'Tugasan dalam projek (Tasks tab)',
+                steps: [
+                    'Buka projek, klik tab "Tasks", klik "Add Task".',
+                    'Isi tajuk, keterangan, keutamaan (priority), tarikh akhir dan boleh tetapkan lebih dari satu staf (multiple assignees).',
+                    'Klik ikon pensel untuk edit, atau ikon tong sampah untuk padam (sistem akan minta pengesahan dahulu).',
+                    'Tukar status terus dari dropdown pada setiap baris: Pending, In progress, In review, Completed atau Cancelled.',
+                    'Tag keutamaan (priority) dipaparkan di sebelah status untuk senang dikenal pasti.',
                 ],
             },
             {
@@ -77,9 +87,69 @@ const SECTIONS = [
                 heading: 'Log tapak harian (Site Log)',
                 steps: [
                     'Buka projek, klik tab "Site Logs" > isi log baru.',
-                    'Rekod tarikh, cuaca, bilangan pekerja, kerja yang dijalankan dan jentera yang digunakan.',
-                    'Jika projek ada tapak, pilih tapak yang berkenaan.',
+                    'Rekod bilangan pekerja (Workers), Weather Times — catat setiap kali cuaca berubah (rekod ini penting sebagai bukti kelewatan akibat cuaca).',
+                    'Isi Machinery yang digunakan; setiap baris jentera boleh dipautkan (optional) kepada aset berdaftar — pautan ini akan terus menetapkan (auto-assign) aset tersebut kepada projek dalam Assets > Machineries.',
+                    'Isi Work performed, Issues dan Safety notes.',
+                    'Di bahagian Attachments, klik "Choose files" untuk lampirkan gambar/dokumen — ia dimuat naik apabila log disimpan.',
+                    'Butang "Monthly Report" jana PDF laporan bulanan; butang "Machinery" jana laporan penggunaan jentera bulanan.',
                     'Log boleh diedit dalam tempoh yang ditetapkan; selepas itu ia dikunci.',
+                ],
+            },
+            {
+                heading: 'Acara projek (Calendar tab)',
+                steps: [
+                    'Buka projek, klik tab "Calendar", klik "New Event".',
+                    'Isi tajuk, jenis acara, tarikh/masa mula & tamat, lokasi dan keterangan.',
+                    'Tambah Attendees (ahli projek) — mereka akan terima notifikasi dalam sistem DAN jemputan emel.',
+                    'Jika acara diedit dan attendee baru ditambah, hanya attendee baru sahaja yang dimaklumkan.',
+                ],
+            },
+            {
+                heading: 'Dokumen projek (Documents tab)',
+                steps: [
+                    'Dokumen boleh ditapis mengikut kategori: Monthly Report, Minute Meeting dan Progress Tracking (selain kategori am seperti Drawing, Contract, Permit dan lain-lain).',
+                ],
+            },
+        ],
+    },
+    {
+        id: 'kontrak',
+        title: 'Kontrak (Contracts)',
+        icon: '📑',
+        intro: 'Urus kontrak projek, dokumen, lukisan dan Bill of Quantity (BQ).',
+        groups: [
+            {
+                heading: 'Senarai & cipta kontrak',
+                steps: [
+                    'Klik "Projects" > "Contracts".',
+                    'Klik tajuk kontrak (pautan) atau ikon mata untuk buka halaman butiran.',
+                    'Klik "New Contract" untuk tambah kontrak baru.',
+                    'Isi tajuk, no. kontrak, nilai, tarikh, status dan PIC (boleh tambah lebih dari satu PIC).',
+                ],
+            },
+            {
+                heading: 'Butiran kontrak — Documents',
+                steps: [
+                    'Buka kontrak, klik tab "Documents".',
+                    'Muat naik dokumen; klik ikon mata untuk lihat terus (inline) atau muat turun.',
+                    'Dokumen boleh dipadam jika tidak diperlukan lagi.',
+                ],
+            },
+            {
+                heading: 'Butiran kontrak — Drawings',
+                steps: [
+                    'Buka kontrak, klik tab "Drawings".',
+                    'Muat naik lukisan secara pukal atau ikut folder (bulk/folder upload).',
+                    'Lihat atau muat turun lukisan yang telah dimuat naik.',
+                ],
+            },
+            {
+                heading: 'Butiran kontrak — Bill of Quantity (BQ)',
+                steps: [
+                    'Buka kontrak, klik tab "Bill of Quantity (BQ)".',
+                    'Setiap kontrak hanya ada SATU dokumen BQ (format pdf/xls/xlsx/doc/docx). Klik "Upload BQ" untuk muat naik.',
+                    'Klik "View BQ" untuk buka dokumen dalam tab baru.',
+                    'Klik "Replace" untuk ganti dengan fail baru, atau "Remove" untuk buang BQ sedia ada.',
                 ],
             },
         ],
@@ -104,7 +174,9 @@ const SECTIONS = [
                     'Klik ikon jam (Workflow & history) pada baris surat untuk buka panel aliran kerja.',
                     'Hand over — serahkan surat kepada pihak lain (klien, perunding, kontraktor).',
                     'Tambah nota, tukar status, dan lihat sejarah penuh siapa memegang surat dan bila.',
-                    'Tutup surat — perlu rujukan penutup DAN sekurang-kurangnya satu dokumen dilampirkan.',
+                    'Status yang boleh dipilih: Open, Pending, Closed, Decline, Forwarded atau Others (jika Others, isi keterangan status sendiri).',
+                    'Tutup surat — perlu rujukan penutup DAN sekurang-kurangnya satu dokumen dilampirkan; sistem turut rekod tarikh tutup untuk klien dan perunding secara berasingan.',
+                    'Rekod yang sudah ditutup (closed) dikunci dan tidak boleh diedit lagi.',
                     'Klik ikon muat turun untuk jana PDF surat (butiran + sejarah penuh).',
                 ],
             },
@@ -277,8 +349,10 @@ const SECTIONS = [
             {
                 heading: 'Cara guna',
                 steps: [
-                    'Klik "Assets" di menu kiri.',
-                    'Machineries — rekod kenderaan/jentera, no. siri/casis dan penetapan kepada projek.',
+                    'Klik "Assets" > "Machineries" di menu kiri.',
+                    'Senarai memaparkan Registration, Serial No, Make/Model, Type, Assigned To Project dan Status.',
+                    'Klik "New Machinery" untuk daftar kenderaan/jentera baru; medan "Assigned To Project" untuk pilih projek dalam sistem.',
+                    'Buka rekod jentera untuk lihat sejarah Project Assignment dan dokumen (road tax, insurance, permit).',
                     'Inventory — stok dan barangan.',
                     'Maintenance — jadual dan rekod penyelenggaraan.',
                 ],
@@ -296,7 +370,8 @@ const SECTIONS = [
                 steps: [
                     'Meetings — jadual mesyuarat, agenda dan minit.',
                     'Chat — mesej peribadi dan kumpulan secara langsung.',
-                    'Notifications — peringatan automatik (loceng di atas kanan).',
+                    'Notifications — peringatan automatik (loceng di atas kanan). Notifikasi juga dihantar secara emel secara automatik (default) untuk kelulusan cuti, penetapan tugasan, jemputan kalendar, slip gaji dan reset kata laluan.',
+                    'Admin boleh konfigurasi penghantaran emel di "Settings" > tab "Email (SMTP)": isi host, port, username dan password SMTP, klik "Send Test" untuk uji, kemudian tandakan "Enable email sending (system-wide)" dan klik "Save SMTP Settings".',
                 ],
             },
         ],
@@ -311,8 +386,16 @@ const SECTIONS = [
                 heading: 'Cara guna (Admin sahaja)',
                 steps: [
                     'Users — luluskan atau tolak pendaftaran akaun baru.',
-                    'User Access / Roles — tetapkan peranan (Admin & HR, Finances & HR, Projects, Employee) dan kebenaran.',
+                    'User Access — tetapkan peranan (Admin & HR, Finances & HR, Projects, Employee) dan kebenaran.',
+                    'Settings > tab "Email (SMTP)" — konfigurasi penghantaran emel sistem (lihat bahagian Notifikasi & Emel).',
                     'Pekerja yang berhenti kerja — tukar status kepada tidak aktif; log masuk mereka akan disekat automatik.',
+                ],
+            },
+            {
+                heading: 'Tetapan akaun sendiri (semua pengguna)',
+                steps: [
+                    'Klik nama anda di penjuru kanan atas untuk ke halaman profil dan tukar kata laluan.',
+                    'Terlupa kata laluan? Di halaman log masuk, klik pautan "Forgot Password" untuk reset melalui emel.',
                 ],
             },
         ],
@@ -429,7 +512,7 @@ export default function Panduan() {
                             type="text"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
-                            placeholder="Cari topik… (cth: cuti, HIRARC, invois)"
+                            placeholder="Cari topik… (cth: cuti, BQ, jentera)"
                             className="w-full rounded-xl border border-white bg-white py-3.5 pl-11 pr-10 text-sm font-medium text-slate-900 shadow-xl ring-1 ring-black/10 placeholder:font-normal placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                         {query && (
