@@ -18,7 +18,7 @@ final class ProgressClaimBuilder extends AbstractBuilder
     {
         $invoices = ProjectInvoice::where('project_id', $ctx->project->id)
             ->where('type', 'client')
-            ->orderBy('claim_number')
+            ->orderByRaw('CAST(claim_number AS UNSIGNED)')
             ->orderBy('invoice_date')
             ->get();
 

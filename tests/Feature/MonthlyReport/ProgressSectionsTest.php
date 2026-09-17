@@ -118,4 +118,17 @@ class ProgressSectionsTest extends TestCase
 
         $this->assertCount(4, $data['series']['scheduled']);
     }
+
+    public function test_physical_s_curve_uses_the_later_period_when_two_periods_end_in_the_same_month(): void
+    {
+        $project = Project::create(['name' => 'Tie Test', 'code' => 'TIE-'.uniqid(), 'status' => 'in_progress']);
+        ProjectScheduleBaseline::create(['project_id' => $project->id, 'month' => '2025-12-01', 'scheduled_physical_pct' => 1, 'scheduled_financial_amount' => 100000, 'scheduled_financial_pct' => 1]);
+        ProjectProgressPeriod::create(['project_id' => $project->id, 'period_no' => 1, 'period_start' => '2025-12-01', 'period_end' => '2025-12-10', 'physical_scheduled_pct' => 1, 'physical_actual_pct' => 1]);
+        $later = ProjectProgressPeriod::create(['project_id' => $project->id, 'period_no' => 2, 'period_start' => '2025-12-11', 'period_end' => '2025-12-20', 'physical_scheduled_pct' => 1, 'physical_actual_pct' => 3]);
+        $report = MonthlyReport::create(['project_id' => $project->id, 'period_id' => $later->id, 'report_no' => 1, 'title' => 'Tie Report', 'month_label' => 'December 2025']);
+
+        $data = SectionRegistry::make('2.2')->build(ReportContext::for($report));
+
+        $this->assertSame([3.0], $data['series']['actual']);
+    }
 }

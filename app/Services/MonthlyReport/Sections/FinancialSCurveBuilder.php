@@ -2,7 +2,6 @@
 
 namespace App\Services\MonthlyReport\Sections;
 
-use App\Models\ProjectProgressPeriod;
 use App\Models\ProjectScheduleBaseline;
 use App\Services\MonthlyReport\ReportContext;
 
@@ -11,7 +10,7 @@ final class FinancialSCurveBuilder extends AbstractBuilder
     public function build(ReportContext $ctx): array
     {
         $baselines = ProjectScheduleBaseline::where('project_id', $ctx->project->id)->orderBy('month')->get();
-        $periods = ProjectProgressPeriod::where('project_id', $ctx->project->id)->get();
+        $periodsByMonth = $this->periodsByMonth($ctx);
 
         $months = [];
         $scheduled = [];
@@ -24,7 +23,7 @@ final class FinancialSCurveBuilder extends AbstractBuilder
             $scheduled[] = (float) $baseline->scheduled_financial_amount;
             $scheduledPct[] = (float) $baseline->scheduled_financial_pct;
 
-            $match = $periods->first(fn ($p) => $p->period_end->isSameMonth($baseline->month) && $p->period_end->isSameYear($baseline->month));
+            $match = $periodsByMonth[$baseline->month->format('Y-m')] ?? null;
             $actual[] = $match ? (float) $match->financial_actual_amount : null;
             $actualPct[] = $match ? (float) $match->financial_actual_pct : null;
         }
