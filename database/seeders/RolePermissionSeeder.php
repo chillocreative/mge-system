@@ -146,6 +146,7 @@ class RolePermissionSeeder extends Seeder
             // Reports
             'reports.view',
             'reports.export',
+            'reports.manage',
 
             // Roles & Permissions (system admin)
             'roles.view',
