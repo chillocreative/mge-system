@@ -1718,7 +1718,7 @@ Schema::create('project_delay_notices', function (Blueprint $table) {
     $table->foreignId('project_id')->constrained()->cascadeOnDelete();
     $table->string('title');
     $table->text('issue')->nullable();
-    $table->foreignId('correspondence_id')->nullable()->constrained('correspondences')->nullOnDelete();
+    $table->foreignId('correspondence_id')->nullable()->constrained('project_correspondences')->nullOnDelete();
     $table->string('reg_number')->nullable();
     $table->date('submitted_date');
     $table->string('submitted_via', 50)->nullable();
@@ -1730,7 +1730,7 @@ Schema::create('project_delay_notices', function (Blueprint $table) {
     $table->timestamps();
 });
 ```
-(Confirm the correspondence table name with `grep -rn "Schema::create('correspondence" database/migrations`; use the real name.)
+(Verified: the correspondence table is `project_correspondences`.)
 
 ```php
 Schema::create('project_tests', function (Blueprint $table) {
