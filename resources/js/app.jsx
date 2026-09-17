@@ -23,6 +23,8 @@ import Correspondence from '@/pages/projects/correspondence/Correspondence';
 import Discussions from '@/pages/projects/discussions/Discussions';
 import Contracts from '@/pages/projects/contracts/Contracts';
 import ContractDetail from '@/pages/projects/contracts/ContractDetail';
+import MonthlyReports from '@/pages/reports/MonthlyReports';
+import MonthlyReportEditor from '@/pages/reports/MonthlyReportEditor';
 import Clients from '@/pages/clients/Clients';
 import Users from '@/pages/users/Users';
 import Roles from '@/pages/roles/Roles';
@@ -114,6 +116,12 @@ function AppRoutes() {
                         <Route path="/projects/contracts/:id" element={<ContractDetail />} />
                         <Route path="/projects/:id" element={<ProjectDetail />} />
                         <Route path="/projects/:id/edit" element={<ProjectCreate />} />
+                    </Route>
+
+                    {/* Monthly Reports — requires reports.view */}
+                    <Route element={<PermissionGate permission="reports.view" />}>
+                        <Route path="/projects/monthly-reports" element={<MonthlyReports />} />
+                        <Route path="/projects/monthly-reports/:id" element={<MonthlyReportEditor />} />
                     </Route>
 
                     {/* Tasks — requires tasks.view */}
