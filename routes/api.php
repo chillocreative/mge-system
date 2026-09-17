@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\ProjectPartyController;
 use App\Http\Controllers\Api\ProjectSiteController;
 use App\Http\Controllers\Api\QcController;
 use App\Http\Controllers\Api\ReportData\ContractParticularsController;
+use App\Http\Controllers\Api\ReportData\ReportPartyController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SafetyController;
 use App\Http\Controllers\Api\SafetyStatisticsController;
@@ -155,6 +156,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('{project}/contract-particulars')->middleware('permission:projects.view')->group(function () {
             Route::get('/', [ContractParticularsController::class, 'show']);
             Route::put('/', [ContractParticularsController::class, 'update'])->middleware('permission:projects.edit');
+        });
+
+        // Report parties — nested under projects; extends the existing project_parties table
+        // used by Correspondence with report-specific fields, contacts and a logo.
+        Route::prefix('{project}/parties')->middleware('permission:projects.view')->group(function () {
+            Route::get('/', [ReportPartyController::class, 'index']);
+            Route::post('/', [ReportPartyController::class, 'store'])->middleware('permission:projects.edit');
+            Route::put('/{party}', [ReportPartyController::class, 'update'])->middleware('permission:projects.edit');
+            Route::delete('/{party}', [ReportPartyController::class, 'destroy'])->middleware('permission:projects.edit');
+            Route::post('/{party}/logo', [ReportPartyController::class, 'storeLogo'])->middleware('permission:projects.edit');
+            Route::get('/{party}/logo', [ReportPartyController::class, 'showLogo']);
         });
 
         // Site Logs — nested under projects

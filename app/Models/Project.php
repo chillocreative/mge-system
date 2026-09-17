@@ -88,6 +88,11 @@ class Project extends Model
         return $this->hasMany(CalendarEvent::class)->orderBy('start_datetime');
     }
 
+    public function parties(): HasMany
+    {
+        return $this->hasMany(ProjectParty::class)->orderBy('sort_order');
+    }
+
     // Scopes
 
     public function scopeActive($query)
