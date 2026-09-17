@@ -11,7 +11,7 @@
     <p class="placeholder">No data.</p>
 @else
     @if(!empty($data['chart_svg_uri']))
-        <img src="{{ $data['chart_svg_uri'] }}" style="width: {{ $isLandscape ? '88%' : '100%' }}; height: auto; display:block; margin: 0 0 4mm 0;">
+        <img src="{{ $data['chart_svg_uri'] }}" style="width: {{ $isLandscape ? '88%' : '100%' }}; height: auto; display:block; margin: 0 auto 4mm auto;">
     @endif
     @foreach($chunks as $chunk)
         <table class="grid small avoid" style="table-layout: fixed; width: 100%; word-wrap: break-word;">
