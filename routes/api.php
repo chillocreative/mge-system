@@ -40,7 +40,9 @@ use App\Http\Controllers\Api\ProjectSiteController;
 use App\Http\Controllers\Api\QcController;
 use App\Http\Controllers\Api\ReportData\ContractParticularsController;
 use App\Http\Controllers\Api\ReportData\OrgChartController;
+use App\Http\Controllers\Api\ReportData\ProgressPeriodController;
 use App\Http\Controllers\Api\ReportData\ReportPartyController;
+use App\Http\Controllers\Api\ReportData\ScheduleBaselineController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SafetyController;
 use App\Http\Controllers\Api\SafetyStatisticsController;
@@ -163,6 +165,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('{project}/org-chart')->middleware('permission:projects.view')->group(function () {
             Route::get('/', [OrgChartController::class, 'show']);
             Route::put('/', [OrgChartController::class, 'update'])->middleware('permission:projects.edit');
+        });
+
+        // Schedule baseline — nested under projects; monthly scheduled physical/financial %
+        Route::prefix('{project}/schedule-baseline')->middleware('permission:projects.view')->group(function () {
+            Route::get('/', [ScheduleBaselineController::class, 'index']);
+            Route::put('/', [ScheduleBaselineController::class, 'replace'])->middleware('permission:projects.edit');
+        });
+
+        // Progress periods — nested under projects; monthly physical/financial actuals with computed variance
+        Route::prefix('{project}/progress-periods')->middleware('permission:projects.view')->group(function () {
+            Route::get('/', [ProgressPeriodController::class, 'index']);
+            Route::get('/suggest', [ProgressPeriodController::class, 'suggest']);
+            Route::post('/', [ProgressPeriodController::class, 'store'])->middleware('permission:projects.edit');
+            Route::put('/{period}', [ProgressPeriodController::class, 'update'])->middleware('permission:projects.edit');
+            Route::delete('/{period}', [ProgressPeriodController::class, 'destroy'])->middleware('permission:projects.edit');
         });
 
         // Report parties — nested under projects; extends the existing project_parties table
