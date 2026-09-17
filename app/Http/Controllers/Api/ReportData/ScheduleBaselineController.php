@@ -21,7 +21,7 @@ class ScheduleBaselineController extends Controller
         Project::findOrFail($projectId);
         $validated = $request->validate([
             'rows' => ['present', 'array', 'max:120'],
-            'rows.*.month' => ['required', 'date_format:Y-m'],
+            'rows.*.month' => ['required', 'date_format:Y-m', 'distinct'],
             'rows.*.scheduled_physical_pct' => ['required', 'numeric', 'min:0', 'max:100'],
             'rows.*.scheduled_financial_amount' => ['nullable', 'numeric', 'min:0'],
             'rows.*.scheduled_financial_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],

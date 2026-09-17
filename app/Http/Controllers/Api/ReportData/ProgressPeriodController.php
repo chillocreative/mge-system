@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\ReportData;
 
+use App\Http\Controllers\Concerns\NormalizesNullableColumns;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\ProjectContract;
@@ -15,6 +16,8 @@ use Illuminate\Validation\Rule;
 
 class ProgressPeriodController extends Controller
 {
+    use NormalizesNullableColumns;
+
     public function __construct(private ProgressService $progress) {}
 
     public function index(int $projectId): JsonResponse
@@ -42,7 +45,7 @@ class ProgressPeriodController extends Controller
             'financial_actual_amount' => $fin['amount'],
             'financial_actual_pct' => $fin['pct'],
             'planning_days_completion' => $contract?->possession_date && $contract?->completion_date
-                ? Carbon::parse($contract->possession_date)->diffInDays(Carbon::parse($contract->completion_date)) : null,
+                ? (int) abs(Carbon::parse($contract->possession_date)->diffInDays(Carbon::parse($contract->completion_date))) : null,
         ]);
     }
 
@@ -50,6 +53,7 @@ class ProgressPeriodController extends Controller
     {
         Project::findOrFail($projectId);
         $validated = $this->validatePayload($request, $projectId, null);
+        $validated = $this->dropNullColumns($validated, ['physical_scheduled_pct', 'physical_actual_pct', 'financial_scheduled_pct', 'financial_actual_pct']);
         $validated = $this->progress->compute($validated);
         unset($validated['physical_variance'], $validated['financial_variance']);
         $validated['project_id'] = $projectId;
@@ -62,6 +66,7 @@ class ProgressPeriodController extends Controller
     {
         $period = ProjectProgressPeriod::where('project_id', $projectId)->findOrFail($periodId);
         $validated = $this->validatePayload($request, $projectId, $periodId);
+        $validated = $this->dropNullColumns($validated, ['physical_scheduled_pct', 'physical_actual_pct', 'financial_scheduled_pct', 'financial_actual_pct']);
 
         // Derived fields are recalculated unless the request overrides them: start from the
         // period's own stored fillable attributes (not the appended variance attributes),

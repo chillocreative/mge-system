@@ -18,8 +18,8 @@ return new class extends Migration
 
         $now = now();
         foreach ([
-            ['code' => 'adm', 'name' => 'ADM', 'full_name' => 'Main Issues (Administration)', 'color' => 'slate', 'report_group' => 'adm', 'sort_order' => 10],
-            ['code' => 'ma', 'name' => 'MA', 'full_name' => 'Material Approval', 'color' => 'emerald', 'report_group' => 'ma', 'sort_order' => 11],
+            ['code' => 'adm', 'name' => 'ADM', 'full_name' => 'Main Issues (Administration)', 'color' => 'gray', 'report_group' => 'adm', 'sort_order' => 10],
+            ['code' => 'ma', 'name' => 'MA', 'full_name' => 'Material Approval', 'color' => 'green', 'report_group' => 'ma', 'sort_order' => 11],
             ['code' => 'mos', 'name' => 'MOS', 'full_name' => 'Method of Statement', 'color' => 'indigo', 'report_group' => 'mos', 'sort_order' => 12],
         ] as $row) {
             if (! DB::table('correspondence_types')->where('code', $row['code'])->exists()) {

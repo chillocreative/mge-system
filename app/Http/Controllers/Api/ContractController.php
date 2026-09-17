@@ -25,9 +25,15 @@ class ContractController extends Controller
 
         $files = $request->file('files', []);
         $pics = $validated['pics'] ?? [];
-        unset($validated['files'], $validated['pics']);
+        $wantsMain = (bool) ($validated['is_main'] ?? false);
+        unset($validated['files'], $validated['pics'], $validated['is_main']);
 
         $contract = $this->contractService->create($validated, $request->user()->id, $files, $pics);
+
+        if ($wantsMain) {
+            $this->contractService->setMain($contract->project_id, $contract->id);
+            $contract = $this->contractService->getOne($contract->id);
+        }
 
         return $this->created($contract, 'Contract created successfully.');
     }

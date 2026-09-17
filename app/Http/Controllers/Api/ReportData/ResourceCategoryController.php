@@ -34,7 +34,7 @@ class ResourceCategoryController extends Controller
             'kind' => ['required', 'in:worker,machinery'],
             'rows' => ['present', 'array', 'max:100'],
             'rows.*.group' => ['nullable', 'string', 'max:100'],
-            'rows.*.name' => ['required', 'string', 'max:100', 'distinct'],
+            'rows.*.name' => ['required', 'string', 'max:100', 'distinct:ignore_case'],
             'rows.*.sort_order' => ['nullable', 'integer', 'min:0'],
             'rows.*.active' => ['nullable', 'boolean'],
         ]);

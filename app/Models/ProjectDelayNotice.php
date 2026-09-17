@@ -35,6 +35,6 @@ class ProjectDelayNotice extends Model
         }
         $end = $this->reply_date ?: now()->startOfDay();
 
-        return (int) $this->submitted_date->diffInDays($end);
+        return max(0, (int) $this->submitted_date->diffInDays($end));
     }
 }

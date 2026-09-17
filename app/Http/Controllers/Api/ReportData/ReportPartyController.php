@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\ReportData;
 
+use App\Http\Controllers\Concerns\NormalizesNullableColumns;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\ProjectParty;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\Storage;
 
 class ReportPartyController extends Controller
 {
+    use NormalizesNullableColumns;
+
     private const LOGO_TYPES = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'webp' => 'image/webp'];
 
     private const PARTY_TYPES = 'client,consultant,main_contractor,subcontractor,supplier,authority,other';
@@ -25,6 +28,7 @@ class ReportPartyController extends Controller
     {
         Project::findOrFail($projectId);
         $validated = $this->validatePayload($request, true);
+        $validated = $this->dropNullColumns($validated, ['type', 'sort_order', 'is_active']);
         $contacts = $validated['contacts'] ?? [];
         unset($validated['contacts']);
         $validated['project_id'] = $projectId;
@@ -43,6 +47,7 @@ class ReportPartyController extends Controller
     {
         $party = ProjectParty::where('project_id', $projectId)->findOrFail($partyId);
         $validated = $this->validatePayload($request, false);
+        $validated = $this->dropNullColumns($validated, ['type', 'sort_order', 'is_active']);
         $contacts = array_key_exists('contacts', $validated) ? $validated['contacts'] : null;
         unset($validated['contacts']);
 

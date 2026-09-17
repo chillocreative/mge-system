@@ -100,12 +100,23 @@ class ReportImageController extends Controller
         if (! $info || $info[0] <= $maxWidth) {
             return;
         }
+        // GD decodes into an uncompressed RGBA buffer (~4 bytes/px); budget 5x for
+        // decode + resample buffers so we don't exhaust PHP's memory_limit on a huge photo.
+        $needed = $info[0] * $info[1] * 5;
+        $limit = $this->memoryLimitBytes();
+        if ($limit !== null && $needed > $limit - memory_get_usage(true)) {
+            return;
+        }
         $src = @imagecreatefromstring((string) file_get_contents($absolutePath));
         if (! $src) {
             return;
         }
         $ratio = $maxWidth / $info[0];
         $dst = imagecreatetruecolor($maxWidth, (int) round($info[1] * $ratio));
+        if ($info[2] === IMAGETYPE_PNG) {
+            imagealphablending($dst, false);
+            imagesavealpha($dst, true);
+        }
         imagecopyresampled($dst, $src, 0, 0, 0, 0, $maxWidth, (int) round($info[1] * $ratio), $info[0], $info[1]);
         match ($info[2]) {
             IMAGETYPE_PNG => imagepng($dst, $absolutePath, 6),
@@ -114,5 +125,23 @@ class ReportImageController extends Controller
         };
         imagedestroy($src);
         imagedestroy($dst);
+    }
+
+    /** Parses php.ini `memory_limit` (supports M/G suffixes); null means unlimited (-1). */
+    private function memoryLimitBytes(): ?int
+    {
+        $value = trim((string) ini_get('memory_limit'));
+        if ($value === '' || $value === '-1') {
+            return null;
+        }
+        $unit = strtolower(substr($value, -1));
+        $number = (int) $value;
+
+        return match ($unit) {
+            'g' => $number * 1024 * 1024 * 1024,
+            'm' => $number * 1024 * 1024,
+            'k' => $number * 1024,
+            default => (int) $value,
+        };
     }
 }
