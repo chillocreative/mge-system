@@ -1180,7 +1180,7 @@ class ProgressService
     public function financialActual(int $projectId, Carbon $periodEnd, ?float $contractSum): array
     {
         $amount = (float) ProjectInvoice::where('project_id', $projectId)
-            ->where('type', 'claim')
+            ->where('type', 'client')
             ->whereNotNull('payment_cert_date')
             ->where('payment_cert_date', '<=', $periodEnd->toDateString())
             ->sum('amount');
@@ -1190,7 +1190,7 @@ class ProgressService
     }
 }
 ```
-(Check `project_invoices.type` values in `ProjectInvoiceController` validation; if claims use a different literal, use that.)
+(`project_invoices.type` is `client` for claims to the client and `subcon` for subcontractor invoices — verified in `ProjectInvoiceController`.)
 
 - [ ] **Step 4: Run unit test** — Expected: PASS.
 
