@@ -8,6 +8,7 @@ use App\Services\MonthlyReport\Charts\SCurveSvg;
 use App\Services\MonthlyReport\ReportContext;
 use App\Services\MonthlyReport\SectionRegistry;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 final class PdfExporter
@@ -65,12 +66,19 @@ final class PdfExporter
                 continue;
             }
             $series = $sections[$key]['series'] ?? [];
-            $sections[$key]['chart_svg_uri'] = empty($series['months'])
-                ? null
-                : SCurveSvg::dataUri((new SCurveSvg)->render($series, [
+            $sections[$key]['chart_svg_uri'] = null;
+            if (empty($series['months'])) {
+                continue;
+            }
+            // A malformed override must degrade to "no chart", never abort the whole PDF.
+            try {
+                $sections[$key]['chart_svg_uri'] = SCurveSvg::dataUri((new SCurveSvg)->render($series, [
                     'title' => $chartTitle,
                     'unit' => $key === '2.4' ? 'RM' : '%',
                 ]));
+            } catch (\Throwable $e) {
+                Log::warning("Monthly report chart {$key} could not be rendered: {$e->getMessage()}", ['report_id' => $report->id]);
+            }
         }
 
         if (isset($sections['cover'])) {
