@@ -4,7 +4,11 @@
 <meta charset="utf-8">
 <title>{{ $report->title }}</title>
 <style>
-    @page { margin: 26mm 14mm 18mm 14mm; }
+    @if(($orientation ?? 'portrait') === 'landscape')
+        @page { size: a4 landscape; margin: 22mm 12mm 18mm 12mm; }
+    @else
+        @page { margin: 26mm 14mm 18mm 14mm; }
+    @endif
     body { font-family: 'DejaVu Sans', sans-serif; font-size: 10px; color: #111; }
     table { border-collapse: collapse; }
     .header {
@@ -23,18 +27,6 @@
     .header .title-cell .project-title { font-size: 10px; font-weight: bold; text-transform: uppercase; }
     .header .title-cell .contract-no { font-size: 9px; text-transform: uppercase; margin-top: 2px; }
     .header hr { border: none; border-bottom: 1px solid #111; margin-top: 3px; }
-
-    .footer {
-        position: fixed;
-        bottom: -14mm;
-        left: 0;
-        right: 0;
-        height: 10mm;
-        font-size: 8px;
-    }
-    .footer table { width: 100%; }
-    .footer .left { text-align: left; }
-    .footer .right { text-align: right; }
 
     .section { margin-bottom: 8px; }
     .section-title { font-weight: bold; text-transform: uppercase; font-size: 11px; margin: 6px 0 4px; }
@@ -84,35 +76,31 @@
     <hr>
 </div>
 
-<div class="footer">
-    <table>
-        <tr>
-            <td class="left">Monthly Progress Report No.{{ $report->report_no }}</td>
-            {{-- The visible page number is drawn by PdfExporter::render() via $pdf->getCanvas()->page_text()
-                 after ->render(); this hidden span only keeps a "Page" marker in the plain HTML for html(). --}}
-            <td class="right"><span style="display:none">Page</span></td>
-        </tr>
-    </table>
-</div>
+@php
+    $orderedKeys = $orderedKeys ?? array_keys(array_diff_key($sections, ['cover' => true]));
+    $showCover = $showCover ?? true;
+@endphp
 
-@include('pdf.monthly-report.cover', ['data' => $sections['cover'] ?? ['schema' => 1, 'placeholder' => true]])
+@if($showCover)
+    @include('pdf.monthly-report.cover', ['data' => $sections['cover'] ?? ['schema' => 1, 'placeholder' => true]])
 
-<div class="page-break"></div>
-<div class="section-title">Table of Contents</div>
-<table class="grid avoid">
-    <tr><th>Section</th><th>Title</th></tr>
-    @foreach($titles as $key => $title)
-        @continue($key === 'cover')
-        @continue(! isset($sections[$key]))
-        <tr><td>{{ $key }}</td><td>{{ $title }}</td></tr>
-    @endforeach
-</table>
-
-@foreach($titles as $key => $title)
-    @continue($key === 'cover')
-    @continue(! isset($sections[$key]))
     <div class="page-break"></div>
-    @include('pdf.monthly-report.section', ['key' => $key, 'title' => $title, 'data' => $sections[$key], 'note' => $notes[$key] ?? null])
+    <div class="section-title">Table of Contents</div>
+    <table class="grid avoid">
+        <tr><th>Section</th><th>Title</th></tr>
+        @foreach($tocKeys ?? [] as $key)
+            @continue($key === 'cover')
+            <tr><td>{{ $key }}</td><td>{{ $titles[$key] ?? $key }}</td></tr>
+        @endforeach
+    </table>
+@endif
+
+@foreach($orderedKeys as $key)
+    @continue(! isset($sections[$key]))
+    @unless($loop->first && ! $showCover)
+        <div class="page-break"></div>
+    @endunless
+    @include('pdf.monthly-report.section', ['key' => $key, 'title' => $titles[$key] ?? $key, 'data' => $sections[$key], 'note' => $notes[$key] ?? null, 'orientation' => $orientation ?? 'portrait'])
 @endforeach
 
 </body>

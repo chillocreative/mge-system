@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MonthlyReport;
 use App\Services\MonthlyReport\Export\PdfExporter;
 use App\Services\MonthlyReport\MonthlyReportService;
+use App\Services\MonthlyReport\SectionRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -71,6 +72,8 @@ class MonthlyReportController extends Controller
             'evaluation_date' => ['sometimes', 'nullable', 'date'],
             'signatories' => ['sometimes', 'nullable', 'array'],
             'options' => ['sometimes', 'nullable', 'array'],
+            'options.landscape_sections' => ['sometimes', 'nullable', 'array'],
+            'options.landscape_sections.*' => ['string', Rule::in(array_diff(array_keys(SectionRegistry::all()), ['cover']))],
         ]);
 
         $report = $this->service->update($report, $validated);
@@ -118,12 +121,15 @@ class MonthlyReportController extends Controller
         ini_set('memory_limit', '512M');
 
         $report = MonthlyReport::with(['sections', 'project', 'period'])->findOrFail($reportId);
-        $pdf = $this->pdfExporter->render($report);
+        $bytes = $this->pdfExporter->render($report);
 
         $projectCode = preg_replace('/[^A-Za-z0-9]+/', '-', (string) $report->project?->code) ?: 'project';
         $filename = "MPR-{$projectCode}-No{$report->report_no}.pdf";
 
-        return $pdf->download($filename);
+        return response($bytes, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
     }
 
     public function destroy(MonthlyReport $report): JsonResponse

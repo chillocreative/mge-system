@@ -20,21 +20,60 @@ final class PdfExporter
     /** @var array<int, ReportImage> */
     private array $imageCache = [];
 
-    /** Renders the same Blade view used by render(), returned as a plain HTML string (for tests/inspection). */
-    public function html(MonthlyReport $report): string
+    public function __construct(private PdfMerger $merger) {}
+
+    /**
+     * Renders the layout view for a single chunk, returned as a plain HTML string.
+     *
+     * @param  string[]|null  $keys  When given, only these section keys are rendered (in order); the
+     *                               cover appears only when 'cover' is among them. Null renders every
+     *                               included section (used by tests and the legacy single-document path).
+     */
+    public function html(MonthlyReport $report, ?array $keys = null, string $orientation = 'portrait'): string
     {
-        return view('pdf.monthly-report.layout', $this->viewData($report))->render();
+        $data = $this->viewData($report);
+
+        // Canonical registry order, restricted to sections actually included in this report —
+        // used for the table of contents (always lists the whole report) regardless of chunk.
+        $data['tocKeys'] = array_values(array_intersect(array_keys(SectionRegistry::TITLES), array_keys($data['sections'])));
+
+        if ($keys !== null) {
+            $data['sections'] = array_intersect_key($data['sections'], array_flip($keys));
+            $data['notes'] = array_intersect_key($data['notes'], array_flip($keys));
+            $data['showCover'] = in_array('cover', $keys, true);
+            $data['orderedKeys'] = array_values(array_filter($keys, fn ($key) => $key !== 'cover'));
+        } else {
+            $data['showCover'] = true;
+            $data['orderedKeys'] = array_values(array_filter($data['tocKeys'], fn ($key) => $key !== 'cover'));
+        }
+
+        $data['orientation'] = $orientation;
+
+        return view('pdf.monthly-report.layout', $data)->render();
     }
 
-    public function render(MonthlyReport $report): \Barryvdh\DomPDF\PDF
+    public function render(MonthlyReport $report): string
     {
-        $pdf = Pdf::loadHTML($this->html($report))->setPaper('a4', 'portrait');
-        $pdf->render();
+        $keys = $report->sections->where('include', true)->sortBy('sort_order')->pluck('key')->values()->all();
+        $chunks = OrientationPlanner::plan($keys, $report->options['landscape_sections'] ?? null);
 
-        $canvas = $pdf->getCanvas();
-        $canvas->page_text($canvas->get_width() - 120, $canvas->get_height() - 42, 'Page {PAGE_NUM} of {PAGE_COUNT}', null, 8, [0, 0, 0]);
+        $parts = [];
+        foreach ($chunks as $chunk) {
+            $html = $this->html($report, $chunk['keys'], $chunk['orientation']);
+            $parts[] = ['pdf' => Pdf::loadHTML($html)->setPaper('a4', $chunk['orientation'])->output()];
+            if (in_array('2.5', $chunk['keys'], true)) {
+                $parts = array_merge($parts, $this->ganttParts($report)); // Task 5 fills this in
+            }
+        }
 
-        return $pdf;
+        return $this->merger->merge($parts, "Monthly Progress Report No.{$report->report_no}");
+    }
+
+    /** @return array<int, array{pdf?: string, file?: string}> */
+    private function ganttParts(MonthlyReport $report): array
+    {
+        // Task 5 will insert the uploaded/rendered Gantt chart pages here.
+        return [];
     }
 
     private function viewData(MonthlyReport $report): array

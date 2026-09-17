@@ -8,7 +8,7 @@
     @else
         @php
             try {
-                echo view($partialView, ['data' => $data])->render();
+                echo view($partialView, ['data' => $data, 'orientation' => $orientation ?? 'portrait'])->render();
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('Monthly report section failed to render', ['key' => $key, 'error' => $e->getMessage()]);
                 echo '<p class="placeholder">Section could not be rendered.</p>';

@@ -1,7 +1,9 @@
 @php
     $days = $data['days'] ?? [];
     $rows = $data['rows'] ?? [];
-    $chunks = array_chunk(array_keys($days), 16);
+    $isLandscape = ($orientation ?? 'portrait') === 'landscape';
+    $chunks = $isLandscape ? [array_keys($days)] : array_chunk(array_keys($days), 16);
+    $cellStyle = $isLandscape ? 'font-size:5.5pt; white-space:nowrap;' : '';
 
     $totals = [];
     foreach (array_keys($days) as $i) {
@@ -40,24 +42,24 @@
 @else
     @foreach($chunks as $chunk)
         @php $no = 1; @endphp
-        <table class="grid small avoid">
+        <table class="grid small avoid" @if($isLandscape) style="table-layout:fixed;" @endif>
             <tr>
-                <th rowspan="2">No.</th><th rowspan="2">Description</th>
-                @foreach($monthRunsFor($chunk) as $run)<th colspan="{{ $run['span'] }}">{{ $run['month'] }}</th>@endforeach
+                <th rowspan="2" style="{{ $cellStyle }}">No.</th><th rowspan="2" style="{{ $cellStyle }}">Description</th>
+                @foreach($monthRunsFor($chunk) as $run)<th colspan="{{ $run['span'] }}" style="{{ $cellStyle }}">{{ $run['month'] }}</th>@endforeach
             </tr>
             <tr>
-                @foreach($chunk as $i)<th>{{ $days[$i]['label'] ?? $days[$i]['date'] ?? '' }}</th>@endforeach
+                @foreach($chunk as $i)<th style="{{ $cellStyle }}">{{ $days[$i]['label'] ?? $days[$i]['date'] ?? '' }}</th>@endforeach
             </tr>
             @foreach($rows as $row)
                 <tr class="avoid">
-                    <td>{{ $no++ }}</td>
-                    <td>{{ $row['description'] ?? '' }}</td>
-                    @foreach($chunk as $i)<td>{{ $row['counts'][$i] ?? '-' }}</td>@endforeach
+                    <td style="{{ $cellStyle }}">{{ $no++ }}</td>
+                    <td style="{{ $cellStyle }}">{{ $row['description'] ?? '' }}</td>
+                    @foreach($chunk as $i)<td style="{{ $cellStyle }}">{{ $row['counts'][$i] ?? '-' }}</td>@endforeach
                 </tr>
             @endforeach
             <tr class="avoid">
-                <td colspan="2"><strong>Total</strong></td>
-                @foreach($chunk as $i)<td><strong>{{ empty($totals[$i]) ? '-' : $totals[$i] }}</strong></td>@endforeach
+                <td colspan="2" style="{{ $cellStyle }}"><strong>Total</strong></td>
+                @foreach($chunk as $i)<td style="{{ $cellStyle }}"><strong>{{ empty($totals[$i]) ? '-' : $totals[$i] }}</strong></td>@endforeach
             </tr>
         </table>
     @endforeach

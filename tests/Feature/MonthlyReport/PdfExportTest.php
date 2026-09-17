@@ -95,7 +95,6 @@ class PdfExportTest extends TestCase
         $this->assertStringContainsString('1.1 PROJECT INFORMATION', $html);
         $this->assertStringContainsString('Two Hundred Eighty-Eight Million Ringgit Only', $html);
         $this->assertStringContainsString('MULTI GREEN ENGINEERING SDN BHD', $html);
-        $this->assertStringContainsString('Page', $html);
 
         // 2.5's section title should not appear since include = false.
         $this->assertStringNotContainsString('2.5 ACTUAL WORK PROGRESS', $html);
@@ -116,5 +115,16 @@ class PdfExportTest extends TestCase
         $response->assertOk();
         $response->assertHeader('content-type', 'application/pdf');
         $this->assertStringStartsWith('%PDF', $response->getContent());
+    }
+
+    public function test_render_returns_merged_pdf_with_landscape_pages_and_global_numbering(): void
+    {
+        $report = $this->makeReportWithSeries();
+        $bytes = app(PdfExporter::class)->render($report);
+
+        $this->assertStringStartsWith('%PDF', $bytes);
+        $this->assertMatchesRegularExpression('/MediaBox \[0 0 841\.\d+ 595\.\d+\]/', $bytes); // at least one landscape page
+        $this->assertMatchesRegularExpression('/MediaBox \[0 0 595\.\d+ 841\.\d+\]/', $bytes); // and a portrait one
+        $this->assertStringContainsString('Page 1 of ', $bytes);
     }
 }
