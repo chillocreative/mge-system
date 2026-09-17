@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\MaintenanceController;
 use App\Http\Controllers\Api\MeetingController;
 use App\Http\Controllers\Api\MemoController;
 use App\Http\Controllers\Api\MilestoneController;
+use App\Http\Controllers\Api\MonthlyReportController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PayrollController;
 use App\Http\Controllers\Api\ProfileController;
@@ -186,6 +187,12 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/{period}', [ProgressPeriodController::class, 'destroy'])->middleware('permission:projects.edit');
         });
 
+        // Monthly reports — nested under projects for listing/creating within a project
+        Route::prefix('{project}/monthly-reports')->group(function () {
+            Route::get('/', [MonthlyReportController::class, 'indexForProject'])->middleware('permission:reports.view');
+            Route::post('/', [MonthlyReportController::class, 'store'])->middleware('permission:reports.manage');
+        });
+
         // Delay notices — nested under projects
         Route::prefix('{project}/delay-notices')->middleware('permission:projects.view')->group(function () {
             Route::get('/', [DelayNoticeController::class, 'index']);
@@ -284,6 +291,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [MilestoneController::class, 'globalStore'])->middleware('permission:projects.edit');
         Route::put('/{id}', [MilestoneController::class, 'globalUpdate'])->middleware('permission:projects.edit');
         Route::delete('/{id}', [MilestoneController::class, 'globalDestroy'])->middleware('permission:projects.edit');
+    });
+
+    Route::prefix('monthly-reports')->group(function () {
+        Route::get('/', [MonthlyReportController::class, 'index'])->middleware('permission:reports.view');
+        Route::get('/{report}', [MonthlyReportController::class, 'show'])->middleware('permission:reports.view');
+        Route::put('/{report}', [MonthlyReportController::class, 'update'])->middleware('permission:reports.manage');
+        Route::put('/{report}/sections/{key}', [MonthlyReportController::class, 'saveSection'])->middleware('permission:reports.manage');
+        Route::post('/{report}/regenerate', [MonthlyReportController::class, 'regenerate'])->middleware('permission:reports.manage');
+        Route::post('/{report}/finalise', [MonthlyReportController::class, 'finalise'])->middleware('permission:reports.manage');
+        Route::post('/{report}/reopen', [MonthlyReportController::class, 'reopen'])->middleware('permission:reports.manage');
+        Route::delete('/{report}', [MonthlyReportController::class, 'destroy'])->middleware('permission:reports.manage');
     });
 
     Route::prefix('project-invoices')->group(function () {
