@@ -3,6 +3,7 @@
 namespace Tests\Feature\ReportData;
 
 use App\Models\Project;
+use App\Models\ProjectCorrespondence;
 use App\Models\ProjectDelayNotice;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -64,5 +65,27 @@ class RegistersTest extends TestCase
         $this->actingAs($this->editor)->putJson("/api/projects/{$project->id}/tests/{$id}", ['result' => 'Fail', 'remarks' => 'Retest'])->assertOk();
         $list = $this->actingAs($this->editor)->getJson("/api/projects/{$project->id}/tests")->assertOk();
         $this->assertSame('Fail', $list->json('data.0.result'));
+    }
+
+    public function test_delay_notice_correspondence_scoped_to_project(): void
+    {
+        $p1 = $this->project();
+        $p2 = $this->project();
+        $corr = ProjectCorrespondence::create([
+            'project_id' => $p2->id,
+            'type' => 'rfi',
+            'title' => 'Test Correspondence',
+            'raised_date' => now()->toDateString(),
+        ]);
+
+        // Cross-project correspondence reference should fail with 422
+        $this->actingAs($this->editor)->postJson("/api/projects/{$p1->id}/delay-notices", [
+            'title' => 'Notice', 'submitted_date' => now()->toDateString(), 'correspondence_id' => $corr->id,
+        ])->assertUnprocessable();
+
+        // Same-project correspondence reference should succeed
+        $this->actingAs($this->editor)->postJson("/api/projects/{$p2->id}/delay-notices", [
+            'title' => 'Notice', 'submitted_date' => now()->toDateString(), 'correspondence_id' => $corr->id,
+        ])->assertCreated();
     }
 }

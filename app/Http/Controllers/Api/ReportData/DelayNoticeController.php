@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\ProjectDelayNotice;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class DelayNoticeController extends Controller
 {
@@ -21,7 +22,7 @@ class DelayNoticeController extends Controller
     public function store(int $projectId, Request $request): JsonResponse
     {
         Project::findOrFail($projectId);
-        $validated = $this->validatePayload($request, true);
+        $validated = $this->validatePayload($request, true, $projectId);
         $validated['project_id'] = $projectId;
         $validated['created_by'] = $request->user()->id;
         $validated = $this->dropNullColumns($validated, ['status', 'sort_order']);
@@ -32,7 +33,7 @@ class DelayNoticeController extends Controller
     public function update(int $projectId, int $noticeId, Request $request): JsonResponse
     {
         $notice = ProjectDelayNotice::where('project_id', $projectId)->findOrFail($noticeId);
-        $notice->update($this->dropNullColumns($this->validatePayload($request, false), ['status', 'sort_order']));
+        $notice->update($this->dropNullColumns($this->validatePayload($request, false, $projectId), ['status', 'sort_order']));
 
         return $this->success($notice->fresh(), 'Delay notice updated.');
     }
@@ -44,14 +45,14 @@ class DelayNoticeController extends Controller
         return $this->success(null, 'Delay notice removed.');
     }
 
-    private function validatePayload(Request $request, bool $creating): array
+    private function validatePayload(Request $request, bool $creating, int $projectId): array
     {
         $required = $creating ? 'required' : 'sometimes';
 
         return $request->validate([
             'title' => [$required, 'string', 'max:255'],
             'issue' => ['nullable', 'string'],
-            'correspondence_id' => ['nullable', 'integer'],
+            'correspondence_id' => ['nullable', 'integer', Rule::exists('project_correspondences', 'id')->where('project_id', $projectId)],
             'reg_number' => ['nullable', 'string', 'max:100'],
             'submitted_date' => [$required, 'date'],
             'submitted_via' => ['nullable', 'string', 'max:50'],
