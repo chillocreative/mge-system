@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 /**
  * Panduan Pengguna (User Manual) — Ciri sokongan.
@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
  * halaman log masuk. Kandungan disusun sebagai data supaya senang dikemas kini.
  */
 
-const SECTIONS = [
+const SISTEM_SECTIONS = [
     {
         id: 'bermula',
         title: 'Bermula',
@@ -402,6 +402,256 @@ const SECTIONS = [
     },
 ];
 
+const WEB_SECTIONS = [
+    {
+        id: 'web-mula',
+        title: 'Bermula',
+        icon: '🌐',
+        intro: 'Log masuk ke CMS laman web dan mengenali menu.',
+        groups: [
+            {
+                heading: 'Log masuk ke CMS',
+                steps: [
+                    'Buka pelayar dan pergi ke https://mge-eng.com/cms/wp-admin (log masuk WordPress biasa).',
+                    'Masukkan username/emel dan kata laluan WordPress anda, klik butang log masuk.',
+                    'Pautan "Staff Login" di laman awam (mge-eng.com) adalah untuk log masuk ke MGE-PMS (app.mge-eng.com), BUKAN untuk CMS laman web — jangan keliru dengan dua sistem ini.',
+                ],
+            },
+            {
+                heading: 'Mengenali menu kiri',
+                steps: [
+                    'Menu kiri CMS mengandungi: Services, Projects, Certificates, Activities, Gallery dan Media.',
+                    'Services, Projects, Certificates dan Activities adalah kandungan utama yang dipaparkan di laman web awam.',
+                    'Gallery sudah didaftarkan dalam CMS tetapi belum digunakan di laman web lagi.',
+                    'Pages dan Posts turut wujud dalam WordPress tetapi TIDAK digunakan oleh laman web — abaikan kedua-dua menu ini, sebarang perubahan padanya tidak akan muncul di laman web.',
+                ],
+            },
+        ],
+    },
+    {
+        id: 'web-perkhidmatan',
+        title: 'Perkhidmatan (Services)',
+        icon: '🧩',
+        intro: 'Urus senarai perkhidmatan syarikat yang dipaparkan di laman web.',
+        groups: [
+            {
+                heading: 'Tambah/edit perkhidmatan',
+                steps: [
+                    'Klik "Services" > "Add New" (atau buka rekod sedia ada untuk edit).',
+                    'Isi tajuk dan kandungan utama (main content) dalam editor.',
+                    'Muat naik gambar utama (featured image/thumbnail).',
+                    'Isi excerpt (ringkasan pendek) dan pilih Service Categories yang berkaitan.',
+                ],
+            },
+            {
+                heading: 'Medan ACF (wajib diisi)',
+                steps: [
+                    'Icon Name — pilih dari senarai (wajib).',
+                    'Short Description — teks pendek, maksimum 200 aksara (wajib).',
+                    'Key Features — repeater; klik "Add row" untuk tambah setiap ciri.',
+                    'Display Order — nombor; nombor lebih kecil dipaparkan dahulu.',
+                    'Medan wajib yang dibiarkan kosong akan kelihatan kosong di laman web — pastikan semua diisi sebelum terbitkan.',
+                ],
+            },
+            {
+                heading: 'Di mana ia dipaparkan',
+                steps: [
+                    'Perkhidmatan dipaparkan di halaman Home, halaman Services dan halaman butiran (detail page) perkhidmatan berkenaan.',
+                ],
+            },
+        ],
+    },
+    {
+        id: 'web-projek',
+        title: 'Projek (Projects)',
+        icon: '🏢',
+        intro: 'Urus senarai projek yang dipaparkan di laman web.',
+        groups: [
+            {
+                heading: 'Tambah/edit projek',
+                steps: [
+                    'Klik "Projects" > "Add New" (atau buka rekod sedia ada untuk edit).',
+                    'Isi tajuk, kandungan (content) dan muat naik gambar utama (featured image).',
+                    'Pilih Project Categories yang berkaitan.',
+                ],
+            },
+            {
+                heading: 'Medan ACF (wajib diisi)',
+                steps: [
+                    'Location — wajib.',
+                    'Start Date dan Completion Date — Completion Date wajib.',
+                    'Project Owner dan Project Value (RM).',
+                    'Scope of Work — keterangan skop kerja.',
+                    'Photo 1 hingga Photo 5 — muat naik gambar projek.',
+                    'Status — pilih salah satu: "Current-In Progress", "Current-Upcoming" atau "Previous-Completed".',
+                    'Featured Project — tandakan "true" jika mahu projek ini dipaparkan di halaman Home.',
+                ],
+            },
+            {
+                heading: 'Di mana ia dipaparkan',
+                steps: [
+                    'Halaman Projects memaparkan projek secara berasingan: Current (In Progress/Upcoming) dan Previous (Completed), mengikut medan Status.',
+                    'Projek yang ditanda Featured Project akan muncul di halaman Home.',
+                ],
+            },
+        ],
+    },
+    {
+        id: 'web-sijil',
+        title: 'Sijil (Certificates)',
+        icon: '🎖️',
+        intro: 'Urus senarai sijil dan pengiktirafan syarikat.',
+        groups: [
+            {
+                heading: 'Tambah/edit sijil',
+                steps: [
+                    'Klik "Certificates" > "Add New" (atau buka rekod sedia ada untuk edit).',
+                    'Isi tajuk sijil.',
+                ],
+            },
+            {
+                heading: 'Medan ACF (wajib diisi)',
+                steps: [
+                    'Icon — pilih dari senarai (wajib).',
+                    'Category — wajib.',
+                    'Issuer — pihak yang mengeluarkan sijil (wajib).',
+                    'Summary — ringkasan sijil (wajib).',
+                    'Details — repeater label/value, maksimum 6 baris.',
+                    'Status/Validity — status sah laku sijil.',
+                    'Display Order — nombor; nombor lebih kecil dipaparkan dahulu.',
+                ],
+            },
+            {
+                heading: 'Di mana ia dipaparkan',
+                steps: [
+                    'Sijil dipaparkan di halaman Certificates.',
+                ],
+            },
+        ],
+    },
+    {
+        id: 'web-aktiviti',
+        title: 'Aktiviti (Activities)',
+        icon: '📸',
+        intro: 'Urus rekod aktiviti dan acara syarikat.',
+        groups: [
+            {
+                heading: 'Tambah/edit aktiviti',
+                steps: [
+                    'Klik "Activities" > "Add New" (atau buka rekod sedia ada untuk edit).',
+                    'Isi tajuk dan kandungan (content), muat naik gambar utama (featured image).',
+                ],
+            },
+            {
+                heading: 'Medan ACF',
+                steps: [
+                    'Photo 1 hingga Photo 8 — muat naik gambar aktiviti.',
+                    'Display Order — nombor; nombor lebih kecil dipaparkan dahulu.',
+                ],
+            },
+            {
+                heading: 'Di mana ia dipaparkan',
+                steps: [
+                    'Aktiviti dipaparkan di halaman Activity dan halaman butiran (detail page) aktiviti berkenaan.',
+                ],
+            },
+        ],
+    },
+    {
+        id: 'web-media',
+        title: 'Gambar & Media',
+        icon: '🖼️',
+        intro: 'Panduan memuat naik dan menguruskan gambar.',
+        groups: [
+            {
+                heading: 'Muat naik gambar',
+                steps: [
+                    'Gambar boleh dimuat naik terus melalui menu "Media", atau terus dari medan gambar (photo field) semasa mengedit Service/Project/Activity/Certificate.',
+                    'Guna format JPG, PNG atau WebP.',
+                    'Mampatkan (compress) gambar besar supaya bersaiz beberapa ratus KB sahaja — elakkan gambar bersaiz beberapa MB.',
+                    'Namakan fail dengan nama yang jelas dan mudah difahami (cth: "tapak-projek-a-1.jpg"), bukan nama automatik kamera.',
+                ],
+            },
+        ],
+    },
+    {
+        id: 'web-terbit',
+        title: 'Menerbitkan & Melihat Perubahan',
+        icon: '🚀',
+        intro: 'Bagaimana dan bila perubahan CMS kelihatan di laman web.',
+        groups: [
+            {
+                heading: 'Bagaimana perubahan sampai ke laman web',
+                steps: [
+                    'Laman web awam (mge-eng.com) adalah laman statik yang DIBINA SEMULA (rebuild) — ia TIDAK dipaparkan terus daripada WordPress secara langsung.',
+                    'Menerbitkan atau mengemas kini rekod Project, Service atau Gallery akan mencetuskan rebuild automatik.',
+                    'Satu notis akan muncul dalam WP admin apabila rebuild dicetuskan.',
+                    'Perubahan akan kelihatan di laman web dalam masa lebih kurang 2–3 minit; terdapat "debounce" 2 minit supaya beberapa kali edit pantas digabungkan menjadi satu rebuild.',
+                ],
+            },
+            {
+                heading: 'Aktiviti dan Sijil — perlu tindakan tambahan',
+                steps: [
+                    'Menerbitkan atau mengemas kini Activity atau Certificate TIDAK mencetuskan rebuild automatik.',
+                    'Selepas mengedit Activity atau Certificate, maklumkan kepada developer/admin untuk jalankan rebuild.',
+                    'Alternatif: buat dan simpan sedikit perubahan kecil pada mana-mana Project atau Service untuk mencetuskan rebuild.',
+                    'Jangan jangka perubahan terus kelihatan selepas "refresh" — beri masa 2–3 minit selepas rebuild dicetuskan.',
+                ],
+            },
+        ],
+    },
+    {
+        id: 'web-borang',
+        title: 'Borang Hubungi & Perkara yang Perlu Dielakkan',
+        icon: '📬',
+        intro: 'Cara borang hubungi berfungsi dan sebab-sebab elak buat perubahan tertentu.',
+        groups: [
+            {
+                heading: 'Borang Hubungi (Contact form)',
+                steps: [
+                    'Penghantaran dari borang di halaman Contact akan dihantar terus ke emel admin laman web.',
+                    'Penghantaran borang TIDAK disimpan dalam WordPress — semak peti emel admin secara berkala supaya tiada pertanyaan pelanggan terlepas.',
+                ],
+            },
+            {
+                heading: 'Apa yang TIDAK boleh diedit dalam CMS',
+                steps: [
+                    'Teks "About Us" dan gambar pasukan (team photos).',
+                    'Privacy Policy.',
+                    'Alamat, telefon, emel dan peta di halaman Contact.',
+                    'Menu navigasi dan footer laman web.',
+                    'Semua di atas berada dalam kod laman web — hubungi developer untuk perubahan.',
+                ],
+            },
+            {
+                heading: 'Perkara yang perlu dielakkan',
+                steps: [
+                    'Jangan tukar "slug" (pautan URL) rekod sedia ada tanpa keperluan — ini akan mematahkan pautan sedia ada.',
+                    'Jangan padam rekod yang sedang dipaparkan di laman web tanpa gantinya.',
+                    'Pastikan semua medan wajib diisi — medan wajib yang kosong akan kelihatan kosong di laman web.',
+                    'Jangan tukar tema (theme) WordPress atau nyahaktifkan plugin "MGE Headless Core" atau "Advanced Custom Fields" — ini akan merosakkan laman web.',
+                    'Jangan edit Pages atau Posts dalam WordPress dengan jangkaan ia akan muncul di laman web — ia tidak digunakan.',
+                ],
+            },
+        ],
+    },
+];
+
+const MANUALS = {
+    sistem: {
+        label: 'Sistem MGE-PMS',
+        tagline: 'Panduan ringkas cara menggunakan setiap modul. Cari topik di bawah, atau pilih modul di menu sisi.',
+        placeholder: 'Cari topik… (cth: cuti, BQ, jentera)',
+        sections: SISTEM_SECTIONS,
+    },
+    web: {
+        label: 'Laman Web mge-eng.com',
+        tagline: 'Panduan ringkas menguruskan kandungan laman web syarikat melalui CMS. Cari topik di bawah, atau pilih bahagian di menu sisi.',
+        placeholder: 'Cari topik… (cth: projek, perkhidmatan, gambar)',
+        sections: WEB_SECTIONS,
+    },
+};
+
 // Serlahkan (highlight) padanan carian dalam teks.
 function Highlight({ text, query }) {
     if (!query) return text;
@@ -417,17 +667,32 @@ function Highlight({ text, query }) {
 }
 
 export default function Panduan() {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const initialManual = searchParams.get('manual') === 'web' ? 'web' : 'sistem';
+    const [manual, setManual] = useState(initialManual);
     const [query, setQuery] = useState('');
-    const [active, setActive] = useState(SECTIONS[0].id);
+    const [active, setActive] = useState(MANUALS[initialManual].sections[0].id);
     const [menuOpen, setMenuOpen] = useState(false);
     const searchRef = useRef(null);
 
+    const current = MANUALS[manual];
     const q = query.trim().toLowerCase();
+
+    const switchManual = (key) => {
+        if (key === manual) return;
+        setManual(key);
+        setQuery('');
+        setActive(MANUALS[key].sections[0].id);
+        setMenuOpen(false);
+        const next = new URLSearchParams(searchParams);
+        if (key === 'sistem') next.delete('manual'); else next.set('manual', key);
+        setSearchParams(next, { replace: true });
+    };
 
     // Tapis modul, kumpulan dan langkah mengikut carian.
     const filtered = useMemo(() => {
-        if (!q) return SECTIONS;
-        return SECTIONS
+        if (!q) return current.sections;
+        return current.sections
             .map((s) => {
                 const sectionMatch = s.title.toLowerCase().includes(q) || s.intro.toLowerCase().includes(q);
                 const groups = s.groups
@@ -440,7 +705,7 @@ export default function Panduan() {
                 return { ...s, groups };
             })
             .filter((s) => s.groups.length > 0);
-    }, [q]);
+    }, [q, current.sections]);
 
     const totalHits = useMemo(() => {
         if (!q) return 0;
@@ -457,9 +722,9 @@ export default function Panduan() {
             },
             { rootMargin: '-96px 0px -60% 0px', threshold: [0, 0.25, 0.5, 1] },
         );
-        SECTIONS.forEach((s) => { const el = document.getElementById(s.id); if (el) obs.observe(el); });
+        current.sections.forEach((s) => { const el = document.getElementById(s.id); if (el) obs.observe(el); });
         return () => obs.disconnect();
-    }, [q]);
+    }, [q, current.sections]);
 
     // Pintasan papan kekunci "/" untuk fokus ke carian.
     useEffect(() => {
@@ -502,8 +767,19 @@ export default function Panduan() {
                 {/* Hero + search */}
                 <div className="mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 to-green-700 p-6 text-white shadow-sm sm:p-8">
                     <h1 className="text-2xl font-bold sm:text-3xl">Panduan Pengguna MGE-PMS</h1>
-                    <p className="mt-2 max-w-2xl text-sm text-emerald-50/90">
-                        Panduan ringkas cara menggunakan setiap modul. Cari topik di bawah, atau pilih modul di menu sisi.
+                    <div className="mt-4 inline-flex rounded-full bg-white/10 p-1">
+                        {Object.entries(MANUALS).map(([key, m]) => (
+                            <button
+                                key={key}
+                                onClick={() => switchManual(key)}
+                                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${manual === key ? 'bg-white text-emerald-700' : 'text-white hover:bg-white/20'}`}
+                            >
+                                {m.label}
+                            </button>
+                        ))}
+                    </div>
+                    <p className="mt-4 max-w-2xl text-sm text-emerald-50/90">
+                        {current.tagline}
                     </p>
                     <div className="relative mt-5 max-w-xl">
                         <svg className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" /></svg>
@@ -512,7 +788,7 @@ export default function Panduan() {
                             type="text"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
-                            placeholder="Cari topik… (cth: cuti, BQ, jentera)"
+                            placeholder={current.placeholder}
                             className="w-full rounded-xl border border-white bg-white py-3.5 pl-11 pr-10 text-sm font-medium text-slate-900 shadow-xl ring-1 ring-black/10 placeholder:font-normal placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                         {query && (
@@ -532,7 +808,7 @@ export default function Panduan() {
                         <nav className="lg:sticky lg:top-24">
                             <p className="mb-2 px-3 text-xs font-bold uppercase tracking-wider text-slate-400">Kandungan</p>
                             <ul className="space-y-0.5">
-                                {SECTIONS.map((s) => {
+                                {current.sections.map((s) => {
                                     const visible = !q || filtered.some((f) => f.id === s.id);
                                     return (
                                         <li key={s.id}>
