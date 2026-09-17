@@ -248,33 +248,23 @@ The following memory entries were copied from Claude Code's project memory.
 
 ## Memory index
 
-- [100% qwen coding delegation](qwen-100-percent-coding-delegation.md) — for this project, Claude never writes code directly: plan/review/find bugs only, qwen-agent authors every patch
+- [Delegation: Opus lead, Sonnet 5 coder, qwen overflow](delegation-opus-lead-sonnet-coder.md) — since 2026-09-16; supersedes the old 100%-qwen rule
 
-## qwen-100-percent-coding-delegation
+## delegation-opus-lead-sonnet-coder
 
 ---
-name: qwen-100-percent-coding-delegation
-description: "User wants 100% of code authorship delegated to qwen-agent for this project — Claude does planning, code review, and bug-finding only, never originates code itself"
-metadata: 
-  node_type: memory
+name: delegation-opus-lead-sonnet-coder
+description: "Delegation model for mge-system since 2026-09-16: Opus leads, Sonnet 5 is the coding subagent (via Agent tool), qwen-agent is spawned only when additional subagents are needed. Supersedes the older 100%-qwen rule."
+metadata:
   type: feedback
-  originSessionId: a6f0173d-1481-49c3-843c-dee2ba136d68
-  modified: 2026-09-13T16:03:39.883Z
 ---
 
-For the mge-system project, the user has explicitly tightened the delegation model beyond what the global `~/.claude/CLAUDE.md` and project `CLAUDE.md` already describe: **all code authorship — new code and bug fixes alike — must be written by `qwen-agent`, not by Claude.** Claude's role is scoped to: planning/architecture decisions, scoping and writing the task prompt for qwen, reviewing qwen's output for correctness/quality, and diagnosing bugs (root cause) before handing the fix description to qwen.
+For mge-system (as of 2026-09-16): **Opus is the lead orchestrator, Sonnet 5 is the primary coding subagent, qwen-agent is the extra/overflow coder.**
 
-This removes the "trivial one-liner, no round-trip needed" exception that the global CLAUDE.md otherwise allows — for this project, even small fixes go through qwen first.
+- Lead (Opus, the top-level session): understands the task, decides architecture, writes narrow task prompts, reviews diffs, runs Pint/tests/`npm run build`, commits/pushes.
+- Primary coder: **Sonnet 5 spawned via the Agent tool**. It authors the implementation directly — a Sonnet implementer subagent writes code itself; it does not have to route through `php artisan qwen:agent`.
+- Overflow: when more than one subagent is needed in parallel, or Sonnet is not a good fit, spawn `qwen-agent` (`php artisan qwen:agent <task.txt> --context=...`) for the additional work. qwen is read-only, so the lead still applies its diff.
 
-**What still has to be done directly by Claude, because qwen-agent is structurally incapable of it** (it is read-only and has no shell/file-write access — confirmed and accepted by the user when this was made explicit):
-- Applying qwen's proposed patch to the actual file (Edit/Write tool)
-- Running builds/tests/migrations to verify the patch
-- git add/commit/push and other repo operations
-- Browser-based visual verification
+**Why:** On 2026-09-16 the user stated the rule explicitly: "opus will lead and sonnet 5 will be sub agent, if require more sub agent, spawn qwen." This replaces the earlier `qwen-100-percent-coding-delegation` rule from 2026-09-13, which is retired.
 
-Established working pattern (used successfully once already, see the "My Tasks" panel dead-CSS-class fix on 2026-09-13): Claude finds/diagnoses an issue → writes a precise task prompt to `storage/app/qwen-tasks/*.txt` describing the bug and the required fix shape → runs `qwen-agent <task>.txt --context=<file> --out=<out>.md` → Claude reviews qwen's proposed diff critically (round 1 had a subtle redundant-class issue Claude caught and sent back) → iterates with qwen until the fix is clean → Claude applies it → Claude verifies (build + visual check).
-
-**Why:** the user wants to keep tight control over cost/spend by using the cheaper qwen model for all code generation, while relying on Claude specifically for judgment — architecture, review, and catching what a less capable model gets wrong or produces imperfectly, exactly as demonstrated in the "My Tasks" fix round-trip.
-
-See also [[mge-system-project-overview]] if that memory exists, and the project's own `CLAUDE.md` "Qwen sub-agent" section for the mechanics (`qwen-agent` CLI location, env config, `storage/app/qwen-tasks/` scratch dir).
-
+**How to apply:** For any non-trivial code change in this repo, delegate authorship to a Sonnet 5 Agent first, not to qwen. Reach for qwen only as a second/parallel coder. Keep verification with the lead: every subagent report is a claim to re-run. Still commit `public/build/**` after any `resources/js` change — production never runs vite.
