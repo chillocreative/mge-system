@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\MaintenanceController;
 use App\Http\Controllers\Api\MeetingController;
 use App\Http\Controllers\Api\MemoController;
 use App\Http\Controllers\Api\MilestoneController;
+use App\Http\Controllers\Api\MonthlyReportAssetController;
 use App\Http\Controllers\Api\MonthlyReportController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PayrollController;
@@ -295,6 +296,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('monthly-reports')->group(function () {
         Route::get('/', [MonthlyReportController::class, 'index'])->middleware('permission:reports.view');
+        Route::prefix('{report}/assets')->group(function () {
+            Route::get('/', [MonthlyReportAssetController::class, 'index'])->middleware('permission:reports.view');
+            Route::post('/', [MonthlyReportAssetController::class, 'store'])->middleware('permission:reports.manage');
+            Route::put('/{asset}', [MonthlyReportAssetController::class, 'update'])->middleware('permission:reports.manage');
+            Route::delete('/{asset}', [MonthlyReportAssetController::class, 'destroy'])->middleware('permission:reports.manage');
+        });
         Route::get('/{report}/export/pdf', [MonthlyReportController::class, 'exportPdf'])->middleware('permission:reports.view');
         Route::get('/{report}', [MonthlyReportController::class, 'show'])->middleware('permission:reports.view');
         Route::put('/{report}', [MonthlyReportController::class, 'update'])->middleware('permission:reports.manage');

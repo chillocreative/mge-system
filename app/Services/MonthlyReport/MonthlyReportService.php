@@ -9,6 +9,7 @@ use App\Services\ReportData\ProgressService;
 use App\Support\ReportPeriod;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 final class MonthlyReportService
@@ -117,6 +118,10 @@ final class MonthlyReportService
     {
         if ($r->isFinal()) {
             throw ValidationException::withMessages(['report' => ['Finalised reports cannot be deleted.']]);
+        }
+
+        foreach ($r->assets as $asset) {
+            Storage::disk('local')->delete($asset->file_path);
         }
 
         $r->delete();

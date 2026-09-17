@@ -64,12 +64,20 @@ final class PdfExporter
         $chunks = OrientationPlanner::plan($keys, $report->options['landscape_sections'] ?? null);
 
         $parts = [];
+        $ganttInserted = false;
         foreach ($chunks as $chunk) {
             $html = $this->html($report, $chunk['keys'], $chunk['orientation']);
             $parts[] = ['pdf' => Pdf::loadHTML($html)->setPaper('a4', $chunk['orientation'])->output()];
             if (in_array('2.5', $chunk['keys'], true)) {
-                $parts = array_merge($parts, $this->ganttParts($report)); // Task 5 fills this in
+                $parts = array_merge($parts, $this->ganttParts($report));
+                $ganttInserted = true;
             }
+        }
+
+        // Section 2.5 is excluded from most reports by default, but uploaded Gantt pages should
+        // still be appended even when there is no 2.5 chunk to anchor them to.
+        if (! $ganttInserted) {
+            $parts = array_merge($parts, $this->ganttParts($report));
         }
 
         return $this->merger->merge($parts, "Monthly Progress Report No.{$report->report_no}");
@@ -78,8 +86,29 @@ final class PdfExporter
     /** @return array<int, array{pdf?: string, file?: string}> */
     private function ganttParts(MonthlyReport $report): array
     {
-        // Task 5 will insert the uploaded/rendered Gantt chart pages here.
-        return [];
+        $assets = $report->assets()->where('kind', 'gantt_page')->orderBy('sort_order')->orderBy('id')->get();
+
+        $parts = [];
+        foreach ($assets as $asset) {
+            $ext = strtolower($asset->extension ?? pathinfo($asset->file_path, PATHINFO_EXTENSION));
+
+            if ($ext === 'pdf') {
+                $parts[] = ['file' => Storage::disk('local')->path($asset->file_path)];
+
+                continue;
+            }
+
+            $mime = self::IMAGE_MIME[$ext] ?? null;
+            if (! $mime || ! Storage::disk('local')->exists($asset->file_path)) {
+                continue;
+            }
+
+            $uri = 'data:'.$mime.';base64,'.base64_encode(Storage::disk('local')->get($asset->file_path));
+            $html = view('pdf.monthly-report.asset-image', ['uri' => $uri])->render();
+            $parts[] = ['pdf' => Pdf::loadHTML($html)->setPaper('a4', 'landscape')->output()];
+        }
+
+        return $parts;
     }
 
     private function viewData(MonthlyReport $report): array
