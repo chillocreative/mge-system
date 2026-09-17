@@ -627,6 +627,8 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
     const [editingId, setEditingId] = useState(null);
     const [form, setForm] = useState(emptySiteLogForm());
     const [saving, setSaving] = useState(false);
+    const [pendingFiles, setPendingFiles] = useState([]);
+    const [editingAttachments, setEditingAttachments] = useState([]);
     const [sites, setSites] = useState([]);
     const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
     const [uploadingLogId, setUploadingLogId] = useState(null);
@@ -675,6 +677,8 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
     const openCreate = () => {
         setEditingId(null);
         setForm(emptySiteLogForm());
+        setPendingFiles([]);
+        setEditingAttachments([]);
         setShowForm(true);
     };
 
@@ -692,6 +696,8 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
             machinery: (log.machinery || []).map((m) => ({ machinery_type: m.machinery_type, quantity: m.quantity, vehicle_id: m.vehicle_id || null })),
             weather_events: (log.weather_events || []).map((w) => ({ condition: w.condition, event_time: (w.event_time || '').slice(0, 5) })),
         });
+        setPendingFiles([]);
+        setEditingAttachments(log.attachments || []);
         setShowForm(true);
     };
 
@@ -703,16 +709,29 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
             site_id: form.site_id || null,
         };
         try {
+            let savedLogId = editingId;
             if (editingId) {
                 await projectService.updateSiteLog(project.id, editingId, payload);
                 toast.success('Site log updated');
             } else {
-                await projectService.createSiteLog(project.id, payload);
+                const res = await projectService.createSiteLog(project.id, payload);
+                savedLogId = res.data.id;
                 toast.success('Site log created');
+            }
+            if (pendingFiles.length > 0) {
+                try {
+                    const fd = new FormData();
+                    pendingFiles.forEach((f) => fd.append('files[]', f));
+                    await projectService.uploadSiteLogFile(project.id, savedLogId, fd);
+                } catch {
+                    toast.error('Log saved, but attachments failed to upload');
+                }
             }
             setShowForm(false);
             setEditingId(null);
             setForm(emptySiteLogForm());
+            setPendingFiles([]);
+            setEditingAttachments([]);
             onRefresh();
         } catch (err) {
             toast.error(err.response?.data?.message || (editingId ? 'Failed to update site log' : 'Failed to create site log'));
@@ -888,8 +907,33 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                         <textarea placeholder="Issues / Concerns" value={form.issues} onChange={(e) => setForm({ ...form, issues: e.target.value })} rows={2} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                         <textarea placeholder="Safety notes" value={form.safety_notes} onChange={(e) => setForm({ ...form, safety_notes: e.target.value })} rows={2} className="sm:col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                     </div>
+
+                    <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
+                        <p className="text-xs font-semibold uppercase text-gray-500">Attachments</p>
+                        <p className="mb-2 text-[11px] text-gray-400">Photos, PDFs or documents for this day's log</p>
+                        {editingAttachments.length === 0 && pendingFiles.length === 0 ? (
+                            <p className="text-xs text-gray-400">No attachments yet</p>
+                        ) : (
+                            <div className="mb-2 flex flex-wrap gap-1.5">
+                                {editingAttachments.map((f) => (
+                                    <span key={f.id} className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600">{f.original_name}</span>
+                                ))}
+                                {pendingFiles.map((f, i) => (
+                                    <span key={`${f.name}-${i}`} className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2 py-0.5 text-[11px] text-primary-700">
+                                        {f.name}
+                                        <button type="button" onClick={() => setPendingFiles((p) => p.filter((_, idx) => idx !== i))} className="text-primary-600 hover:text-primary-900"><HiOutlineX className="h-3 w-3" /></button>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                        <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                            <HiOutlineUpload className="h-3.5 w-3.5" /> Choose files
+                            <input type="file" multiple className="hidden" onChange={(e) => { setPendingFiles((p) => [...p, ...Array.from(e.target.files)]); e.target.value = ''; }} />
+                        </label>
+                    </div>
+
                     <div className="mt-3 flex justify-end gap-2">
-                        <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
+                        <button type="button" onClick={() => { setShowForm(false); setEditingId(null); setPendingFiles([]); setEditingAttachments([]); }} className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
                         <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Saving...' : editingId ? 'Update' : 'Create'}</button>
                     </div>
                 </form>
@@ -958,7 +1002,7 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                                         key={f.id}
                                         href={`/api/projects/${project.id}/site-logs/${log.id}/attachments/${f.id}/download`}
                                         target="_blank"
-                                        rel="noreferrer"
+                                        rel="noopener"
                                         className="rounded-full bg-primary-50 px-2 py-0.5 text-[11px] text-primary-700 hover:bg-primary-100"
                                     >
                                         {f.original_name}

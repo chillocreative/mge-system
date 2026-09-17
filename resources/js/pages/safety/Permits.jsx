@@ -276,7 +276,7 @@ export default function Permits() {
                                                 <li key={f.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
                                                     <span className="min-w-0 flex-1 truncate text-gray-700">{f.original_name}</span>
                                                     <span className="shrink-0 text-xs text-gray-400">{fmtSize(f.size_bytes)}</span>
-                                                    <a href={`/api/safety/permits/${form.id}/attachments/${f.id}/download`} target="_blank" rel="noreferrer" className="shrink-0 text-xs font-medium text-primary-600 hover:text-primary-700">Download</a>
+                                                    <a href={`/api/safety/permits/${form.id}/attachments/${f.id}/download`} target="_blank" rel="noopener" className="shrink-0 text-xs font-medium text-primary-600 hover:text-primary-700">Download</a>
                                                 </li>
                                             ))}
                                         </ul>

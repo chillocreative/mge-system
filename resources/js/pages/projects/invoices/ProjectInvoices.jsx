@@ -366,7 +366,7 @@ export default function ProjectInvoices() {
                                         <td className="whitespace-nowrap px-4 py-3 text-right">
                                             <div className="flex items-center justify-end gap-1">
                                                 {inv.files?.map((f) => (
-                                                    <a key={f.id} href={projectInvoiceService.getFileDownloadUrl(f.id)} target="_blank" rel="noreferrer" title={f.file_name}
+                                                    <a key={f.id} href={projectInvoiceService.getFileDownloadUrl(f.id)} target="_blank" rel="noopener" title={f.file_name}
                                                         className="rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600"><HiOutlineDownload className="h-4 w-4" /></a>
                                                 ))}
                                                 {canEdit && <button onClick={() => openEdit(inv)} title="Edit" className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><HiOutlinePencil className="h-4 w-4" /></button>}
@@ -536,7 +536,7 @@ export default function ProjectInvoices() {
                                     <ul className="mt-2 space-y-1">
                                         {existingFiles.map((f) => (
                                             <li key={f.id} className="flex items-center justify-between gap-2 rounded bg-gray-50 px-2 py-1 text-xs text-gray-600">
-                                                <a href={projectInvoiceService.getFileDownloadUrl(f.id)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700"><HiOutlineDownload className="h-3.5 w-3.5" />{f.file_name}</a>
+                                                <a href={projectInvoiceService.getFileDownloadUrl(f.id)} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700"><HiOutlineDownload className="h-3.5 w-3.5" />{f.file_name}</a>
                                                 <button type="button" onClick={() => deleteExistingFile(f.id)} className="text-gray-400 hover:text-red-600"><HiOutlineTrash className="h-3.5 w-3.5" /></button>
                                             </li>
                                         ))}

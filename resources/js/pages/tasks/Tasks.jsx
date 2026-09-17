@@ -386,7 +386,7 @@ export default function Tasks() {
                                         <ul className="space-y-1">
                                             {detail.attachments.map((a) => (
                                                 <li key={a.id}>
-                                                    <a href={a.download_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700">
+                                                    <a href={a.download_url} target="_blank" rel="noopener" className="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700">
                                                         <HiOutlineDownload className="h-4 w-4" /> {a.file_name}
                                                     </a>
                                                 </li>

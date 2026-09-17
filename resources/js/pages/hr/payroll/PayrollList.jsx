@@ -150,7 +150,7 @@ export default function PayrollList() {
                                         <td className="whitespace-nowrap px-4 py-3 text-right">
                                             <div className="flex items-center justify-end gap-1">
                                                 <Link to={`/hr/payroll/${r.id}`} className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="View"><HiOutlineEye className="h-4 w-4" /></Link>
-                                                <a href={payrollService.payslipUrl(r.id)} target="_blank" rel="noreferrer" className="rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600" title="Payslip PDF"><HiOutlineDocumentDownload className="h-4 w-4" /></a>
+                                                <a href={payrollService.payslipUrl(r.id)} target="_blank" rel="noopener" className="rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600" title="Payslip PDF"><HiOutlineDocumentDownload className="h-4 w-4" /></a>
                                                 {can('payroll.approve') && r.status === 'draft' && (
                                                     <button onClick={() => act(payrollService.approve, r.id, 'Approved')} className="rounded p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600" title="Approve"><HiOutlineCheck className="h-4 w-4" /></button>
                                                 )}

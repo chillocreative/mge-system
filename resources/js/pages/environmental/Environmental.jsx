@@ -276,7 +276,7 @@ function InspectionsTable({ items, onView }) {
                             <td className="px-4 py-3 text-sm text-gray-500">{formatDate(i.inspection_date)}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{i.inspector?.first_name} {i.inspector?.last_name}</td>
                             <td className="px-4 py-3 text-right">
-                                <a href={environmentalService.getInspectionPdfUrl(i.id)} target="_blank" rel="noreferrer"
+                                <a href={environmentalService.getInspectionPdfUrl(i.id)} target="_blank" rel="noopener"
                                     onClick={e => e.stopPropagation()} className="text-emerald-600 hover:text-emerald-800">
                                     <HiOutlineDownload className="inline h-4 w-4" />
                                 </a>
@@ -316,7 +316,7 @@ function AuditsTable({ items, onView }) {
                             <td className="px-4 py-3 text-sm text-gray-500">{formatDate(a.audit_date)}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{a.auditor?.first_name} {a.auditor?.last_name}</td>
                             <td className="px-4 py-3 text-right">
-                                <a href={environmentalService.getAuditPdfUrl(a.id)} target="_blank" rel="noreferrer"
+                                <a href={environmentalService.getAuditPdfUrl(a.id)} target="_blank" rel="noopener"
                                     onClick={e => e.stopPropagation()} className="text-emerald-600 hover:text-emerald-800">
                                     <HiOutlineDownload className="inline h-4 w-4" />
                                 </a>
@@ -512,7 +512,7 @@ function InspectionDetail({ id, onBack, canManage, onUpdated }) {
                         <h2 className="text-xl font-bold text-gray-900">{record.title}</h2>
                         <div className="mt-2"><Badge text={record.overall_status} colorMap={inspStatusColors} /></div>
                     </div>
-                    <a href={environmentalService.getInspectionPdfUrl(id)} target="_blank" rel="noreferrer"
+                    <a href={environmentalService.getInspectionPdfUrl(id)} target="_blank" rel="noopener"
                         className="rounded-lg border px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
                         <HiOutlineDownload className="inline h-4 w-4 mr-1" />PDF
                     </a>
@@ -580,7 +580,7 @@ function AuditDetail({ id, onBack, canManage, onUpdated }) {
                         <h2 className="text-xl font-bold text-gray-900">{record.title}</h2>
                         <div className="mt-2"><Badge text={record.status} colorMap={auditStatusColors} /></div>
                     </div>
-                    <a href={environmentalService.getAuditPdfUrl(id)} target="_blank" rel="noreferrer"
+                    <a href={environmentalService.getAuditPdfUrl(id)} target="_blank" rel="noopener"
                         className="rounded-lg border px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
                         <HiOutlineDownload className="inline h-4 w-4 mr-1" />PDF
                     </a>

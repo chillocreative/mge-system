@@ -193,7 +193,7 @@ export default function Memo() {
                                 <ul className="space-y-1.5">
                                     {reading.attachments.map((a) => (
                                         <li key={a.id}>
-                                            <a href={memoService.attachmentUrl(reading.id, a.id)} target="_blank" rel="noreferrer"
+                                            <a href={memoService.attachmentUrl(reading.id, a.id)} target="_blank" rel="noopener"
                                                 className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                                 <span className="flex min-w-0 items-center gap-2"><HiOutlinePaperClip className="h-4 w-4 shrink-0 text-gray-400" /><span className="truncate">{a.file_name}</span></span>
                                                 <span className="flex shrink-0 items-center gap-2 text-xs text-gray-400">{a.human_size}<HiOutlineDownload className="h-4 w-4 text-primary-600" /></span>

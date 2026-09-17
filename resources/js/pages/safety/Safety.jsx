@@ -261,7 +261,7 @@ function IncidentsTable({ items, onView }) {
                             <td className="px-4 py-3 text-sm text-gray-500">{formatDate(i.incident_date)}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{i.reporter?.first_name} {i.reporter?.last_name}</td>
                             <td className="px-4 py-3 text-right">
-                                <a href={safetyService.getIncidentPdfUrl(i.id)} target="_blank" rel="noreferrer"
+                                <a href={safetyService.getIncidentPdfUrl(i.id)} target="_blank" rel="noopener"
                                     onClick={e => e.stopPropagation()} className="text-red-600 hover:text-red-800">
                                     <HiOutlineDownload className="inline h-4 w-4" />
                                 </a>
@@ -301,7 +301,7 @@ function HazardsTable({ items }) {
                             <td className="px-4 py-3"><Badge text={h.status} colorMap={statusColors} /></td>
                             <td className="px-4 py-3 text-sm text-gray-500">{h.reporter?.first_name} {h.reporter?.last_name}</td>
                             <td className="px-4 py-3 text-right">
-                                <a href={safetyService.getHazardPdfUrl(h.id)} target="_blank" rel="noreferrer" className="text-red-600 hover:text-red-800">
+                                <a href={safetyService.getHazardPdfUrl(h.id)} target="_blank" rel="noopener" className="text-red-600 hover:text-red-800">
                                     <HiOutlineDownload className="inline h-4 w-4" />
                                 </a>
                             </td>
@@ -338,7 +338,7 @@ function MeetingsTable({ items, onView }) {
                             <td className="px-4 py-3 text-sm text-gray-500">{m.conductor?.first_name} {m.conductor?.last_name}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{m.attendees_count || 0}</td>
                             <td className="px-4 py-3 text-right">
-                                <a href={safetyService.getMeetingPdfUrl(m.id)} target="_blank" rel="noreferrer"
+                                <a href={safetyService.getMeetingPdfUrl(m.id)} target="_blank" rel="noopener"
                                     onClick={e => e.stopPropagation()} className="text-red-600 hover:text-red-800">
                                     <HiOutlineDownload className="inline h-4 w-4" />
                                 </a>
@@ -378,7 +378,7 @@ function ChecklistsTable({ items, onView }) {
                             <td className="px-4 py-3 text-sm text-gray-500">{formatDate(c.checklist_date)}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{c.items_count || 0}</td>
                             <td className="px-4 py-3 text-right">
-                                <a href={safetyService.getChecklistPdfUrl(c.id)} target="_blank" rel="noreferrer"
+                                <a href={safetyService.getChecklistPdfUrl(c.id)} target="_blank" rel="noopener"
                                     onClick={e => e.stopPropagation()} className="text-red-600 hover:text-red-800">
                                     <HiOutlineDownload className="inline h-4 w-4" />
                                 </a>
@@ -653,7 +653,7 @@ function IncidentDetail({ id, onBack, canManage, onUpdated }) {
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <a href={safetyService.getIncidentPdfUrl(id)} target="_blank" rel="noreferrer"
+                        <a href={safetyService.getIncidentPdfUrl(id)} target="_blank" rel="noopener"
                             className="rounded-lg border px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
                             <HiOutlineDownload className="inline h-4 w-4 mr-1" />PDF
                         </a>
@@ -718,7 +718,7 @@ function MeetingDetail({ id, onBack }) {
             <div className="rounded-xl border border-gray-200 bg-white p-6">
                 <div className="flex items-start justify-between">
                     <h2 className="text-xl font-bold text-gray-900">{record.title}</h2>
-                    <a href={safetyService.getMeetingPdfUrl(id)} target="_blank" rel="noreferrer"
+                    <a href={safetyService.getMeetingPdfUrl(id)} target="_blank" rel="noopener"
                         className="rounded-lg border px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
                         <HiOutlineDownload className="inline h-4 w-4 mr-1" />PDF
                     </a>
@@ -779,7 +779,7 @@ function ChecklistDetail({ id, onBack }) {
                         <h2 className="text-xl font-bold text-gray-900">{record.title}</h2>
                         <div className="mt-2"><Badge text={record.overall_status} colorMap={checklistStatusColors} /></div>
                     </div>
-                    <a href={safetyService.getChecklistPdfUrl(id)} target="_blank" rel="noreferrer"
+                    <a href={safetyService.getChecklistPdfUrl(id)} target="_blank" rel="noopener"
                         className="rounded-lg border px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
                         <HiOutlineDownload className="inline h-4 w-4 mr-1" />PDF
                     </a>

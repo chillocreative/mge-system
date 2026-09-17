@@ -102,7 +102,7 @@ export default function ProjectFilesPanel({ projectId, readOnly = false }) {
                                     {f.created_at ? ` · ${formatDate(f.created_at)}` : ''}
                                 </p>
                             </div>
-                            <a href={projectService.getDocumentDownloadUrl(projectId, f.id)} target="_blank" rel="noreferrer"
+                            <a href={projectService.getDocumentDownloadUrl(projectId, f.id)} target="_blank" rel="noopener"
                                 className="rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600" title="Download">
                                 <HiOutlineDownload className="h-4 w-4" />
                             </a>

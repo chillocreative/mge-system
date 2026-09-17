@@ -79,7 +79,7 @@ export default function PayslipDetail() {
                     <p className="text-sm text-gray-500">{record.period_start} – {record.period_end} · <span className="capitalize">{record.status}</span></p>
                 </div>
                 <div className="flex gap-2">
-                    <a href={payrollService.payslipUrl(id)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <a href={payrollService.payslipUrl(id)} target="_blank" rel="noopener" className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                         <HiOutlineDocumentDownload className="h-5 w-5" /> PDF
                     </a>
                     {can('payroll.email') && (
