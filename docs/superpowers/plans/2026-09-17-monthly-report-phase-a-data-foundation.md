@@ -27,7 +27,7 @@
 **Backend (create)**
 - `database/migrations/2026_09_18_000001_add_report_cutoff_day_to_projects.php`
 - `database/migrations/2026_09_18_000002_add_contract_particulars_to_project_contracts.php`
-- `database/migrations/2026_09_18_000003_create_project_parties_tables.php`
+- `database/migrations/2026_09_18_000003_add_report_fields_to_project_parties.php`
 - `database/migrations/2026_09_18_000004_add_org_chart_fields_to_project_members.php`
 - `database/migrations/2026_09_18_000005_create_project_progress_tables.php`
 - `database/migrations/2026_09_18_000006_add_report_columns_to_project_invoices.php`
@@ -37,12 +37,12 @@
 - `database/migrations/2026_09_18_000010_add_is_tender_to_drawings.php`
 - `database/migrations/2026_09_18_000011_create_project_resource_categories_table.php`
 - `database/migrations/2026_09_18_000012_create_report_images_table.php`
-- `app/Models/ProjectParty.php`, `ProjectPartyContact.php`, `ProjectScheduleBaseline.php`, `ProjectProgressPeriod.php`, `ProjectDelayNotice.php`, `ProjectTest.php`, `ProjectResourceCategory.php`, `ReportImage.php`
+- `app/Models/ProjectPartyContact.php`, `ProjectScheduleBaseline.php`, `ProjectProgressPeriod.php`, `ProjectDelayNotice.php`, `ProjectTest.php`, `ProjectResourceCategory.php`, `ReportImage.php`
 - `app/Support/RinggitWords.php` — amount in words
 - `app/Support/ReportPeriod.php` — cutoff → period dates
 - `app/Services/ReportData/ProgressService.php` — variance/ahead-delay maths
 - `app/Services/ReportData/ResourceCategoryService.php` — defaults + validation list
-- `app/Http/Controllers/Api/ReportData/ContractParticularsController.php`, `ProjectPartyController.php`, `OrgChartController.php`, `ProgressPeriodController.php`, `ScheduleBaselineController.php`, `DelayNoticeController.php`, `ProjectTestController.php`, `ResourceCategoryController.php`, `ReportImageController.php`
+- `app/Http/Controllers/Api/ReportData/ContractParticularsController.php`, `ReportPartyController.php`, `OrgChartController.php`, `ProgressPeriodController.php`, `ScheduleBaselineController.php`, `DelayNoticeController.php`, `ProjectTestController.php`, `ResourceCategoryController.php`, `ReportImageController.php`
 - `tests/Feature/ReportData/*Test.php` (one per task) and `tests/Unit/RinggitWordsTest.php`, `tests/Unit/ReportPeriodTest.php`
 
 **Backend (modify)**
@@ -566,16 +566,24 @@ git commit -m "Add contract particulars, main-contract flag and amount-in-words 
 
 ---
 
-### Task 3: Project parties and contacts (with logo)
+### Task 3: Report fields on project parties + party contacts (with logo)
+
+> **Revised during execution (ruling):** `project_parties` already exists (migration
+> `2026_09_07_270001_add_correspondence_workflow.php`, model `App\Models\ProjectParty`,
+> routes `/api/project-parties`, used by Correspondence). We EXTEND it instead of creating a
+> second parties table, so Correspondence and the report share one party list. Existing
+> columns: `name` (company), `type` (client|consultant|main_contractor|subcontractor|supplier|
+> authority|other), `contact_person`, `email`, `phone`, `is_active`. The existing controller,
+> routes and `correspondenceService.js` functions stay untouched.
 
 **Files:**
-- Create: `database/migrations/2026_09_18_000003_create_project_parties_tables.php`, `app/Models/ProjectParty.php`, `app/Models/ProjectPartyContact.php`, `app/Http/Controllers/Api/ReportData/ProjectPartyController.php`
-- Modify: `app/Models/Project.php` (`parties()` relation), `routes/api.php`
-- Test: `tests/Feature/ReportData/ProjectPartyTest.php`
+- Create: `database/migrations/2026_09_18_000003_add_report_fields_to_project_parties.php`, `app/Models/ProjectPartyContact.php`, `app/Http/Controllers/Api/ReportData/ReportPartyController.php`
+- Modify: `app/Models/ProjectParty.php`, `app/Models/Project.php` (`parties()` relation), `routes/api.php`
+- Test: `tests/Feature/ReportData/ReportPartyTest.php`
 
 **Interfaces:**
-- Produces: `ProjectParty {project_id, role, role_label, company_name, address, logo_path, sort_order}` with `contacts()` hasMany `ProjectPartyContact {name, designation, phone, email, sort_order}`; routes `GET/POST /api/projects/{project}/parties`, `PUT/DELETE /api/projects/{project}/parties/{party}`, `POST /api/projects/{project}/parties/{party}/logo` (multipart `logo`), `GET /api/projects/{project}/parties/{party}/logo` (inline image). Contacts are replaced wholesale via the party payload (`contacts: [...]`).
-- `ProjectParty::ROLES = ['owner','superintending_officer','so_representative','district_engineer','quantity_surveyor','consultant','contractor','other']`.
+- Produces: `project_parties` gains `report_role` (string 40, nullable), `role_label` (nullable), `address` (text nullable), `logo_path` (nullable), `sort_order` (smallint default 0); `ProjectParty::REPORT_ROLES = ['owner','superintending_officer','so_representative','district_engineer','quantity_surveyor','consultant','contractor','other']`; `ProjectParty::contacts()` hasMany `ProjectPartyContact {project_party_id, name, designation, phone, email, sort_order}`; routes `GET/POST /api/projects/{project}/parties`, `PUT/DELETE /api/projects/{project}/parties/{party}`, `POST …/{party}/logo` (multipart `logo`), `GET …/{party}/logo` (inline image). Contacts are replaced wholesale via `contacts: [...]` in the party payload. `Project::parties()` → `hasMany(ProjectParty::class)->orderBy('sort_order')`.
+- Later tasks (report builder, Task 10 panel) read `name` as the company name, `report_role` for the report row, and `contacts`.
 
 - [ ] **Step 1: Failing test**
 
@@ -593,7 +601,7 @@ use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
-class ProjectPartyTest extends TestCase
+class ReportPartyTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -614,13 +622,14 @@ class ProjectPartyTest extends TestCase
         return Project::create(['name' => 'P', 'code' => 'P'.random_int(1000, 9999), 'status' => 'in_progress']);
     }
 
-    public function test_party_with_contacts_is_created_and_contacts_are_replaced_on_update(): void
+    public function test_party_with_report_role_and_contacts_is_created_and_contacts_are_replaced_on_update(): void
     {
         $project = $this->project();
 
         $res = $this->actingAs($this->editor)->postJson("/api/projects/{$project->id}/parties", [
-            'role' => 'consultant',
-            'company_name' => 'Jurutera Perunding Riz Sdn. Bhd.',
+            'name' => 'Jurutera Perunding Riz Sdn. Bhd.',
+            'type' => 'consultant',
+            'report_role' => 'consultant',
             'address' => '73-2, Petaling Utama Avenue',
             'contacts' => [
                 ['name' => 'Ir. Khairul Izman Bin Kamal', 'phone' => '+60 12-222 8429'],
@@ -629,6 +638,7 @@ class ProjectPartyTest extends TestCase
         ])->assertCreated();
         $id = $res->json('data.id');
         $this->assertCount(2, $res->json('data.contacts'));
+        $this->assertSame('consultant', ProjectParty::find($id)->report_role);
 
         $this->actingAs($this->editor)->putJson("/api/projects/{$project->id}/parties/{$id}", [
             'contacts' => [['name' => 'Only One']],
@@ -636,12 +646,23 @@ class ProjectPartyTest extends TestCase
         $this->assertSame(1, ProjectParty::find($id)->contacts()->count());
     }
 
+    public function test_existing_correspondence_parties_still_work_without_report_fields(): void
+    {
+        $project = $this->project();
+        $party = ProjectParty::create(['project_id' => $project->id, 'name' => 'JPS', 'type' => 'client']);
+
+        $this->assertNull($party->fresh()->report_role);
+        $list = $this->actingAs($this->editor)->getJson("/api/projects/{$project->id}/parties")->assertOk();
+        $this->assertSame('JPS', $list->json('data.0.name'));
+        $this->assertSame([], $list->json('data.0.contacts'));
+    }
+
     public function test_role_other_requires_a_label_and_parties_are_scoped_to_project(): void
     {
         $p1 = $this->project();
         $p2 = $this->project();
-        $this->actingAs($this->editor)->postJson("/api/projects/{$p1->id}/parties", ['role' => 'other', 'company_name' => 'X'])->assertStatus(422);
-        $party = ProjectParty::create(['project_id' => $p1->id, 'role' => 'owner', 'company_name' => 'JPS']);
+        $this->actingAs($this->editor)->postJson("/api/projects/{$p1->id}/parties", ['name' => 'X', 'report_role' => 'other'])->assertStatus(422);
+        $party = ProjectParty::create(['project_id' => $p1->id, 'name' => 'JPS', 'type' => 'client']);
 
         $this->actingAs($this->editor)->deleteJson("/api/projects/{$p2->id}/parties/{$party->id}")->assertNotFound();
     }
@@ -650,7 +671,7 @@ class ProjectPartyTest extends TestCase
     {
         Storage::fake('local');
         $project = $this->project();
-        $party = ProjectParty::create(['project_id' => $project->id, 'role' => 'contractor', 'company_name' => 'MGE']);
+        $party = ProjectParty::create(['project_id' => $project->id, 'name' => 'MGE', 'type' => 'main_contractor']);
 
         $this->actingAs($this->editor)->post("/api/projects/{$project->id}/parties/{$party->id}/logo", [
             'logo' => UploadedFile::fake()->create('mge.png', 20, 'image/png'),
@@ -666,7 +687,7 @@ class ProjectPartyTest extends TestCase
 }
 ```
 
-- [ ] **Step 2: Run** — Expected: FAIL (404 routes).
+- [ ] **Step 2: Run** — Expected: FAIL (404 routes / unknown columns).
 
 - [ ] **Step 3: Migration**
 
@@ -681,18 +702,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('project_parties', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('project_id')->constrained()->cascadeOnDelete();
-            $table->string('role', 40);
-            $table->string('role_label')->nullable();
-            $table->string('company_name');
-            $table->text('address')->nullable();
-            $table->string('logo_path')->nullable();
-            $table->unsignedSmallInteger('sort_order')->default(0);
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamps();
-            $table->index(['project_id', 'sort_order']);
+        Schema::table('project_parties', function (Blueprint $table) {
+            $table->string('report_role', 40)->nullable()->after('type');
+            $table->string('role_label')->nullable()->after('report_role');
+            $table->text('address')->nullable()->after('phone');
+            $table->string('logo_path')->nullable()->after('address');
+            $table->unsignedSmallInteger('sort_order')->default(0)->after('logo_path');
         });
 
         Schema::create('project_party_contacts', function (Blueprint $table) {
@@ -710,40 +725,28 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('project_party_contacts');
-        Schema::dropIfExists('project_parties');
+        Schema::table('project_parties', function (Blueprint $table) {
+            $table->dropColumn(['report_role', 'role_label', 'address', 'logo_path', 'sort_order']);
+        });
     }
 };
 ```
 
 - [ ] **Step 4: Models**
 
+`ProjectParty` (extend, keep everything that exists):
 ```php
-<?php
+public const REPORT_ROLES = ['owner', 'superintending_officer', 'so_representative', 'district_engineer', 'quantity_surveyor', 'consultant', 'contractor', 'other'];
 
-namespace App\Models;
+protected $fillable = ['project_id', 'name', 'type', 'contact_person', 'email', 'phone', 'is_active', 'report_role', 'role_label', 'address', 'logo_path', 'sort_order'];
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-
-class ProjectParty extends Model
+public function contacts(): HasMany
 {
-    public const ROLES = ['owner', 'superintending_officer', 'so_representative', 'district_engineer', 'quantity_surveyor', 'consultant', 'contractor', 'other'];
-
-    protected $fillable = ['project_id', 'role', 'role_label', 'company_name', 'address', 'logo_path', 'sort_order', 'created_by'];
-
-    public function project(): BelongsTo
-    {
-        return $this->belongsTo(Project::class);
-    }
-
-    public function contacts(): HasMany
-    {
-        return $this->hasMany(ProjectPartyContact::class)->orderBy('sort_order');
-    }
+    return $this->hasMany(ProjectPartyContact::class)->orderBy('sort_order');
 }
 ```
 
+`ProjectPartyContact`:
 ```php
 <?php
 
@@ -763,9 +766,9 @@ class ProjectPartyContact extends Model
 }
 ```
 
-`Project::parties()` → `return $this->hasMany(ProjectParty::class)->orderBy('sort_order');`
+`Project::parties()` → `return $this->hasMany(ProjectParty::class)->orderBy('sort_order');` (add only if no `parties()` relation exists yet; if one exists, keep it and add the ordering).
 
-- [ ] **Step 5: Controller**
+- [ ] **Step 5: Controller `ReportPartyController`**
 
 ```php
 <?php
@@ -773,28 +776,31 @@ class ProjectPartyContact extends Model
 namespace App\Http\Controllers\Api\ReportData;
 
 use App\Http\Controllers\Controller;
+use App\Models\Project;
 use App\Models\ProjectParty;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
-class ProjectPartyController extends Controller
+class ReportPartyController extends Controller
 {
     private const LOGO_TYPES = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'webp' => 'image/webp'];
 
+    private const PARTY_TYPES = 'client,consultant,main_contractor,subcontractor,supplier,authority,other';
+
     public function index(int $projectId): JsonResponse
     {
-        return $this->success(ProjectParty::where('project_id', $projectId)->with('contacts')->orderBy('sort_order')->get());
+        return $this->success(ProjectParty::where('project_id', $projectId)->with('contacts')->orderBy('sort_order')->orderBy('id')->get());
     }
 
     public function store(int $projectId, Request $request): JsonResponse
     {
+        Project::findOrFail($projectId);
         $validated = $this->validatePayload($request, true);
         $contacts = $validated['contacts'] ?? [];
         unset($validated['contacts']);
         $validated['project_id'] = $projectId;
-        $validated['created_by'] = $request->user()->id;
 
         $party = DB::transaction(function () use ($validated, $contacts) {
             $party = ProjectParty::create($validated);
@@ -865,10 +871,15 @@ class ProjectPartyController extends Controller
         $required = $creating ? 'required' : 'sometimes';
 
         return $request->validate([
-            'role' => [$required, 'in:'.implode(',', ProjectParty::ROLES)],
-            'role_label' => ['nullable', 'string', 'max:100', 'required_if:role,other'],
-            'company_name' => [$required, 'string', 'max:255'],
+            'name' => [$required, 'string', 'max:255'],
+            'type' => ['nullable', 'in:'.self::PARTY_TYPES],
+            'report_role' => ['nullable', 'in:'.implode(',', ProjectParty::REPORT_ROLES)],
+            'role_label' => ['nullable', 'string', 'max:100', 'required_if:report_role,other'],
+            'contact_person' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
             'address' => ['nullable', 'string'],
+            'is_active' => ['nullable', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'contacts' => ['sometimes', 'array', 'max:20'],
             'contacts.*.name' => ['required', 'string', 'max:255'],
@@ -887,26 +898,27 @@ class ProjectPartyController extends Controller
     }
 }
 ```
+Note `type` defaults to `other` at DB level when omitted, so `type` is nullable here; the existing `ProjectPartyController` keeps its own stricter rules.
 
-Routes:
+Routes (nested project group, with `use App\Http\Controllers\Api\ReportData\ReportPartyController;`):
 ```php
 Route::prefix('{project}/parties')->middleware('permission:projects.view')->group(function () {
-    Route::get('/', [ProjectPartyController::class, 'index']);
-    Route::post('/', [ProjectPartyController::class, 'store'])->middleware('permission:projects.edit');
-    Route::put('/{party}', [ProjectPartyController::class, 'update'])->middleware('permission:projects.edit');
-    Route::delete('/{party}', [ProjectPartyController::class, 'destroy'])->middleware('permission:projects.edit');
-    Route::post('/{party}/logo', [ProjectPartyController::class, 'storeLogo'])->middleware('permission:projects.edit');
-    Route::get('/{party}/logo', [ProjectPartyController::class, 'showLogo']);
+    Route::get('/', [ReportPartyController::class, 'index']);
+    Route::post('/', [ReportPartyController::class, 'store'])->middleware('permission:projects.edit');
+    Route::put('/{party}', [ReportPartyController::class, 'update'])->middleware('permission:projects.edit');
+    Route::delete('/{party}', [ReportPartyController::class, 'destroy'])->middleware('permission:projects.edit');
+    Route::post('/{party}/logo', [ReportPartyController::class, 'storeLogo'])->middleware('permission:projects.edit');
+    Route::get('/{party}/logo', [ReportPartyController::class, 'showLogo']);
 });
 ```
 
 - [ ] **Step 6: Migrate, test, lint, commit**
 
-Run: `php artisan migrate && php artisan test tests/Feature/ReportData/ProjectPartyTest.php && php vendor/bin/pint --test` — Expected: 3 PASS.
+Run: `php artisan migrate && php artisan test tests/Feature/ReportData/ReportPartyTest.php tests/Feature/Correspondence && php vendor/bin/pint --test` — Expected: 4 PASS and the existing correspondence suite still green.
 
 ```bash
-git add database/migrations/2026_09_18_000003_create_project_parties_tables.php app/Models/ProjectParty.php app/Models/ProjectPartyContact.php app/Models/Project.php app/Http/Controllers/Api/ReportData/ProjectPartyController.php routes/api.php tests/Feature/ReportData/ProjectPartyTest.php
-git commit -m "Add project parties and contacts for report correspondence table"
+git add database/migrations/2026_09_18_000003_add_report_fields_to_project_parties.php app/Models/ProjectParty.php app/Models/ProjectPartyContact.php app/Models/Project.php app/Http/Controllers/Api/ReportData/ReportPartyController.php routes/api.php tests/Feature/ReportData/ReportPartyTest.php
+git commit -m "Extend project parties with report role, address, logo and contacts"
 ```
 
 ---
@@ -2506,7 +2518,7 @@ git commit -m "Add Report Data tab with contract particulars panel"
 
 - [ ] **Step 1: PartiesPanel**
 
-Behaviour: list of party cards ordered by `sort_order`, each showing role label, company, address, logo thumbnail (`<img src={getPartyLogoUrl}>` when `logo_path`), contacts list. Buttons (canEdit): Add party, Edit (opens inline form with role select over `ROLES`, role_label when `other`, company, address, contacts rows name/designation/phone/email with add/remove), Upload logo (hidden `<input type="file" accept=".png,.jpg,.jpeg,.webp">`), Delete (`useConfirm`). Role labels map:
+Behaviour: list of party cards ordered by `sort_order`, each showing the report role label (or the existing `type` when `report_role` is null), company (`name`), address, logo thumbnail (`<img src={getPartyLogoUrl}>` when `logo_path`), contacts list. Buttons (canEdit): Add party, Edit (opens inline form with report role select over `ROLES`, role_label when `other`, company name, address, contacts rows name/designation/phone/email with add/remove), Upload logo (hidden `<input type="file" accept=".png,.jpg,.jpeg,.webp">`), Delete (`useConfirm`). Role labels map:
 
 ```js
 const ROLES = [
@@ -2514,7 +2526,7 @@ const ROLES = [
     ['district_engineer', 'District Engineer'], ['quantity_surveyor', 'Quantity Surveyor'], ['consultant', 'Consultant'], ['contractor', 'Contractor'], ['other', 'Other'],
 ];
 ```
-Save calls `createParty`/`updateParty` with `{ role, role_label, company_name, address, sort_order, contacts }`, then reloads the list and toasts. Follow the form styling from `ContractParticularsPanel` (`input` class) and the card styling from the Documents tab.
+Save calls `createParty`/`updateParty` with `{ name, type, report_role, role_label, address, sort_order, contacts }` (`name` is the company; `type` is the existing correspondence party type — default it from `report_role`: owner/superintending_officer/so_representative/district_engineer/quantity_surveyor → `client`, consultant → `consultant`, contractor → `main_contractor`, other → `other`), then reloads the list and toasts. Follow the form styling from `ContractParticularsPanel` (`input` class) and the card styling from the Documents tab.
 
 - [ ] **Step 2: OrgChartPanel**
 
