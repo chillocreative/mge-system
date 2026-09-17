@@ -47,6 +47,7 @@ export default function ProgressPanel({ project, canEdit }) {
     const [periods, setPeriods] = useState([]);
     const [savingBaseline, setSavingBaseline] = useState(false);
     const [form, setForm] = useState(null);
+    const [touched, setTouched] = useState({ ahead_delay_days: false, physical_status: false });
     const [saving, setSaving] = useState(false);
     const [suggesting, setSuggesting] = useState(false);
 
@@ -145,26 +146,36 @@ export default function ProgressPanel({ project, canEdit }) {
     };
 
     // --- Period form ---
-    const openAdd = () => setForm(emptyPeriodForm());
-    const openEdit = (period) => setForm({
-        id: period.id,
-        period_no: period.period_no ?? '',
-        period_start: period.period_start ? period.period_start.slice(0, 10) : '',
-        period_end: period.period_end ? period.period_end.slice(0, 10) : '',
-        planning_days_completion: period.planning_days_completion ?? '',
-        physical_scheduled_pct: period.physical_scheduled_pct ?? '',
-        physical_actual_pct: period.physical_actual_pct ?? '',
-        financial_scheduled_pct: period.financial_scheduled_pct ?? '',
-        financial_actual_pct: period.financial_actual_pct ?? '',
-        financial_actual_amount: period.financial_actual_amount ?? '',
-        ahead_delay_days: period.ahead_delay_days ?? '',
-        physical_status: period.physical_status ?? '',
-        financial_status: period.financial_status ?? '',
-        notes: period.notes ?? '',
-    });
+    const openAdd = () => {
+        setTouched({ ahead_delay_days: false, physical_status: false });
+        setForm(emptyPeriodForm());
+    };
+    const openEdit = (period) => {
+        setTouched({ ahead_delay_days: false, physical_status: false });
+        setForm({
+            id: period.id,
+            period_no: period.period_no ?? '',
+            period_start: period.period_start ? period.period_start.slice(0, 10) : '',
+            period_end: period.period_end ? period.period_end.slice(0, 10) : '',
+            planning_days_completion: period.planning_days_completion ?? '',
+            physical_scheduled_pct: period.physical_scheduled_pct ?? '',
+            physical_actual_pct: period.physical_actual_pct ?? '',
+            financial_scheduled_pct: period.financial_scheduled_pct ?? '',
+            financial_actual_pct: period.financial_actual_pct ?? '',
+            financial_actual_amount: period.financial_actual_amount ?? '',
+            ahead_delay_days: period.ahead_delay_days ?? '',
+            physical_status: period.physical_status ?? '',
+            financial_status: period.financial_status ?? '',
+            notes: period.notes ?? '',
+        });
+    };
     const closeForm = () => setForm(null);
 
     const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+    const setOverride = (k) => (e) => {
+        setTouched((t) => ({ ...t, [k]: true }));
+        setForm((f) => ({ ...f, [k]: e.target.value }));
+    };
 
     const onPeriodEndChange = async (e) => {
         const value = e.target.value;
@@ -206,8 +217,8 @@ export default function ProgressPanel({ project, canEdit }) {
                 financial_scheduled_pct: num(form.financial_scheduled_pct),
                 financial_actual_pct: num(form.financial_actual_pct),
                 financial_actual_amount: num(form.financial_actual_amount),
-                ahead_delay_days: num(form.ahead_delay_days),
-                physical_status: form.physical_status || null,
+                ahead_delay_days: touched.ahead_delay_days ? num(form.ahead_delay_days) : null,
+                physical_status: touched.physical_status ? (form.physical_status || null) : null,
                 financial_status: form.financial_status || null,
                 notes: form.notes || null,
             };
@@ -361,11 +372,11 @@ export default function ProgressPanel({ project, canEdit }) {
                             </div>
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Ahead/Delay days</label>
-                                <input type="number" value={form.ahead_delay_days} onChange={set('ahead_delay_days')} placeholder="blank = auto" className={input} />
+                                <input type="number" value={form.ahead_delay_days} onChange={setOverride('ahead_delay_days')} placeholder="blank = auto (computed value shown)" className={input} />
                             </div>
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Physical status</label>
-                                <select value={form.physical_status} onChange={set('physical_status')} className={input}>
+                                <select value={form.physical_status} onChange={setOverride('physical_status')} className={input}>
                                     <option value="">Auto</option>
                                     <option value="ON TRACK">ON TRACK</option>
                                     <option value="AHEAD">AHEAD</option>

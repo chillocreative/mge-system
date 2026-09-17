@@ -46,6 +46,7 @@ export default function PartiesPanel({ project, canEdit }) {
     const openAdd = () => setForm(emptyForm());
     const openEdit = (party) => setForm({
         id: party.id,
+        hadRole: !!party.report_role,
         report_role: party.report_role || 'other',
         role_label: party.role_label || '',
         name: party.name || '',
@@ -66,13 +67,18 @@ export default function PartiesPanel({ project, canEdit }) {
         try {
             const payload = {
                 name: form.name,
-                type: TYPE_FROM_ROLE[form.report_role] || 'other',
                 report_role: form.report_role,
                 role_label: form.report_role === 'other' ? form.role_label : null,
                 address: form.address,
                 sort_order: Number(form.sort_order) || 0,
                 contacts: form.contacts.filter((c) => c.name),
             };
+            // Only send `type` when creating a party, or when editing one that had no
+            // report_role yet (and the user is now picking one) — never overwrite the
+            // Correspondence `type` of a party that already had a report_role set.
+            if (!form.id || !form.hadRole) {
+                payload.type = TYPE_FROM_ROLE[form.report_role] || 'other';
+            }
             if (form.id) {
                 await reportDataService.updateParty(project.id, form.id, payload);
                 toast.success('Party updated');

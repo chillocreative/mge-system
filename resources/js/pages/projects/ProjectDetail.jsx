@@ -8,6 +8,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
 import ProjectDiscussions from '@/components/ProjectDiscussions';
 import ReportDataTab from './report-data/ReportDataTab';
+import reportDataService from '@/services/reportDataService';
 import ProjectSitesPanel from '@/components/ProjectSitesPanel';
 import { useAuth } from '@/context/AuthContext';
 import { useConfirm } from '@/context/ConfirmContext';
@@ -723,8 +724,17 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
     const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
     const [uploadingLogId, setUploadingLogId] = useState(null);
 
+    const [workerTypes, setWorkerTypes] = useState(WORKER_TYPES);
+    const [machineryTypes, setMachineryTypes] = useState(MACHINERY_TYPES);
+
     useEffect(() => {
         projectSiteService.list(project.id, true).then((r) => setSites(r.data || [])).catch(() => setSites([]));
+        reportDataService.getCategories(project.id, 'worker')
+            .then((res) => { if (res?.data?.effective) setWorkerTypes(res.data.effective); })
+            .catch(() => {});
+        reportDataService.getCategories(project.id, 'machinery')
+            .then((res) => { if (res?.data?.effective) setMachineryTypes(res.data.effective); })
+            .catch(() => {});
     }, [project.id]);
     const [machineryReport, setMachineryReport] = useState(null);
     const [machineryLoading, setMachineryLoading] = useState(false);
@@ -752,11 +762,11 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
         }
     };
 
-    const addMachinery = () => setForm((p) => ({ ...p, machinery: [...p.machinery, { machinery_type: MACHINERY_TYPES[0], quantity: 1 }] }));
+    const addMachinery = () => setForm((p) => ({ ...p, machinery: [...p.machinery, { machinery_type: machineryTypes[0], quantity: 1 }] }));
     const removeMachinery = (idx) => setForm((p) => ({ ...p, machinery: p.machinery.filter((_, i) => i !== idx) }));
     const updateMachinery = (idx, field, value) => setForm((p) => ({ ...p, machinery: p.machinery.map((m, i) => i === idx ? { ...m, [field]: value } : m) }));
 
-    const addWorker = () => setForm((p) => ({ ...p, workers: [...p.workers, { worker_type: WORKER_TYPES[0], count: 1 }] }));
+    const addWorker = () => setForm((p) => ({ ...p, workers: [...p.workers, { worker_type: workerTypes[0], count: 1 }] }));
     const removeWorker = (idx) => setForm((p) => ({ ...p, workers: p.workers.filter((_, i) => i !== idx) }));
     const updateWorker = (idx, field, value) => setForm((p) => ({ ...p, workers: p.workers.map((w, i) => i === idx ? { ...w, [field]: value } : w) }));
 
@@ -926,7 +936,7 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                                 {form.workers.map((w, i) => (
                                     <div key={i} className="flex items-center gap-2">
                                         <select value={w.worker_type} onChange={(e) => updateWorker(i, 'worker_type', e.target.value)} className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
-                                            {WORKER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                                            {(w.worker_type && !workerTypes.includes(w.worker_type) ? [w.worker_type, ...workerTypes] : workerTypes).map((t) => <option key={t} value={t}>{t}</option>)}
                                         </select>
                                         <input type="number" min="1" value={w.count} onChange={(e) => updateWorker(i, 'count', e.target.value)} className="w-16 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                                         <button type="button" onClick={() => removeWorker(i)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"><HiOutlineX className="h-3.5 w-3.5" /></button>
@@ -975,7 +985,7 @@ function SiteLogsTab({ project, canEdit, onRefresh }) {
                                 {form.machinery.map((m, i) => (
                                     <div key={i} className="flex items-center gap-2">
                                         <select value={m.machinery_type} onChange={(e) => updateMachinery(i, 'machinery_type', e.target.value)} className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
-                                            {MACHINERY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                                            {(m.machinery_type && !machineryTypes.includes(m.machinery_type) ? [m.machinery_type, ...machineryTypes] : machineryTypes).map((t) => <option key={t} value={t}>{t}</option>)}
                                         </select>
                                         <input type="number" min="1" value={m.quantity} onChange={(e) => updateMachinery(i, 'quantity', e.target.value)} className="w-16 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                                         {machineryAssets.length > 0 && (
