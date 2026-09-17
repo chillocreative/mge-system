@@ -112,6 +112,21 @@ export const SISTEM_SECTIONS = [
                     'Report Images — peta lokasi, akses tapak dan gambar kemajuan (label seperti "Aerial 1" supaya boleh dibandingkan bulan ke bulan).',
                 ],
             },
+            {
+                heading: 'Laporan Bulanan (Monthly Reports)',
+                steps: [
+                    'Klik "Projects" > "Monthly Reports".',
+                    'Klik "New Report": pilih projek, tempoh (tarikh akhir tempoh laporan), no. laporan dan label bulan; boleh salin seksyen statik (cover, parties, org chart, dll.) dari laporan lepas untuk projek yang sama.',
+                    'Buka laporan untuk edit setiap seksyen — kemas kini data, tambah nota seksyen, dan togol "include" untuk pilih seksyen yang dipaparkan dalam PDF.',
+                    'Klik "Save" untuk simpan satu seksyen atau "Save all" untuk simpan semua seksyen sekali gus.',
+                    '"Reset to system data" buang suntingan (overrides) seksyen dan kembali kepada data sistem asal.',
+                    '"Regenerate" jana semula data sistem bagi seksyen (atau semua seksyen) — suntingan (overrides) dan nota yang telah disimpan dikekalkan.',
+                    'Klik "Finalise" apabila laporan sedia; laporan yang sudah finalise dikunci daripada suntingan. Klik "Reopen" untuk buka semula jika perlu labur.',
+                    'Klik "Export PDF" untuk jana PDF laporan bulanan penuh.',
+                    'Nota: carta S-curve, laman landscape, eksport Word (.docx) dan import program kerja (Gantt) akan disediakan dalam fasa akan datang.',
+                    'Kebenaran: role dengan "reports.view" boleh lihat laporan dan eksport PDF; role dengan "reports.manage" boleh cipta, edit, regenerate dan finalise laporan.',
+                ],
+            },
         ],
     },
     {
