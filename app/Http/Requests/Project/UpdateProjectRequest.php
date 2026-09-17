@@ -28,6 +28,7 @@ class UpdateProjectRequest extends FormRequest
             'spent' => ['nullable', 'numeric', 'min:0'],
             'progress' => ['nullable', 'integer', 'min:0', 'max:100'],
             'location' => ['nullable', 'string', 'max:255'],
+            'report_cutoff_day' => ['nullable', 'integer', 'min:1', 'max:28'],
             'notes' => ['nullable', 'string'],
             'member_ids' => ['nullable', 'array'],
             'member_ids.*' => ['exists:users,id'],

@@ -27,6 +27,7 @@ class Project extends Model
         'spent',
         'progress',
         'location',
+        'report_cutoff_day',
         'notes',
     ];
 

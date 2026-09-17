@@ -25,6 +25,7 @@ class StoreProjectRequest extends FormRequest
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'budget' => ['nullable', 'numeric', 'min:0'],
             'location' => ['nullable', 'string', 'max:255'],
+            'report_cutoff_day' => ['nullable', 'integer', 'min:1', 'max:28'],
             'notes' => ['nullable', 'string'],
             'member_ids' => ['nullable', 'array'],
             'member_ids.*' => ['exists:users,id'],
