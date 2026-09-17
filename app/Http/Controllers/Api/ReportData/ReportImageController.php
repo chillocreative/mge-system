@@ -16,7 +16,7 @@ class ReportImageController extends Controller
     public function index(int $projectId, Request $request): JsonResponse
     {
         $q = ReportImage::where('project_id', $projectId)->orderBy('section')->orderBy('sort_order')->orderBy('id');
-        if ($request->section) {
+        if ($request->filled('section')) {
             $q->where('section', $request->section);
         }
         if ($request->filled('period_id')) {
@@ -109,7 +109,7 @@ class ReportImageController extends Controller
         imagecopyresampled($dst, $src, 0, 0, 0, 0, $maxWidth, (int) round($info[1] * $ratio), $info[0], $info[1]);
         match ($info[2]) {
             IMAGETYPE_PNG => imagepng($dst, $absolutePath, 6),
-            IMAGETYPE_WEBP => imagewebp($dst, $absolutePath, 82),
+            IMAGETYPE_WEBP => function_exists('imagewebp') ? imagewebp($dst, $absolutePath, 82) : imagejpeg($dst, $absolutePath, 82),
             default => imagejpeg($dst, $absolutePath, 82),
         };
         imagedestroy($src);
