@@ -88,7 +88,12 @@ export default function ContractDetail() {
                 </Link>
                 <div className="flex items-start justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">{contract.title}</h1>
+                        <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
+                            {contract.title}
+                            {contract.is_main && (
+                                <span className="rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-700">MAIN</span>
+                            )}
+                        </h1>
                         <p className="text-sm text-gray-500">{contract.project?.name || '-'}{contract.contract_no ? ` · ${contract.contract_no}` : ''}</p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -567,6 +572,7 @@ function EditContractModal({ contract, onClose, onSaved }) {
         start_date: contract.start_date ? String(contract.start_date).split('T')[0] : '',
         end_date: contract.end_date ? String(contract.end_date).split('T')[0] : '',
         status: contract.status || 'active',
+        is_main: !!contract.is_main,
         notes: contract.notes || '',
         pics: contract.pics?.length
             ? contract.pics.map((p) => ({ name: p.name || '', email: p.email || '', phone: p.phone || '', company: p.company || '', designation: p.designation || '' }))
@@ -590,6 +596,7 @@ function EditContractModal({ contract, onClose, onSaved }) {
             if (form.start_date) fd.append('start_date', form.start_date);
             if (form.end_date) fd.append('end_date', form.end_date);
             if (form.notes) fd.append('notes', form.notes);
+            fd.append('is_main', form.is_main ? '1' : '0');
             fd.append('pics_sync', '1');
             form.pics.filter((p) => p.name?.trim()).forEach((pic, i) => {
                 fd.append(`pics[${i}][name]`, pic.name);
@@ -647,6 +654,12 @@ function EditContractModal({ contract, onClose, onSaved }) {
                         <select value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
                             {statuses.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
                         </select>
+                    </div>
+                    <div>
+                        <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <input type="checkbox" checked={form.is_main} onChange={(e) => setForm((p) => ({ ...p, is_main: e.target.checked }))} className="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                            Main contract (used for reports)
+                        </label>
                     </div>
 
                     <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">

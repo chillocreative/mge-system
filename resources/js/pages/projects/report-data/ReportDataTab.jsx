@@ -1,0 +1,31 @@
+import { useState } from 'react';
+import ContractParticularsPanel from './ContractParticularsPanel';
+
+const PANELS = [
+    { id: 'particulars', label: 'Contract Particulars', component: ContractParticularsPanel },
+    // Later tasks append: parties, org-chart, progress, registers, categories, images
+];
+
+export default function ReportDataTab({ project, canEdit }) {
+    const [active, setActive] = useState(PANELS[0].id);
+    const Panel = PANELS.find((p) => p.id === active)?.component;
+
+    return (
+        <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
+            <nav className="rounded-xl bg-white p-2 shadow-sm ring-1 ring-gray-200">
+                <p className="px-3 py-2 text-xs font-semibold uppercase text-gray-500">Report Data</p>
+                {PANELS.map((p) => (
+                    <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setActive(p.id)}
+                        className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${active === p.id ? 'bg-primary-50 font-medium text-primary-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                    >
+                        {p.label}
+                    </button>
+                ))}
+            </nav>
+            <div>{Panel && <Panel project={project} canEdit={canEdit} />}</div>
+        </div>
+    );
+}

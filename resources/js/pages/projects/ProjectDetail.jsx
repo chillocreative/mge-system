@@ -7,6 +7,7 @@ import taskService from '@/services/taskService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
 import ProjectDiscussions from '@/components/ProjectDiscussions';
+import ReportDataTab from './report-data/ReportDataTab';
 import ProjectSitesPanel from '@/components/ProjectSitesPanel';
 import { useAuth } from '@/context/AuthContext';
 import { useConfirm } from '@/context/ConfirmContext';
@@ -65,6 +66,7 @@ const tabs = [
     { id: 'documents', label: 'Documents', icon: HiOutlineDocumentDownload },
     { id: 'calendar', label: 'Calendar', icon: HiOutlineCalendar },
     { id: 'discussions', label: 'Discussions', icon: HiOutlineChatAlt2 },
+    { id: 'report-data', label: 'Report Data', icon: HiOutlineClipboardList },
 ];
 
 export default function ProjectDetail() {
@@ -160,6 +162,7 @@ export default function ProjectDetail() {
             {activeTab === 'documents' && <DocumentsTab project={project} canEdit={canEdit} onRefresh={fetchProject} />}
             {activeTab === 'calendar' && <CalendarTab project={project} canEdit={canEdit} onRefresh={fetchProject} />}
             {activeTab === 'discussions' && <ProjectDiscussions projectId={project.id} />}
+            {activeTab === 'report-data' && <ReportDataTab project={project} canEdit={canEdit} />}
         </div>
     );
 }
