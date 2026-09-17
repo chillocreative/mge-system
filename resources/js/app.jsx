@@ -71,6 +71,7 @@ import MeetingDetail from '@/pages/meetings/MeetingDetail';
 import CompanyDocuments from '@/pages/documents/CompanyDocuments';
 import Unauthorized from '@/pages/Unauthorized';
 import Panduan from '@/pages/Panduan';
+import PanduanManual from '@/pages/panduan/PanduanManual';
 import NotFound from '@/pages/NotFound';
 
 function AppRoutes() {
@@ -86,6 +87,7 @@ function AppRoutes() {
 
             {/* Public — user manual, no login required */}
             <Route path="/panduan" element={<Panduan />} />
+            <Route path="/panduan/:manual" element={<PanduanManual />} />
 
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
