@@ -119,10 +119,16 @@ export default function DashboardLayout() {
     // navigation, so moving between sections keeps exactly one group open and
     // never leaves the active page inside a collapsed menu.
     const { pathname } = useLocation();
+    const matchesPath = (href) => pathname === href || pathname.startsWith(href + '/');
+    // Longest matching sibling wins, so /projects/contracts lights "Contracts"
+    // rather than "All Projects", while /projects/12 still lights "All Projects".
+    const isChildActive = (child, siblings) =>
+        matchesPath(child.href)
+        && !siblings.some((s) => s.href !== child.href && s.href.length > child.href.length && matchesPath(s.href));
+    const isGroupActive = (item) => item.children?.some((c) => matchesPath(c.href)) ?? false;
+
     useEffect(() => {
-        const owner = navigation.find(
-            (item) => item.children?.some((c) => pathname === c.href || pathname.startsWith(c.href + '/')),
-        );
+        const owner = navigation.find((item) => isGroupActive(item));
         if (owner) setOpenGroups({ [owner.name]: true });
     }, [pathname]);
 
@@ -205,13 +211,18 @@ export default function DashboardLayout() {
                     {visibleNavigation.map((item) => {
                         if (item.children) {
                             const isOpen = !!openGroups[item.name];
+                            const groupActive = isGroupActive(item);
                             return (
                                 <div key={item.name}>
                                     <button
                                         type="button"
                                         onClick={(e) => { if (collapsed) setCollapsed(false); toggleGroup(item.name); centerInSidebar(e); }}
                                         title={collapsed ? item.name : undefined}
-                                        className={`group flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium text-primary-300 transition-colors hover:bg-white/5 hover:text-white ${collapsed ? 'lg:justify-center' : 'justify-between gap-3'}`}
+                                        className={`group flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${collapsed ? 'lg:justify-center' : 'justify-between gap-3'} ${
+                                            groupActive
+                                                ? 'bg-white/10 text-white'
+                                                : 'text-primary-300 hover:bg-white/5 hover:text-white'
+                                        }`}
                                     >
                                         <span className="flex items-center gap-3">
                                             <item.icon className="h-5 w-5 shrink-0" />
@@ -225,14 +236,11 @@ export default function DashboardLayout() {
                                                 <NavLink
                                                     key={child.name}
                                                     to={child.href}
-                                                    end
-                                                    className={({ isActive }) =>
-                                                        `flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
-                                                            isActive
-                                                                ? 'bg-accent-400/10 text-accent-400'
-                                                                : 'text-primary-400 hover:bg-white/5 hover:text-white'
-                                                        }`
-                                                    }
+                                                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+                                                        isChildActive(child, item.children)
+                                                            ? 'bg-accent-400/10 text-accent-400'
+                                                            : 'text-primary-400 hover:bg-white/5 hover:text-white'
+                                                    }`}
                                                     onClick={(e) => { setSidebarOpen(false); centerInSidebar(e); }}
                                                 >
                                                     <child.icon className="h-4 w-4 shrink-0" />
