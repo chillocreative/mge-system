@@ -15,6 +15,15 @@ const WORKER_GROUPS = ['Management Team', 'Tradesman'];
 
 const emptyRow = () => ({ group: '', name: '', sort_order: 0, active: true });
 
+const errorMessage = (err, fallback) => {
+    const errors = err.response?.data?.errors;
+    if (errors) {
+        const first = Object.values(errors)[0];
+        if (Array.isArray(first) && first[0]) return first[0];
+    }
+    return err.response?.data?.message || fallback;
+};
+
 export default function ResourceCategoriesPanel({ project, canEdit }) {
     const [kind, setKind] = useState('worker');
     const [loading, setLoading] = useState(true);
@@ -59,7 +68,7 @@ export default function ResourceCategoriesPanel({ project, canEdit }) {
             toast.success('Default categories added');
             load();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to seed defaults');
+            toast.error(errorMessage(err, 'Failed to seed defaults'));
         } finally {
             setSeeding(false);
         }
@@ -67,7 +76,8 @@ export default function ResourceCategoriesPanel({ project, canEdit }) {
 
     const save = async () => {
         const names = rows.map((r) => r.name.trim()).filter(Boolean);
-        const dupes = names.filter((n, idx) => names.indexOf(n) !== idx);
+        const namesLower = names.map((n) => n.toLowerCase());
+        const dupes = names.filter((n, idx) => namesLower.indexOf(n.toLowerCase()) !== idx);
         if (dupes.length > 0) {
             toast.error(`Duplicate name(s): ${[...new Set(dupes)].join(', ')}`);
             return;
@@ -88,7 +98,7 @@ export default function ResourceCategoriesPanel({ project, canEdit }) {
             toast.success('Category list saved');
             load();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to save category list');
+            toast.error(errorMessage(err, 'Failed to save category list'));
         } finally {
             setSaving(false);
         }

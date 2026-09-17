@@ -61,11 +61,13 @@ export default function ReportImagesPanel({ project, canEdit }) {
         if (files.length === 0) return;
         setUploading(true);
         let successCount = 0;
-        for (const file of files) {
+        for (let i = 0; i < files.length; i += 1) {
+            const file = files[i];
             try {
                 const formData = new FormData();
                 formData.append('image', file);
                 formData.append('section', section);
+                formData.append('sort_order', String(images.length + i));
                 if (section === 'progress' && uploadLabel.trim()) formData.append('label', uploadLabel.trim());
                 await reportDataService.uploadImage(project.id, formData);
                 successCount += 1;
@@ -81,7 +83,8 @@ export default function ReportImagesPanel({ project, canEdit }) {
         }
     };
 
-    const updateField = async (img, field, value) => {
+    const updateField = async (img, field, value, currentValue = img[field]) => {
+        if (currentValue === value) return;
         setSavingId(img.id);
         try {
             await reportDataService.updateImage(project.id, img.id, { [field]: value });
@@ -107,22 +110,18 @@ export default function ReportImagesPanel({ project, canEdit }) {
     const move = async (index, direction) => {
         const other = index + direction;
         if (other < 0 || other >= images.length) return;
-        const a = images[index];
-        const b = images[other];
-        const aOrder = a.sort_order;
-        const bOrder = b.sort_order;
+        const reordered = [...images];
+        const [moved] = reordered.splice(index, 1);
+        reordered.splice(other, 0, moved);
+        const changed = reordered
+            .map((img, i) => ({ img, sort_order: i }))
+            .filter(({ img, sort_order }) => img.sort_order !== sort_order);
         try {
-            await Promise.all([
-                reportDataService.updateImage(project.id, a.id, { sort_order: bOrder }),
-                reportDataService.updateImage(project.id, b.id, { sort_order: aOrder }),
-            ]);
-            setImages((rows) => {
-                const next = [...rows];
-                next[index] = { ...a, sort_order: bOrder };
-                next[other] = { ...b, sort_order: aOrder };
-                next.sort((x, y) => (x.sort_order ?? 0) - (y.sort_order ?? 0));
-                return next;
-            });
+            for (const { img, sort_order } of changed) {
+                // eslint-disable-next-line no-await-in-loop
+                await reportDataService.updateImage(project.id, img.id, { sort_order });
+            }
+            load();
         } catch {
             toast.error('Failed to reorder images');
         }
@@ -189,7 +188,7 @@ export default function ReportImagesPanel({ project, canEdit }) {
                                 <input
                                     value={img.label || ''}
                                     onChange={(e) => setImages((rows) => rows.map((r) => (r.id === img.id ? { ...r, label: e.target.value } : r)))}
-                                    onBlur={(e) => updateField(img, 'label', e.target.value)}
+                                    onBlur={(e) => updateField(img, 'label', e.target.value, img.label || '')}
                                     disabled={!canEdit || savingId === img.id}
                                     placeholder="Label"
                                     className={input}
@@ -197,7 +196,7 @@ export default function ReportImagesPanel({ project, canEdit }) {
                                 <textarea
                                     value={img.caption || ''}
                                     onChange={(e) => setImages((rows) => rows.map((r) => (r.id === img.id ? { ...r, caption: e.target.value } : r)))}
-                                    onBlur={(e) => updateField(img, 'caption', e.target.value)}
+                                    onBlur={(e) => updateField(img, 'caption', e.target.value, img.caption || '')}
                                     disabled={!canEdit || savingId === img.id}
                                     placeholder="Caption"
                                     rows={2}
@@ -207,7 +206,7 @@ export default function ReportImagesPanel({ project, canEdit }) {
                                     type="date"
                                     value={img.taken_on ? img.taken_on.slice(0, 10) : ''}
                                     onChange={(e) => setImages((rows) => rows.map((r) => (r.id === img.id ? { ...r, taken_on: e.target.value } : r)))}
-                                    onBlur={(e) => updateField(img, 'taken_on', e.target.value || null)}
+                                    onBlur={(e) => updateField(img, 'taken_on', e.target.value || null, img.taken_on ? img.taken_on.slice(0, 10) : null)}
                                     disabled={!canEdit || savingId === img.id}
                                     className={input}
                                 />
