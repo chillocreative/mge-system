@@ -200,7 +200,7 @@ export default function PartiesPanel({ project, canEdit }) {
                             <div className="flex items-start gap-4">
                                 <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
                                     {party.logo_path ? (
-                                        <img src={reportDataService.getPartyLogoUrl(project.id, party.id)} alt={`${party.name} logo`} className="h-full w-full object-contain" />
+                                        <img src={`${reportDataService.getPartyLogoUrl(project.id, party.id)}?v=${encodeURIComponent(party.updated_at || '')}`} alt={`${party.name} logo`} className="h-full w-full object-contain" />
                                     ) : (
                                         <span className="text-xs text-gray-300">No logo</span>
                                     )}
@@ -226,14 +226,14 @@ export default function PartiesPanel({ project, canEdit }) {
                                 </div>
                                 {canEdit && (
                                     <div className="flex shrink-0 items-center gap-1">
-                                        <label className="cursor-pointer rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600" title="Upload logo">
+                                        <label className="cursor-pointer rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600" title="Upload logo" aria-label="Upload logo">
                                             <HiOutlineUpload className="h-4 w-4" />
                                             <input type="file" accept=".png,.jpg,.jpeg,.webp" className="hidden" disabled={uploadingId === party.id} onChange={(e) => onUploadLogo(party, e)} />
                                         </label>
-                                        <button type="button" onClick={() => openEdit(party)} className="rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600" title="Edit">
+                                        <button type="button" onClick={() => openEdit(party)} className="rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600" title="Edit" aria-label="Edit">
                                             <HiOutlinePencil className="h-4 w-4" />
                                         </button>
-                                        <button type="button" onClick={() => onDelete(party)} className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600" title="Delete">
+                                        <button type="button" onClick={() => onDelete(party)} className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600" title="Delete" aria-label="Delete">
                                             <HiOutlineTrash className="h-4 w-4" />
                                         </button>
                                     </div>
