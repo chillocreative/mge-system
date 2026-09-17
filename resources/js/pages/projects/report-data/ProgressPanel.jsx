@@ -98,6 +98,10 @@ export default function ProgressPanel({ project, canEdit }) {
             toast.error('Enter months as YYYY-MM');
             return;
         }
+        if (start > end) {
+            toast.error('Start month must be before end month');
+            return;
+        }
         const months = [];
         let cur = start;
         let guard = 0;
@@ -165,7 +169,7 @@ export default function ProgressPanel({ project, canEdit }) {
     const onPeriodEndChange = async (e) => {
         const value = e.target.value;
         setForm((f) => ({ ...f, period_end: value }));
-        if (!value) return;
+        if (!value || form.id) return;
         setSuggesting(true);
         try {
             const res = await reportDataService.suggestPeriod(project.id, value);
@@ -362,7 +366,7 @@ export default function ProgressPanel({ project, canEdit }) {
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Physical status</label>
                                 <select value={form.physical_status} onChange={set('physical_status')} className={input}>
-                                    <option value="">blank = auto</option>
+                                    <option value="">Auto</option>
                                     <option value="ON TRACK">ON TRACK</option>
                                     <option value="AHEAD">AHEAD</option>
                                     <option value="DELAY">DELAY</option>
