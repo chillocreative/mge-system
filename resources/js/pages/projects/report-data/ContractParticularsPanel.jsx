@@ -16,12 +16,15 @@ const FIELDS = [
 export default function ContractParticularsPanel({ project, canEdit }) {
     const [loading, setLoading] = useState(true);
     const [missing, setMissing] = useState(false);
+    const [loadError, setLoadError] = useState(false);
     const [words, setWords] = useState({});
     const [form, setForm] = useState(null);
     const [saving, setSaving] = useState(false);
 
-    useEffect(() => {
+    const load = () => {
         setLoading(true);
+        setMissing(false);
+        setLoadError(false);
         reportDataService.getContractParticulars(project.id)
             .then((res) => {
                 const c = res.data.contract;
@@ -31,8 +34,16 @@ export default function ContractParticularsPanel({ project, canEdit }) {
                 });
                 setWords({ sum: res.data.contract_sum_words, bond: res.data.performance_bond_words });
             })
-            .catch((err) => { if (err.response?.status === 404) setMissing(true); else toast.error('Failed to load particulars'); })
+            .catch((err) => {
+                if (err.response?.status === 404) setMissing(true);
+                else { setLoadError(true); toast.error('Failed to load particulars'); }
+            })
             .finally(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        load();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [project.id]);
 
     const save = async (e) => {
@@ -58,6 +69,15 @@ export default function ContractParticularsPanel({ project, canEdit }) {
             </div>
         );
     }
+    if (loadError) {
+        return (
+            <div className="rounded-xl bg-white p-6 text-sm text-gray-600 shadow-sm ring-1 ring-gray-200">
+                <p className="mb-3">Failed to load contract particulars.</p>
+                <button type="button" onClick={load} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Retry</button>
+            </div>
+        );
+    }
+    if (!form) return null;
 
     const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
     const setIns = (i, k) => (e) => setForm((f) => ({ ...f, insurances: f.insurances.map((row, idx) => (idx === i ? { ...row, [k]: e.target.value } : row)) }));
