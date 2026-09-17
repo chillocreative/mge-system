@@ -7,6 +7,8 @@ use App\Models\Project;
 use App\Models\ProjectContract;
 use App\Models\ProjectParty;
 use App\Models\ProjectProgressPeriod;
+use App\Models\ProjectScheduleBaseline;
+use App\Models\SiteLog;
 use App\Models\User;
 use App\Services\MonthlyReport\Export\PdfExporter;
 use App\Services\MonthlyReport\MonthlyReportService;
@@ -40,6 +42,45 @@ class PdfExportTest extends TestCase
         $service = app(MonthlyReportService::class);
 
         return $service->create($project->id, ['period_id' => $period->id], $user->id);
+    }
+
+    /** Project with 3 progress periods + baseline (so 2.2/2.4 have months) and 2 site logs with a rain interval on one day (so 4.3 has data). */
+    private function makeReportWithSeries(): MonthlyReport
+    {
+        $project = Project::create(['name' => 'Series Test', 'code' => 'SER-'.uniqid(), 'status' => 'in_progress']);
+
+        foreach ([['2025-11-01', 1], ['2025-12-01', 1], ['2026-01-01', 2]] as [$month, $pct]) {
+            ProjectScheduleBaseline::create(['project_id' => $project->id, 'month' => $month, 'scheduled_physical_pct' => $pct, 'scheduled_financial_amount' => $pct * 100000, 'scheduled_financial_pct' => $pct]);
+        }
+
+        ProjectProgressPeriod::create(['project_id' => $project->id, 'period_no' => 1, 'period_start' => '2025-10-16', 'period_end' => '2025-11-15', 'physical_scheduled_pct' => 1, 'physical_actual_pct' => 1, 'financial_scheduled_pct' => 1, 'financial_actual_pct' => 1, 'financial_actual_amount' => 100000]);
+        ProjectProgressPeriod::create(['project_id' => $project->id, 'period_no' => 2, 'period_start' => '2025-11-16', 'period_end' => '2025-12-15', 'physical_scheduled_pct' => 1, 'physical_actual_pct' => 1, 'financial_scheduled_pct' => 1, 'financial_actual_pct' => 1, 'financial_actual_amount' => 100000]);
+        $period3 = ProjectProgressPeriod::create(['project_id' => $project->id, 'period_no' => 3, 'period_start' => '2025-12-16', 'period_end' => '2026-01-15', 'physical_scheduled_pct' => 2, 'physical_actual_pct' => 4, 'financial_scheduled_pct' => 2, 'financial_actual_pct' => 4, 'financial_actual_amount' => 400000]);
+
+        $user = User::create(['first_name' => 'Log', 'last_name' => 'Ger', 'email' => 'logger-'.uniqid().'@mge-eng.com', 'password' => bcrypt('x'), 'status' => 'active']);
+
+        // 2 site logs (same day), rain_start 10:00 / rain_stop 12:30, split across both logs.
+        $logA = SiteLog::create(['project_id' => $project->id, 'log_date' => '2025-12-20', 'title' => 'Site A', 'logged_by' => $user->id]);
+        $logA->weatherEvents()->create(['condition' => 'rain_start', 'event_time' => '10:00']);
+        $logB = SiteLog::create(['project_id' => $project->id, 'log_date' => '2025-12-20', 'title' => 'Site B', 'logged_by' => $user->id]);
+        $logB->weatherEvents()->create(['condition' => 'rain_stop', 'event_time' => '12:30']);
+
+        /** @var MonthlyReportService $service */
+        $service = app(MonthlyReportService::class);
+
+        return $service->create($project->id, ['period_id' => $period3->id], $user->id);
+    }
+
+    public function test_html_embeds_s_curve_charts_and_weather_grid(): void
+    {
+        $report = $this->makeReportWithSeries();
+
+        $html = app(PdfExporter::class)->html($report);
+
+        $this->assertSame(2, substr_count($html, 'data:image/svg+xml;base64,'));
+        $this->assertStringContainsString('class="weather-grid"', $html);
+        $this->assertStringContainsString('Raining hours', $html);
+        $this->assertStringNotContainsString('Chart available in a later phase.', $html);
     }
 
     public function test_html_renders_included_sections_and_excludes_excluded_ones(): void

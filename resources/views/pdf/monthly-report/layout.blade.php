@@ -48,6 +48,11 @@
     table.grid th { background-color: #d9ead3; font-weight: bold; }
     table.grid.small th, table.grid.small td { font-size: 7px; padding: 2px 3px; }
 
+    table.weather-grid th, table.weather-grid td { border: 1px solid #ccc; padding: 1px; text-align: center; }
+    table.weather-grid th { background-color: #d9ead3; font-weight: bold; }
+    table.kv td { padding: 2px 6px; font-size: 9px; }
+    table.kv td:first-child { font-weight: bold; }
+
     .images img { max-width: 100%; max-height: 110mm; display: block; margin: 0 auto 3px; }
     .images .caption { text-align: center; font-size: 9px; margin-bottom: 8px; }
 

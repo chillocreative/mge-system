@@ -4,6 +4,7 @@ namespace App\Services\MonthlyReport\Export;
 
 use App\Models\MonthlyReport;
 use App\Models\ReportImage;
+use App\Services\MonthlyReport\Charts\SCurveSvg;
 use App\Services\MonthlyReport\ReportContext;
 use App\Services\MonthlyReport\SectionRegistry;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -57,6 +58,19 @@ final class PdfExporter
         foreach ($included as $section) {
             $sections[$section->key] = $this->embedImages($section->key, $section->merged);
             $notes[$section->key] = $section->notes;
+        }
+
+        foreach (['2.2' => '2.2 PHYSICAL S-CURVE', '2.4' => '2.4 FINANCIAL S-CURVE'] as $key => $chartTitle) {
+            if (! isset($sections[$key])) {
+                continue;
+            }
+            $series = $sections[$key]['series'] ?? [];
+            $sections[$key]['chart_svg_uri'] = empty($series['months'])
+                ? null
+                : SCurveSvg::dataUri((new SCurveSvg)->render($series, [
+                    'title' => $chartTitle,
+                    'unit' => $key === '2.4' ? 'RM' : '%',
+                ]));
         }
 
         if (isset($sections['cover'])) {
