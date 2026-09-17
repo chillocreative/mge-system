@@ -99,6 +99,19 @@ export const SISTEM_SECTIONS = [
                     'Dokumen boleh ditapis mengikut kategori: Monthly Report, Minute Meeting dan Progress Tracking (selain kategori am seperti Drawing, Contract, Permit dan lain-lain).',
                 ],
             },
+            {
+                heading: 'Data laporan bulanan (tab Report Data)',
+                steps: [
+                    'Buka projek, klik tab "Report Data".',
+                    'Contract Particulars — nilai kontrak, WJP, tempoh, DLP, tarikh milikan/siap, CIDB dan insurans (kontrak utama perlu ditanda "Main contract" di Projects > Contracts).',
+                    'Parties & Contacts — pihak dalam kontrak (Owner, SO, Consultant, Contractor, dll.) beserta alamat, logo dan pegawai untuk dihubungi.',
+                    'Organisation Chart — jawatan dan garis pelaporan ahli projek.',
+                    'Progress & Baseline — jadual CPM bulanan (scheduled %) dan rekod kemajuan setiap tempoh laporan; variance dan hari ahead/delay dikira automatik.',
+                    'Delay Notices & Tests — notis kelewatan dan rekod ujian/pentauliahan.',
+                    'Site-Log Categories — senarai kategori pekerja dan jentera khusus projek yang digunakan dalam borang Site Log.',
+                    'Report Images — peta lokasi, akses tapak dan gambar kemajuan (label seperti "Aerial 1" supaya boleh dibandingkan bulan ke bulan).',
+                ],
+            },
         ],
     },
     {
