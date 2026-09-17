@@ -13,6 +13,9 @@ class ProjectMember extends Model
         'role',
         'joined_at',
         'left_at',
+        'designation',
+        'reports_to_user_id',
+        'org_sort',
     ];
 
     protected function casts(): array
