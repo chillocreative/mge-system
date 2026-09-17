@@ -258,8 +258,8 @@ export default function MonthlyReports() {
                                             {r.title && <p className="text-xs text-gray-500">{r.title}</p>}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
-                                            {r.period_start || r.period_end
-                                                ? `${formatDate(r.period_start)} - ${formatDate(r.period_end)}`
+                                            {r.period?.period_start || r.period?.period_end
+                                                ? `${formatDate(r.period?.period_start)} - ${formatDate(r.period?.period_end)}`
                                                 : (r.month_label || '-')}
                                         </td>
                                         <td className="px-4 py-3">

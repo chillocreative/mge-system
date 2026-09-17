@@ -315,8 +315,8 @@ export default function MonthlyReportEditor() {
                     </div>
                     <p className="mt-1 text-sm text-gray-500">
                         Report No. {report.report_no} &middot; {report.title || report.month_label}
-                        {(report.period_start || report.period_end) && (
-                            <> &middot; {formatDate(report.period_start)} - {formatDate(report.period_end)}</>
+                        {(report.period?.period_start || report.period?.period_end) && (
+                            <> &middot; {formatDate(report.period?.period_start)} - {formatDate(report.period?.period_end)}</>
                         )}
                     </p>
                 </div>
@@ -391,15 +391,16 @@ export default function MonthlyReportEditor() {
                         const d = sectionDrafts[s.key] || { overrides: {}, notes: '', include: s.include };
                         const edited = Object.keys(d.overrides || {}).length > 0;
                         const hasNotes = !!(d.notes && d.notes.trim());
+                        const isCover = s.key === 'cover';
                         return (
                             <div key={s.key} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${activeKey === s.key ? 'bg-primary-50' : 'hover:bg-gray-50'}`}>
                                 <input
                                     type="checkbox"
-                                    checked={!!d.include}
+                                    checked={isCover ? true : !!d.include}
                                     onChange={(e) => setSectionInclude(s.key, e.target.checked)}
-                                    disabled={!canEdit}
-                                    title="Include in PDF"
-                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                    disabled={!canEdit || isCover}
+                                    title={isCover ? 'The cover section is always included in the PDF' : 'Include in PDF'}
+                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60"
                                 />
                                 <button
                                     type="button"

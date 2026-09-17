@@ -343,11 +343,17 @@ function Matrix({ config, merged, canEdit, onOverridesChange }) {
         : <MatrixFlat merged={merged} canEdit={canEdit} onOverridesChange={onOverridesChange} />;
 }
 
+// 2.1 cells are display strings emitted by the builder (e.g. "12.5%", "+3%",
+// "5 Days", "AHEAD"), not numbers — stored as text while typing; trimmed on blur
+// (empty -> null) so inner spaces like "5 Days" survive keystrokes.
 function ProgressTable({ title, block, onChange, canEdit }) {
     const rows = block?.rows || [];
-    const updateCell = (idx, key, raw) => {
-        const val = raw === '' ? null : Number(raw);
+    const setCell = (idx, key, val) =>
         onChange({ ...block, rows: rows.map((r, i) => (i === idx ? { ...r, [key]: val } : r)) });
+    const updateCell = (idx, key, raw) => setCell(idx, key, raw === '' ? null : raw);
+    const trimCell = (idx, key, raw) => {
+        const trimmed = raw.trim();
+        if (trimmed !== raw) setCell(idx, key, trimmed === '' ? null : trimmed);
     };
 
     return (
@@ -366,8 +372,8 @@ function ProgressTable({ title, block, onChange, canEdit }) {
                         {rows.map((r, idx) => (
                             <tr key={idx}>
                                 <td className="px-3 py-2 font-medium text-gray-700">{r.label}</td>
-                                <td className="px-2 py-2"><input type="number" value={r.prev ?? ''} onChange={(e) => updateCell(idx, 'prev', e.target.value)} disabled={!canEdit} className={`${numInput} w-20`} /></td>
-                                <td className="px-2 py-2"><input type="number" value={r.cur ?? ''} onChange={(e) => updateCell(idx, 'cur', e.target.value)} disabled={!canEdit} className={`${numInput} w-20`} /></td>
+                                <td className="px-2 py-2"><input type="text" value={r.prev ?? ''} onChange={(e) => updateCell(idx, 'prev', e.target.value)} onBlur={(e) => trimCell(idx, 'prev', e.target.value)} disabled={!canEdit} className={`${numInput} w-20`} /></td>
+                                <td className="px-2 py-2"><input type="text" value={r.cur ?? ''} onChange={(e) => updateCell(idx, 'cur', e.target.value)} onBlur={(e) => trimCell(idx, 'cur', e.target.value)} disabled={!canEdit} className={`${numInput} w-20`} /></td>
                             </tr>
                         ))}
                     </tbody>
