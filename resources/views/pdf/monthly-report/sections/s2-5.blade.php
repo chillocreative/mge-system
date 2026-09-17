@@ -1,5 +1,9 @@
 @if(empty($data['rows']))
-    <p class="placeholder">No data.</p>
+    @if(!empty($data['gantt_pages']))
+        <p>The work programme (Gantt chart) is attached on the following {{ $data['gantt_pages'] }} page(s).</p>
+    @else
+        <p class="placeholder">No data.</p>
+    @endif
 @else
     <table class="grid small">
         <tr><th>No.</th><th>Task</th><th>Duration</th><th>Start</th><th>Finish</th><th>Actual</th><th>Plan</th></tr>

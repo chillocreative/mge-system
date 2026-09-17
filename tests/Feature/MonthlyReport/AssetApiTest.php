@@ -71,6 +71,7 @@ class AssetApiTest extends TestCase
         $res->assertCreated()->assertJsonPath('data.kind', 'gantt_page')->assertJsonPath('data.extension', 'png');
         Storage::disk('local')->assertExists($res->json('data.file_path'));
         $this->actingAs($manager)->getJson("/api/monthly-reports/{$report->id}/assets")->assertOk()->assertJsonCount(1, 'data');
+        $this->assertTrue((bool) $report->sections()->where('key', '2.5')->value('include'), 'Uploading a Gantt page includes section 2.5');
     }
 
     public function test_upload_pdf_probes_readability_and_stores_page_count(): void

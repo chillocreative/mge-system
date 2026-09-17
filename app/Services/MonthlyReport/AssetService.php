@@ -33,6 +33,12 @@ final class AssetService
 
         $nextSortOrder = (int) MonthlyReportAsset::where('report_id', $report->id)->max('sort_order') + 1;
 
+        // Gantt pages are appended right after section 2.5, so make sure that
+        // section is part of the export instead of falling to the end of the PDF.
+        if ($kind === 'gantt_page') {
+            $report->sections()->where('key', '2.5')->update(['include' => true]);
+        }
+
         return MonthlyReportAsset::create([
             'report_id' => $report->id,
             'kind' => $kind,

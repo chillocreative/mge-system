@@ -155,6 +155,10 @@ final class PdfExporter
             }
         }
 
+        if (isset($sections['2.5'])) {
+            $sections['2.5']['gantt_pages'] = (int) $report->assets()->where('kind', 'gantt_page')->sum('pages');
+        }
+
         if (isset($sections['cover'])) {
             $sections['cover']['signatories'] = $report->signatories ?: ($sections['cover']['signatories'] ?? []);
             if ($report->evaluation_date) {
