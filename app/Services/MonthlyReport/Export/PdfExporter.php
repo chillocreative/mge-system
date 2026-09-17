@@ -13,6 +13,11 @@ final class PdfExporter
 {
     private const IMAGE_MIME = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg'];
 
+    private const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+
+    /** @var array<int, ReportImage> */
+    private array $imageCache = [];
+
     /** Renders the same Blade view used by render(), returned as a plain HTML string (for tests/inspection). */
     public function html(MonthlyReport $report): string
     {
@@ -35,14 +40,30 @@ final class PdfExporter
         $report->loadMissing(['sections', 'project', 'period']);
         $ctx = ReportContext::for($report);
 
+        $included = $report->sections->filter(fn ($section) => $section->include);
+
+        $imageIds = [];
+        foreach ($included as $section) {
+            foreach ($this->collectImageIds($section->key, $section->merged) as $id) {
+                $imageIds[$id] = true;
+            }
+        }
+        $this->imageCache = $imageIds
+            ? ReportImage::whereIn('id', array_keys($imageIds))->get()->keyBy('id')->all()
+            : [];
+
         $sections = [];
         $notes = [];
-        foreach ($report->sections as $section) {
-            if (! $section->include) {
-                continue;
-            }
+        foreach ($included as $section) {
             $sections[$section->key] = $this->embedImages($section->key, $section->merged);
             $notes[$section->key] = $section->notes;
+        }
+
+        if (isset($sections['cover'])) {
+            $sections['cover']['signatories'] = $report->signatories ?: ($sections['cover']['signatories'] ?? []);
+            if ($report->evaluation_date) {
+                $sections['cover']['evaluation_date'] = $report->evaluation_date->copy()->format('d M Y');
+            }
         }
 
         $logos = [];
@@ -60,6 +81,39 @@ final class PdfExporter
             'mgeLogo' => $this->mgeLogo(),
             'titles' => SectionRegistry::TITLES,
         ];
+    }
+
+    /** @return array<int, int> image ids referenced by this section */
+    private function collectImageIds(string $key, array $data): array
+    {
+        $ids = [];
+
+        if ($key === '1.3') {
+            foreach ($data['images'] ?? [] as $img) {
+                if (isset($img['id'])) {
+                    $ids[] = (int) $img['id'];
+                }
+            }
+        }
+
+        if ($key === '5.0') {
+            foreach (['site_access', 'key_plan'] as $group) {
+                foreach ($data[$group] ?? [] as $img) {
+                    if (isset($img['id'])) {
+                        $ids[] = (int) $img['id'];
+                    }
+                }
+            }
+            foreach ($data['pairs'] ?? [] as $pair) {
+                foreach (['previous', 'current'] as $slot) {
+                    if (isset($pair[$slot]['id'])) {
+                        $ids[] = (int) $pair[$slot]['id'];
+                    }
+                }
+            }
+        }
+
+        return $ids;
     }
 
     private function embedImages(string $key, array $data): array
@@ -84,16 +138,26 @@ final class PdfExporter
 
     private function withDataUri(array $image): array
     {
-        $image['data_uri'] = isset($image['id']) ? $this->reportImageDataUri((int) $image['id']) : null;
+        $image['data_uri'] = null;
+
+        if (isset($image['id']) && ($reportImage = $this->imageCache[(int) $image['id']] ?? null)) {
+            if ($this->fileTooLarge($reportImage->file_path)) {
+                $image['caption'] = trim(($image['caption'] ?? '').' (image too large)');
+            } else {
+                $image['data_uri'] = $this->dataUriFromDisk($reportImage->file_path);
+            }
+        }
 
         return $image;
     }
 
-    private function reportImageDataUri(int $imageId): ?string
+    private function fileTooLarge(?string $path): bool
     {
-        $image = ReportImage::find($imageId);
+        if (! $path || ! Storage::disk('local')->exists($path)) {
+            return false;
+        }
 
-        return $image ? $this->dataUriFromDisk($image->file_path) : null;
+        return Storage::disk('local')->size($path) > self::MAX_IMAGE_BYTES;
     }
 
     private function dataUriFromDisk(?string $path): ?string

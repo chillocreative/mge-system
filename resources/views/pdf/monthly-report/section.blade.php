@@ -6,7 +6,14 @@
     @if(!empty($data['placeholder']) || empty($data))
         <p class="placeholder">No data.</p>
     @else
-        @include($partialView, ['data' => $data])
+        @php
+            try {
+                echo view($partialView, ['data' => $data])->render();
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Monthly report section failed to render', ['key' => $key, 'error' => $e->getMessage()]);
+                echo '<p class="placeholder">Section could not be rendered.</p>';
+            }
+        @endphp
     @endif
 
     @if(!empty($note))

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\ReportData;
 
 use App\Http\Controllers\Concerns\NormalizesNullableColumns;
 use App\Http\Controllers\Controller;
+use App\Models\MonthlyReport;
 use App\Models\Project;
 use App\Models\ProjectContract;
 use App\Models\ProjectProgressPeriod;
@@ -84,7 +85,13 @@ class ProgressPeriodController extends Controller
 
     public function destroy(int $projectId, int $periodId): JsonResponse
     {
-        ProjectProgressPeriod::where('project_id', $projectId)->findOrFail($periodId)->delete();
+        $period = ProjectProgressPeriod::where('project_id', $projectId)->findOrFail($periodId);
+
+        if (MonthlyReport::where('period_id', $periodId)->exists()) {
+            return $this->error('This period is referenced by one or more monthly reports and cannot be deleted.', 422);
+        }
+
+        $period->delete();
 
         return $this->success(null, 'Progress period deleted.');
     }

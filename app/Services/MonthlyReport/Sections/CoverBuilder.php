@@ -14,6 +14,12 @@ final class CoverBuilder extends AbstractBuilder
         $party = fn (string $role) => ($p = $ctx->party($role)) ? $this->party($p) : null;
         $contractor = $ctx->party('contractor');
 
+        $signatories = $ctx->report?->signatories ?: [
+            ['slot' => 'prepared', 'name' => $contractor?->contacts->first()?->name ?? '', 'designation' => $contractor?->contacts->first()?->designation ?? 'Project Manager', 'company' => $contractor?->name ?? ''],
+            ['slot' => 'verified', 'name' => $ctx->party('consultant')?->contacts->first()?->name ?? '', 'designation' => '', 'company' => $ctx->party('consultant')?->name ?? ''],
+            ['slot' => 'accepted', 'name' => '', 'designation' => '', 'company' => $ctx->party('superintending_officer')?->name ?? ''],
+        ];
+
         return [
             'schema' => 1,
             'report_no' => $ctx->reportNo,
@@ -27,11 +33,8 @@ final class CoverBuilder extends AbstractBuilder
             'so' => $party('superintending_officer'),
             'consultant' => $party('consultant'),
             'contractor' => $party('contractor'),
-            'signatories' => [
-                ['slot' => 'prepared', 'name' => $contractor?->contacts->first()?->name ?? '', 'designation' => $contractor?->contacts->first()?->designation ?? 'Project Manager', 'company' => $contractor?->name ?? ''],
-                ['slot' => 'verified', 'name' => $ctx->party('consultant')?->contacts->first()?->name ?? '', 'designation' => '', 'company' => $ctx->party('consultant')?->name ?? ''],
-                ['slot' => 'accepted', 'name' => '', 'designation' => '', 'company' => $ctx->party('superintending_officer')?->name ?? ''],
-            ],
+            'signatories' => $signatories,
+            'evaluation_date' => $ctx->report?->evaluation_date?->copy()->format('d M Y'),
         ];
     }
 

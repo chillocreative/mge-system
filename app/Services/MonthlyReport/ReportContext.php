@@ -19,6 +19,7 @@ final class ReportContext
         public readonly Collection $parties,
         public readonly int $reportNo,
         public readonly array $options = [],
+        public readonly ?MonthlyReport $report = null,
     ) {}
 
     public static function for(MonthlyReport $report): self
@@ -34,6 +35,7 @@ final class ReportContext
             parties: ProjectParty::where('project_id', $project->id)->whereNotNull('report_role')->with('contacts')->orderBy('sort_order')->get(),
             reportNo: (int) $report->report_no,
             options: $report->options ?? [],
+            report: $report,
         );
     }
 

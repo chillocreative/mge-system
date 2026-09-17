@@ -42,9 +42,9 @@ class MonthlyReportController extends Controller
     public function store(int $projectId, Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'report_no' => ['nullable', 'integer', 'min:1', Rule::unique('monthly_reports', 'report_no')->where('project_id', $projectId)],
+            'report_no' => ['nullable', 'integer', 'min:1', 'max:65535', Rule::unique('monthly_reports', 'report_no')->where('project_id', $projectId)],
             'period_id' => ['nullable', 'integer', 'exists:project_progress_periods,id'],
-            'period_start' => ['required_without:period_id', 'date'],
+            'period_start' => ['nullable', 'date'],
             'period_end' => ['required_without:period_id', 'date'],
             'month_label' => ['nullable', 'string', 'max:40'],
             'evaluation_date' => ['nullable', 'date'],
@@ -73,9 +73,9 @@ class MonthlyReportController extends Controller
             'options' => ['sometimes', 'nullable', 'array'],
         ]);
 
-        $report->update($validated);
+        $report = $this->service->update($report, $validated);
 
-        return $this->success($this->present($report->fresh(['sections', 'project', 'period'])), 'Monthly report updated.');
+        return $this->success($this->present($report), 'Monthly report updated.');
     }
 
     public function saveSection(MonthlyReport $report, string $key, Request $request): JsonResponse
@@ -115,6 +115,7 @@ class MonthlyReportController extends Controller
     public function exportPdf(int $reportId)
     {
         set_time_limit(120);
+        ini_set('memory_limit', '512M');
 
         $report = MonthlyReport::with(['sections', 'project', 'period'])->findOrFail($reportId);
         $pdf = $this->pdfExporter->render($report);
@@ -127,11 +128,7 @@ class MonthlyReportController extends Controller
 
     public function destroy(MonthlyReport $report): JsonResponse
     {
-        if ($report->isFinal()) {
-            return $this->error('Finalised reports cannot be deleted.', 422);
-        }
-
-        $report->delete();
+        $this->service->destroy($report);
 
         return $this->success(null, 'Monthly report deleted.');
     }

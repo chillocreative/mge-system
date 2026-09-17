@@ -8,6 +8,7 @@ use App\Models\ProjectContract;
 use App\Models\ProjectParty;
 use App\Models\ProjectProgressPeriod;
 use App\Models\User;
+use App\Services\MonthlyReport\Export\PdfExporter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -183,5 +184,92 @@ class MonthlyReportApiTest extends TestCase
         $res = $this->actingAs($this->manager)->getJson('/api/monthly-reports?project_id='.$project->id)->assertOk();
         $this->assertCount(1, $res->json('data.data'));
         $this->assertSame($project->id, $res->json('data.data.0.project.id'));
+    }
+
+    public function test_update_save_section_and_regenerate_are_blocked_on_a_finalised_report(): void
+    {
+        [$project, $period] = $this->seedProject();
+        $reportId = $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", ['period_id' => $period->id])->json('data.id');
+
+        $this->actingAs($this->manager)->postJson("/api/monthly-reports/{$reportId}/finalise")->assertOk();
+
+        $this->actingAs($this->manager)->putJson("/api/monthly-reports/{$reportId}", ['title' => 'New Title'])->assertStatus(422);
+        $this->actingAs($this->manager)->putJson("/api/monthly-reports/{$reportId}/sections/1.1", ['notes' => 'x'])->assertStatus(422);
+        $this->actingAs($this->manager)->postJson("/api/monthly-reports/{$reportId}/regenerate?key=1.1")->assertStatus(422);
+    }
+
+    public function test_ill_typed_override_is_rejected(): void
+    {
+        [$project, $period] = $this->seedProject();
+        $reportId = $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", ['period_id' => $period->id])->json('data.id');
+
+        $this->actingAs($this->manager)->putJson("/api/monthly-reports/{$reportId}/sections/1.1", [
+            'overrides' => ['rows' => 'x'],
+        ])->assertStatus(422);
+    }
+
+    public function test_view_only_user_gets_403_on_manage_actions(): void
+    {
+        [$project, $period] = $this->seedProject();
+        $reportId = $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", ['period_id' => $period->id])->json('data.id');
+
+        $this->actingAs($this->viewer)->putJson("/api/monthly-reports/{$reportId}/sections/1.1", ['notes' => 'x'])->assertStatus(403);
+        $this->actingAs($this->viewer)->postJson("/api/monthly-reports/{$reportId}/regenerate?key=1.1")->assertStatus(403);
+        $this->actingAs($this->viewer)->postJson("/api/monthly-reports/{$reportId}/finalise")->assertStatus(403);
+        $this->actingAs($this->viewer)->deleteJson("/api/monthly-reports/{$reportId}")->assertStatus(403);
+    }
+
+    public function test_destroy_finalised_report_returns_422(): void
+    {
+        [$project, $period] = $this->seedProject();
+        $reportId = $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", ['period_id' => $period->id])->json('data.id');
+
+        $this->actingAs($this->manager)->postJson("/api/monthly-reports/{$reportId}/finalise")->assertOk();
+
+        $this->actingAs($this->manager)->deleteJson("/api/monthly-reports/{$reportId}")->assertStatus(422);
+        $this->assertNotNull(MonthlyReport::find($reportId));
+    }
+
+    public function test_cover_pdf_html_uses_report_level_signatory(): void
+    {
+        [$project, $period] = $this->seedProject();
+        $reportId = $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", ['period_id' => $period->id])->json('data.id');
+
+        $this->actingAs($this->manager)->putJson("/api/monthly-reports/{$reportId}", [
+            'signatories' => [
+                ['slot' => 'prepared', 'name' => 'Edited Signatory Name', 'designation' => 'Site Agent', 'company' => 'MGE'],
+                ['slot' => 'verified', 'name' => '', 'designation' => '', 'company' => ''],
+                ['slot' => 'accepted', 'name' => '', 'designation' => '', 'company' => ''],
+            ],
+        ])->assertOk();
+
+        $report = MonthlyReport::with(['sections', 'project', 'period'])->findOrFail($reportId);
+        $html = app(PdfExporter::class)->html($report);
+
+        $this->assertStringContainsString('Edited Signatory Name', $html);
+    }
+
+    public function test_creating_two_reports_for_the_same_period_end_reuses_one_period(): void
+    {
+        $project = $this->project();
+        ProjectContract::create(['project_id' => $project->id, 'title' => 'Main', 'is_main' => true, 'contract_sum' => 288000000]);
+        ProjectParty::create(['project_id' => $project->id, 'name' => 'MULTI GREEN ENGINEERING SDN BHD', 'type' => 'main_contractor', 'report_role' => 'contractor', 'address' => 'No. 35, Segamat', 'sort_order' => 6]);
+        \App\Models\ProjectScheduleBaseline::create(['project_id' => $project->id, 'month' => '2026-01-01', 'scheduled_physical_pct' => 2, 'scheduled_financial_amount' => 200000, 'scheduled_financial_pct' => 2]);
+
+        $beforeCount = ProjectProgressPeriod::count();
+
+        $first = $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", [
+            'period_end' => '2026-01-15',
+            'report_no' => 1,
+        ])->assertCreated();
+
+        $second = $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", [
+            'period_end' => '2026-01-15',
+            'report_no' => 2,
+        ])->assertCreated();
+
+        $afterCount = ProjectProgressPeriod::count();
+        $this->assertSame($beforeCount + 1, $afterCount);
+        $this->assertSame($first->json('data.period.id'), $second->json('data.period.id'));
     }
 }

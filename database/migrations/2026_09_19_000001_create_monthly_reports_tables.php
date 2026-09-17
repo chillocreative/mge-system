@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('monthly_reports', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('period_id')->constrained('project_progress_periods')->cascadeOnDelete();
+            $table->foreignId('period_id')->constrained('project_progress_periods')->restrictOnDelete();
             $table->unsignedSmallInteger('report_no');
             $table->string('title');
             $table->string('month_label', 40);

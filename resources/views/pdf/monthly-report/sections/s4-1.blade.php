@@ -1,8 +1,18 @@
 @php
     $days = $data['days'] ?? [];
     $groups = $data['groups'] ?? [];
-    $totals = $data['totals'] ?? [];
     $chunks = array_chunk(array_keys($days), 16);
+
+    $totals = [];
+    foreach (array_keys($days) as $i) {
+        $sum = 0;
+        foreach ($groups as $group) {
+            foreach (($group['rows'] ?? []) as $row) {
+                $sum += (float) ($row['counts'][$i] ?? 0);
+            }
+        }
+        $totals[$i] = $sum == (int) $sum ? (int) $sum : $sum;
+    }
 
     $monthRunsFor = function (array $chunk) use ($days) {
         $runs = [];

@@ -65,6 +65,14 @@ final class MonthlyReportService
 
     public function regenerate(MonthlyReport $r, ?string $key = null): MonthlyReport
     {
+        if ($r->isFinal()) {
+            throw ValidationException::withMessages(['report' => ['Report is finalised and cannot be edited.']]);
+        }
+
+        if ($key !== null && ! array_key_exists($key, SectionRegistry::all())) {
+            throw ValidationException::withMessages(['key' => ["Unknown section key: {$key}."]]);
+        }
+
         $ctx = ReportContext::for($r);
         $keys = $key ? [$key] : array_keys(SectionRegistry::all());
 
@@ -84,6 +92,26 @@ final class MonthlyReportService
         return $r->fresh(['sections', 'project', 'period']);
     }
 
+    public function update(MonthlyReport $r, array $attrs): MonthlyReport
+    {
+        if ($r->isFinal()) {
+            throw ValidationException::withMessages(['report' => ['Report is finalised and cannot be edited.']]);
+        }
+
+        $r->update($attrs);
+
+        return $r->fresh(['sections', 'project', 'period']);
+    }
+
+    public function destroy(MonthlyReport $r): void
+    {
+        if ($r->isFinal()) {
+            throw ValidationException::withMessages(['report' => ['Finalised reports cannot be deleted.']]);
+        }
+
+        $r->delete();
+    }
+
     public function saveSection(MonthlyReport $r, string $key, array $payload): MonthlyReportSection
     {
         if ($r->isFinal()) {
@@ -96,9 +124,9 @@ final class MonthlyReportService
 
         if (array_key_exists('overrides', $payload)) {
             $overrides = $payload['overrides'] ?? [];
-            $unknown = SectionMerger::validateOverrides($section->data ?? [], $overrides);
-            if ($unknown !== []) {
-                throw ValidationException::withMessages(['overrides' => ['Unknown override key(s): '.implode(', ', $unknown)]]);
+            $invalid = SectionMerger::validateOverrides($section->data ?? [], $overrides);
+            if ($invalid !== []) {
+                throw ValidationException::withMessages(['overrides' => ['Unknown or invalid override key(s): '.implode(', ', $invalid)]]);
             }
             $update['overrides'] = $overrides ?: null;
         }
@@ -168,6 +196,16 @@ final class MonthlyReportService
         $project = \App\Models\Project::findOrFail($projectId);
         $end = Carbon::parse($attrs['period_end']);
         $bounds = ReportPeriod::containing((int) $project->report_cutoff_day, $end);
+
+        $existing = ProjectProgressPeriod::where('project_id', $projectId)
+            ->where('period_end', $bounds['end']->toDateString())
+            ->first()
+            ?? ProjectProgressPeriod::where('project_id', $projectId)
+                ->where('period_start', $bounds['start']->toDateString())
+                ->first();
+        if ($existing) {
+            return $existing;
+        }
 
         $baseline = $this->progress->scheduledFor($projectId, $bounds['end']);
         $contract = \App\Models\ProjectContract::where('project_id', $projectId)->where('is_main', true)->first();

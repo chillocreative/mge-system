@@ -102,7 +102,7 @@ class RolePresets
             'tasks.view', 'tasks.create', 'tasks.edit', 'tasks.delete', 'tasks.assign',
             'clients.view', 'clients.create', 'clients.edit', 'clients.delete',
             'finance.view',
-            'reports.view',
+            'reports.view', 'reports.manage',
             'safety.view', 'safety.create', 'safety.manage',
             'environmental.view', 'environmental.create', 'environmental.manage',
             'staff.view',
