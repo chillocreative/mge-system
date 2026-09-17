@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\MonthlyReport;
+use App\Services\MonthlyReport\Export\PdfExporter;
 use App\Services\MonthlyReport\MonthlyReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,7 +12,7 @@ use Illuminate\Validation\Rule;
 
 class MonthlyReportController extends Controller
 {
-    public function __construct(private MonthlyReportService $service) {}
+    public function __construct(private MonthlyReportService $service, private PdfExporter $pdfExporter) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -109,6 +110,19 @@ class MonthlyReportController extends Controller
         $report = $this->service->reopen($report);
 
         return $this->success($this->present($report), 'Report reopened.');
+    }
+
+    public function exportPdf(int $reportId)
+    {
+        set_time_limit(120);
+
+        $report = MonthlyReport::with(['sections', 'project', 'period'])->findOrFail($reportId);
+        $pdf = $this->pdfExporter->render($report);
+
+        $projectCode = preg_replace('/[^A-Za-z0-9]+/', '-', (string) $report->project?->code) ?: 'project';
+        $filename = "MPR-{$projectCode}-No{$report->report_no}.pdf";
+
+        return $pdf->download($filename);
     }
 
     public function destroy(MonthlyReport $report): JsonResponse

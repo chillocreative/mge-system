@@ -295,6 +295,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('monthly-reports')->group(function () {
         Route::get('/', [MonthlyReportController::class, 'index'])->middleware('permission:reports.view');
+        Route::get('/{report}/export/pdf', [MonthlyReportController::class, 'exportPdf'])->middleware('permission:reports.view');
         Route::get('/{report}', [MonthlyReportController::class, 'show'])->middleware('permission:reports.view');
         Route::put('/{report}', [MonthlyReportController::class, 'update'])->middleware('permission:reports.manage');
         Route::put('/{report}/sections/{key}', [MonthlyReportController::class, 'saveSection'])->middleware('permission:reports.manage');
