@@ -59,6 +59,7 @@ const weatherIcons = { sunny: '☀️', cloudy: '☁️', rainy: '🌧️', stor
 
 const tabs = [
     { id: 'overview', label: 'Overview', icon: HiOutlineClipboardList },
+    { id: 'report-data', label: 'Report Data', icon: HiOutlineClipboardList },
     { id: 'tasks', label: 'Tasks', icon: HiOutlineClipboardList },
     { id: 'milestones', label: 'Milestones', icon: HiOutlineFlag },
     { id: 'timeline', label: 'Timeline', icon: HiOutlineClock },
@@ -67,7 +68,6 @@ const tabs = [
     { id: 'documents', label: 'Documents', icon: HiOutlineDocumentDownload },
     { id: 'calendar', label: 'Calendar', icon: HiOutlineCalendar },
     { id: 'discussions', label: 'Discussions', icon: HiOutlineChatAlt2 },
-    { id: 'report-data', label: 'Report Data', icon: HiOutlineClipboardList },
 ];
 
 export default function ProjectDetail() {
