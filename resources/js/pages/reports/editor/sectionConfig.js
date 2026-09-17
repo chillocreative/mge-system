@@ -2,14 +2,19 @@
 //
 // `type` selects which editor component renders the section
 // (see MonthlyReportEditor.jsx): 'value' -> ValueSection, 'text' -> TextSection,
-// 'image' -> ImageSection, everything else ('table', 'groups-table',
-// 'groups-numbers', 'matrix', 'progress') -> TableSection, which dispatches
-// internally on `type`.
+// 'image' -> ImageSection, 'chart' -> ChartSection, 'gantt' -> GanttAssetsPanel,
+// everything else ('table', 'groups-table', 'groups-numbers', 'matrix',
+// 'progress') -> TableSection, which dispatches internally on `type`.
 //
 // Table `columns` entries: { key, label, readOnly?, multiline?, type? }.
 // `type` on a column is one of: 'text' (default), 'number', 'contacts'.
 // Columns without `readOnly` are editable; the underlying (non-bold) system
 // fields from section-shapes.md are marked readOnly.
+
+// Sections that render landscape by default in the PDF when
+// `report.options?.landscape_sections` is null — kept in sync with the
+// server default (see MonthlyReportController / PDF template).
+export const DEFAULT_LANDSCAPE = ['2.2', '2.3', '2.4', '2.5', '4.1', '4.2'];
 
 export const SECTION_EDITORS = {
     cover: {
@@ -45,7 +50,7 @@ export const SECTION_EDITORS = {
         ],
     },
     '2.1': { type: 'progress' },
-    '2.2': { type: 'text' },
+    '2.2': { type: 'chart', unit: '%' },
     '2.3': {
         type: 'table',
         columns: [
@@ -61,19 +66,8 @@ export const SECTION_EDITORS = {
             { key: 'remarks', label: 'Remarks', multiline: true },
         ],
     },
-    '2.4': { type: 'text' },
-    '2.5': {
-        type: 'table',
-        columns: [
-            { key: 'no', label: 'No.' },
-            { key: 'task', label: 'Task' },
-            { key: 'duration', label: 'Duration' },
-            { key: 'start', label: 'Start' },
-            { key: 'finish', label: 'Finish' },
-            { key: 'actual', label: 'Actual' },
-            { key: 'plan', label: 'Plan' },
-        ],
-    },
+    '2.4': { type: 'chart', unit: 'RM' },
+    '2.5': { type: 'gantt' },
     '2.6': {
         type: 'table',
         columns: [

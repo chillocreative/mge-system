@@ -44,6 +44,31 @@ const monthlyReportService = {
     getPdfUrl(id) {
         return `/api/monthly-reports/${id}/export/pdf`;
     },
+    getChartUrl(id, key, version) {
+        const v = version ?? Date.now();
+        return `/api/monthly-reports/${id}/charts/${key}?v=${v}`;
+    },
+    async listAssets(id) {
+        const response = await apiClient.get(`/monthly-reports/${id}/assets`);
+        return response.data;
+    },
+    async uploadAsset(id, file, kind = 'gantt_page') {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('kind', kind);
+        // Do not set Content-Type manually — apiClient/axios sets the correct
+        // multipart boundary automatically from the FormData instance.
+        const response = await apiClient.post(`/monthly-reports/${id}/assets`, formData);
+        return response.data;
+    },
+    async updateAsset(id, assetId, data) {
+        const response = await apiClient.put(`/monthly-reports/${id}/assets/${assetId}`, data);
+        return response.data;
+    },
+    async deleteAsset(id, assetId) {
+        const response = await apiClient.delete(`/monthly-reports/${id}/assets/${assetId}`);
+        return response.data;
+    },
 };
 
 export default monthlyReportService;

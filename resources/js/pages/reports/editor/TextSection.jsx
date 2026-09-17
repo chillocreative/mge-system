@@ -51,11 +51,13 @@ function SeriesTable({ series }) {
     );
 }
 
-function minutesToClock(min) {
-    if (min === null || min === undefined) return '-';
-    const h = Math.floor(min / 60).toString().padStart(2, '0');
-    const m = Math.floor(min % 60).toString().padStart(2, '0');
-    return `${h}:${m}`;
+const HOURS = Array.from({ length: 24 }, (_, h) => h);
+
+// A hour cell is filled when any recorded interval [s, e) (minutes since
+// midnight) overlaps that hour's [h*60, (h+1)*60) window — same rule as the
+// PDF's Blade template.
+function hourFilled(intervals, h) {
+    return (intervals || []).some(([s, e]) => s < (h + 1) * 60 && e > h * 60);
 }
 
 function WeatherLog({ data }) {
@@ -68,18 +70,38 @@ function WeatherLog({ data }) {
                 <span><strong>{summary.raining_days ?? '-'}</strong> raining days</span>
                 <span><strong>{summary.raining_hours ?? '-'}</strong> raining hours</span>
             </div>
-            <ul className="divide-y divide-gray-100 rounded-lg ring-1 ring-gray-200">
-                {days.map((d, i) => (
-                    <li key={i} className="flex items-center justify-between px-3 py-2 text-sm">
-                        <span className="text-gray-700">{d.date}</span>
-                        <span className="text-gray-500">
-                            {d.intervals?.length
-                                ? d.intervals.map(([s, e]) => `${minutesToClock(s)}–${minutesToClock(e)}`).join(', ')
-                                : 'No rain'}
-                        </span>
-                    </li>
-                ))}
-            </ul>
+            <div className="overflow-x-auto rounded-lg ring-1 ring-gray-200">
+                <table className="min-w-full divide-y divide-gray-200 text-xs">
+                    <thead className="bg-gray-50">
+                        <tr>
+                            <th className="sticky left-0 z-10 bg-gray-50 px-3 py-2 text-left font-semibold uppercase text-gray-500">Date</th>
+                            {HOURS.map((h) => (
+                                <th key={h} className="px-1 py-2 text-center font-medium text-gray-400">{h}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                        {days.map((d, i) => (
+                            <tr key={i}>
+                                <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium text-gray-700">{d.date}</td>
+                                {HOURS.map((h) => (
+                                    <td key={h} className="px-1 py-1 text-center">
+                                        <span
+                                            className={`inline-block h-4 w-4 rounded-sm ${hourFilled(d.intervals, h) ? 'bg-blue-500' : 'bg-gray-100'}`}
+                                            title={hourFilled(d.intervals, h) ? 'Rain' : 'No rain'}
+                                        />
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+                        {days.length === 0 && (
+                            <tr>
+                                <td colSpan={25} className="px-3 py-4 text-center text-gray-400">No data.</td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }
@@ -106,6 +128,13 @@ export default function TextSection({ data }) {
 
     if (data.summary && data.days) {
         return <WeatherLog data={data} />;
+    }
+
+    // 2.5 (Gantt) merged data is `{ rows: [], note }` — the activity table
+    // itself is edited via GanttAssetsPanel (see MonthlyReportEditor's
+    // 'gantt' case), so this host only surfaces the note here.
+    if (data.note) {
+        return <p className="text-sm text-gray-500">{data.note}</p>;
     }
 
     return <p className="text-sm text-gray-500">No data.</p>;

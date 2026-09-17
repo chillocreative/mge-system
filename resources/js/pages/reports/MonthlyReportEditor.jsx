@@ -14,12 +14,16 @@ import {
     HiOutlineCheckCircle,
     HiOutlineLockOpen,
     HiOutlineExclamation,
+    HiOutlineViewGrid,
 } from 'react-icons/hi';
-import SECTION_EDITORS from './editor/sectionConfig';
+import SECTION_EDITORS, { DEFAULT_LANDSCAPE } from './editor/sectionConfig';
 import ValueSection from './editor/ValueSection';
 import TableSection from './editor/TableSection';
 import TextSection from './editor/TextSection';
 import ImageSection from './editor/ImageSection';
+import ChartSection from './editor/ChartSection';
+import GanttAssetsPanel from './editor/GanttAssetsPanel';
+import ReportOptionsDialog from './editor/ReportOptionsDialog';
 import SectionNotes from './editor/SectionNotes';
 import applyDraft from './editor/applyDraft';
 
@@ -61,6 +65,8 @@ export default function MonthlyReportEditor() {
     const [regeneratingAll, setRegeneratingAll] = useState(false);
     const [regeneratingKey, setRegeneratingKey] = useState(null);
     const [statusBusy, setStatusBusy] = useState(false);
+    const [chartVersion, setChartVersion] = useState(0);
+    const [showOptions, setShowOptions] = useState(false);
 
     const applyReport = useCallback((data) => {
         setReport(data);
@@ -84,6 +90,18 @@ export default function MonthlyReportEditor() {
     useEffect(() => {
         load();
     }, [load]);
+
+    // Silent refetch (no full-page spinner) used after a Gantt page upload,
+    // since the server auto-sets section 2.5 `include=true` and the left
+    // nav needs to reflect that without disrupting the rest of the page.
+    const refetchQuiet = useCallback(async () => {
+        try {
+            const res = await monthlyReportService.get(id);
+            applyReport(res.data);
+        } catch {
+            toast.error('Failed to refresh report');
+        }
+    }, [id, applyReport]);
 
     const isFinal = report?.status === 'final';
     const canEdit = canManage && !isFinal;
@@ -146,6 +164,7 @@ export default function MonthlyReportEditor() {
             await persistDirty();
             const res = await monthlyReportService.get(report.id);
             applyReport(res.data);
+            setChartVersion((v) => v + 1);
             toast.success('Report saved');
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to save report');
@@ -167,6 +186,7 @@ export default function MonthlyReportEditor() {
             }
             const res = await monthlyReportService.regenerate(report.id);
             applyReport(res.data);
+            setChartVersion((v) => v + 1);
             toast.success('Report regenerated');
         } catch (err) {
             toast.error(err.response?.data?.message || (hasDirty ? 'Failed to save changes before regenerating' : 'Failed to regenerate report'));
@@ -194,6 +214,7 @@ export default function MonthlyReportEditor() {
             }
             const res = await monthlyReportService.regenerate(report.id, section.key);
             applyReport(res.data);
+            setChartVersion((v) => v + 1);
             toast.success(`${section.title} regenerated`);
         } catch (err) {
             toast.error(err.response?.data?.message || (hasDirty ? 'Failed to save changes before regenerating' : 'Failed to regenerate section'));
@@ -284,6 +305,29 @@ export default function MonthlyReportEditor() {
                         onOverridesChange={onOverridesChange}
                     />
                 );
+            case 'chart':
+                return (
+                    <ChartSection
+                        config={config}
+                        reportId={report.id}
+                        sectionKey={activeSection.key}
+                        merged={effectiveMerged}
+                        canEdit={canEdit}
+                        onOverridesChange={onOverridesChange}
+                        version={chartVersion}
+                    />
+                );
+            case 'gantt':
+                return (
+                    <div className="space-y-4">
+                        <TextSection data={effectiveMerged} />
+                        <GanttAssetsPanel
+                            reportId={report.id}
+                            canEdit={canEdit}
+                            onUploaded={refetchQuiet}
+                        />
+                    </div>
+                );
             default:
                 return (
                     <TableSection
@@ -341,6 +385,15 @@ export default function MonthlyReportEditor() {
                             </button>
                         </>
                     )}
+                    {canManage && (
+                        <button
+                            type="button"
+                            onClick={() => setShowOptions(true)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                            <HiOutlineViewGrid className="h-4 w-4" /> Layout
+                        </button>
+                    )}
                     <a
                         href={monthlyReportService.getPdfUrl(report.id)}
                         target="_blank"
@@ -392,6 +445,7 @@ export default function MonthlyReportEditor() {
                         const edited = Object.keys(d.overrides || {}).length > 0;
                         const hasNotes = !!(d.notes && d.notes.trim());
                         const isCover = s.key === 'cover';
+                        const isLandscape = (report.options?.landscape_sections ?? DEFAULT_LANDSCAPE).includes(s.key);
                         return (
                             <div key={s.key} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${activeKey === s.key ? 'bg-primary-50' : 'hover:bg-gray-50'}`}>
                                 <input
@@ -410,6 +464,7 @@ export default function MonthlyReportEditor() {
                                     {s.title}
                                 </button>
                                 <div className="flex shrink-0 items-center gap-1">
+                                    {isLandscape && <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500" title="Prints landscape">L</span>}
                                     {edited && <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700" title="Has overrides">edited</span>}
                                     {hasNotes && <span className="rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-700" title="Has notes">notes</span>}
                                 </div>
@@ -444,6 +499,17 @@ export default function MonthlyReportEditor() {
                     </div>
                 </div>
             </div>
+
+            {showOptions && (
+                <ReportOptionsDialog
+                    report={report}
+                    onClose={() => setShowOptions(false)}
+                    onSaved={(data) => {
+                        applyReport(data);
+                        setShowOptions(false);
+                    }}
+                />
+            )}
         </div>
     );
 }
