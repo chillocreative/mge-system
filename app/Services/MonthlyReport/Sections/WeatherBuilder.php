@@ -10,11 +10,11 @@ final class WeatherBuilder extends AbstractBuilder
 {
     public function build(ReportContext $ctx): array
     {
-        $logs = SiteLog::forProject($ctx->project->id)
+        $logsByDate = SiteLog::forProject($ctx->project->id)
             ->forPeriod($ctx->period->period_start->format('Y-m-d'), $ctx->period->period_end->format('Y-m-d'))
             ->with('weatherEvents')
             ->get()
-            ->keyBy(fn (SiteLog $log) => $log->log_date->format('Y-m-d'));
+            ->groupBy(fn (SiteLog $log) => $log->log_date->format('Y-m-d'));
 
         $days = [];
         $totalMinutes = 0;
@@ -22,10 +22,14 @@ final class WeatherBuilder extends AbstractBuilder
 
         foreach (self::dateRange($ctx->period->period_start, $ctx->period->period_end) as $date) {
             $key = $date->format('Y-m-d');
-            $log = $logs->get($key);
+            $dayLogs = $logsByDate->get($key);
 
-            $events = $log
-                ? $log->weatherEvents->map(fn ($e) => ['condition' => $e->condition, 'time' => substr($e->event_time->format('H:i:s'), 0, 5)])->all()
+            $events = $dayLogs
+                ? $dayLogs->flatMap(fn (SiteLog $log) => $log->weatherEvents)
+                    ->map(fn ($e) => ['condition' => $e->condition, 'time' => substr($e->event_time->format('H:i:s'), 0, 5)])
+                    ->sortBy('time')
+                    ->values()
+                    ->all()
                 : [];
 
             $intervals = self::intervals($events);

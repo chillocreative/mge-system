@@ -127,4 +127,54 @@ class SiteLogSectionsTest extends TestCase
         $this->assertNotNull($data['pairs'][0]['previous']);
         $this->assertNotNull($data['pairs'][0]['current']);
     }
+
+    /** Multi-site projects can log more than one SiteLog on the same date. */
+    private function multiLogContext(): ReportContext
+    {
+        $project = Project::create(['name' => 'Multi Site Log Test', 'code' => 'MSL-'.uniqid(), 'status' => 'in_progress']);
+        $user = User::create(['first_name' => 'Log', 'last_name' => 'Ger', 'email' => 'logger-'.uniqid().'@mge-eng.com', 'password' => bcrypt('x'), 'status' => 'active']);
+
+        $period = ProjectProgressPeriod::create(['project_id' => $project->id, 'period_no' => 1, 'period_start' => '2025-12-16', 'period_end' => '2025-12-16']);
+
+        $logA = SiteLog::create(['project_id' => $project->id, 'log_date' => '2025-12-16', 'title' => 'Site A', 'logged_by' => $user->id]);
+        $logA->workers()->create(['worker_type' => 'General Worker', 'count' => 30]);
+        $logA->machinery()->create(['machinery_type' => 'Excavator', 'quantity' => 2]);
+        $logA->weatherEvents()->create(['condition' => 'rain_start', 'event_time' => '09:00']);
+
+        $logB = SiteLog::create(['project_id' => $project->id, 'log_date' => '2025-12-16', 'title' => 'Site B', 'logged_by' => $user->id]);
+        $logB->workers()->create(['worker_type' => 'General Worker', 'count' => 10]);
+        $logB->machinery()->create(['machinery_type' => 'Excavator', 'quantity' => 3]);
+        $logB->weatherEvents()->create(['condition' => 'rain_stop', 'event_time' => '10:00']);
+
+        $report = MonthlyReport::create(['project_id' => $project->id, 'period_id' => $period->id, 'report_no' => 1, 'title' => 'Report', 'month_label' => 'December 2025']);
+
+        return ReportContext::for($report);
+    }
+
+    public function test_trade_worker_matrix_sums_counts_across_multiple_logs_on_the_same_day(): void
+    {
+        $data = SectionRegistry::make('4.1')->build($this->multiLogContext());
+
+        $row = collect($data['groups'][0]['rows'])->firstWhere('description', 'General Worker');
+        $this->assertSame([40], $row['counts']);
+        $this->assertSame([40], $data['totals']);
+    }
+
+    public function test_machinery_matrix_sums_quantities_across_multiple_logs_on_the_same_day(): void
+    {
+        $data = SectionRegistry::make('4.2')->build($this->multiLogContext());
+
+        $row = collect($data['rows'])->firstWhere('description', 'Excavator');
+        $this->assertSame([5], $row['counts']);
+        $this->assertSame([5], $data['totals']);
+    }
+
+    public function test_weather_report_merges_events_across_multiple_logs_on_the_same_day(): void
+    {
+        $data = SectionRegistry::make('4.3')->build($this->multiLogContext());
+
+        $this->assertSame([[540, 600]], $data['days'][0]['intervals']);
+        $this->assertSame(1, $data['summary']['raining_days']);
+        $this->assertSame(1.0, $data['summary']['raining_hours']);
+    }
 }

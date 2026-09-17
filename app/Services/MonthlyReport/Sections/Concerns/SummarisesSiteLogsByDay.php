@@ -50,11 +50,11 @@ trait SummarisesSiteLogsByDay
         $start = $ctx->period->period_start;
         $end = $ctx->period->period_end;
 
-        $logs = SiteLog::forProject($ctx->project->id)
+        $logsByDate = SiteLog::forProject($ctx->project->id)
             ->forPeriod($start->format('Y-m-d'), $end->format('Y-m-d'))
             ->with($relation)
             ->get()
-            ->keyBy(fn (SiteLog $log) => $log->log_date->format('Y-m-d'));
+            ->groupBy(fn (SiteLog $log) => $log->log_date->format('Y-m-d'));
 
         $dates = [];
         for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
@@ -65,26 +65,28 @@ trait SummarisesSiteLogsByDay
         $loggedTypes = [];
 
         foreach ($dates as $i => $date) {
-            $log = $logs->get($date);
+            $dayLogs = $logsByDate->get($date);
 
-            if (! $log) {
+            if (! $dayLogs) {
                 continue;
             }
 
-            foreach ($log->{$relation} as $item) {
-                $type = $item->{$typeField};
+            foreach ($dayLogs as $log) {
+                foreach ($log->{$relation} as $item) {
+                    $type = $item->{$typeField};
 
-                if (! in_array($type, $loggedTypes, true)) {
-                    $loggedTypes[] = $type;
+                    if (! in_array($type, $loggedTypes, true)) {
+                        $loggedTypes[] = $type;
+                    }
+
+                    $sums[$type][$i] = ($sums[$type][$i] ?? 0) + (int) $item->{$countField};
                 }
-
-                $sums[$type][$i] = ($sums[$type][$i] ?? 0) + (int) $item->{$countField};
             }
         }
 
         return [
             'dates' => $dates,
-            'hasLog' => array_map(fn (string $date) => $logs->has($date), $dates),
+            'hasLog' => array_map(fn (string $date) => $logsByDate->has($date), $dates),
             'sums' => $sums,
             'loggedTypes' => $loggedTypes,
         ];
