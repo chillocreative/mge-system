@@ -5,14 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CalendarEvent;
 use App\Models\Project;
-use App\Services\NotificationService;
+use App\Models\User;
+use App\Notifications\CalendarEventInviteNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 
 class CalendarEventController extends Controller
 {
-    public function __construct(private NotificationService $notifications) {}
-
     public function index(int $projectId, Request $request): JsonResponse
     {
         $query = CalendarEvent::where('project_id', $projectId)
@@ -34,6 +35,14 @@ class CalendarEventController extends Controller
         }
 
         $events = $query->orderBy('start_datetime')->get();
+
+        $users = User::whereIn('id', $events->pluck('attendees')->flatten()->unique()->filter())
+            ->get(['id', 'first_name', 'last_name'])
+            ->keyBy('id');
+        $events->each(fn ($e) => $e->setAttribute(
+            'attendee_users',
+            collect($e->attendees ?? [])->map(fn ($id) => $users->get($id))->filter()->values()
+        ));
 
         return $this->success($events);
     }
@@ -60,25 +69,11 @@ class CalendarEventController extends Controller
 
         $event = CalendarEvent::create($validated);
 
-        $actorId = $request->user()->id;
-        $recipients = $project->members()
-            ->whereIn('users.id', $validated['attendees'] ?? [])
-            ->pluck('users.id')
-            ->reject(fn ($id) => $id === $actorId)
-            ->values()
-            ->all();
+        $this->notifyAttendees($event, $validated['attendees'] ?? [], $request->user());
 
-        $this->notifications->notifyUserIds(
-            $recipients,
-            'New event: '.$event->title,
-            $request->user()->first_name.' scheduled "'.$event->title.'" on '.$event->start_datetime->format('d M Y, g:ia').'.',
-            'calendar',
-            "/projects/{$project->id}?tab=calendar",
-            ['project_id' => $project->id, 'event_id' => $event->id],
-            'calendar',
-        );
+        $event->load('creator:id,first_name,last_name')->setAttribute('attendee_users', $this->attendeeUsers($event));
 
-        return $this->created($event->load('creator:id,first_name,last_name'), 'Event created.');
+        return $this->created($event, 'Event created.');
     }
 
     public function show(int $projectId, int $eventId): JsonResponse
@@ -87,12 +82,16 @@ class CalendarEventController extends Controller
             ->with('creator:id,first_name,last_name')
             ->findOrFail($eventId);
 
+        $event->setAttribute('attendee_users', $this->attendeeUsers($event));
+
         return $this->success($event);
     }
 
     public function update(int $projectId, int $eventId, Request $request): JsonResponse
     {
         $event = CalendarEvent::where('project_id', $projectId)->findOrFail($eventId);
+
+        $oldAttendees = $event->attendees ?? [];
 
         $validated = $request->validate([
             'title' => ['sometimes', 'string', 'max:255'],
@@ -108,8 +107,20 @@ class CalendarEventController extends Controller
         ]);
 
         $event->update($validated);
+        $event = $event->fresh();
 
-        return $this->success($event->fresh()->load('creator:id,first_name,last_name'), 'Event updated.');
+        if (array_key_exists('attendees', $validated)) {
+            $newAttendees = $validated['attendees'] ?? [];
+            $added = array_diff($newAttendees, $oldAttendees);
+
+            if (! empty($added)) {
+                $this->notifyAttendees($event, array_values($added), $request->user());
+            }
+        }
+
+        $event->load('creator:id,first_name,last_name')->setAttribute('attendee_users', $this->attendeeUsers($event));
+
+        return $this->success($event, 'Event updated.');
     }
 
     public function destroy(int $projectId, int $eventId): JsonResponse
@@ -118,5 +129,40 @@ class CalendarEventController extends Controller
         $event->delete();
 
         return $this->success(null, 'Event deleted.');
+    }
+
+    private function notifyAttendees(CalendarEvent $event, array $userIds, User $actor): void
+    {
+        $ids = collect($userIds)->reject(fn ($id) => (int) $id === $actor->id)->unique()->values()->all();
+
+        if (empty($ids)) {
+            return;
+        }
+
+        try {
+            $event->loadMissing('project');
+
+            $recipients = User::whereIn('id', $ids)->get();
+
+            if ($recipients->isEmpty()) {
+                return;
+            }
+
+            Notification::send(
+                $recipients,
+                new CalendarEventInviteNotification($event, $event->project->name, trim("{$actor->first_name} {$actor->last_name}"))
+            );
+        } catch (\Throwable $e) {
+            Log::error('Failed to send calendar event attendee invitations', [
+                'event_id' => $event->id,
+                'recipient_ids' => $ids,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function attendeeUsers(CalendarEvent $event): \Illuminate\Support\Collection
+    {
+        return User::whereIn('id', $event->attendees ?? [])->get(['id', 'first_name', 'last_name']);
     }
 }

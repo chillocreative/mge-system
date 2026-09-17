@@ -1208,7 +1208,7 @@ function DocumentsTab({ project, canEdit, onRefresh }) {
 }
 
 // ─── Calendar Tab ──────────────────────────────────────────────
-const emptyEventForm = () => ({ title: '', type: 'meeting', start_datetime: '', end_datetime: '', location: '', description: '' });
+const emptyEventForm = () => ({ title: '', type: 'meeting', start_datetime: '', end_datetime: '', location: '', description: '', attendees: [] });
 const toLocalInput = (dt) => (dt ? String(dt).slice(0, 16) : '');
 
 function CalendarTab({ project, canEdit }) {
@@ -1254,6 +1254,7 @@ function CalendarTab({ project, canEdit }) {
             end_datetime: toLocalInput(event.end_datetime),
             location: event.location || '',
             description: event.description || '',
+            attendees: event.attendees || [],
         });
         setShowForm(true);
     };
@@ -1327,6 +1328,27 @@ function CalendarTab({ project, canEdit }) {
                         <input type="datetime-local" value={form.start_datetime} onChange={(e) => setForm({ ...form, start_datetime: e.target.value })} required className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                         <input type="datetime-local" value={form.end_datetime} onChange={(e) => setForm({ ...form, end_datetime: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                         <textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="sm:col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                        <div className="sm:col-span-2">
+                            <p className="mb-1 text-xs font-medium text-gray-600">Attendees</p>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2">
+                                {project.members?.length ? project.members.map((m) => (
+                                    <label key={m.id} className="flex items-center gap-1.5 text-sm text-gray-700">
+                                        <input
+                                            type="checkbox"
+                                            checked={form.attendees.includes(m.id)}
+                                            onChange={(e) => setForm((p) => ({
+                                                ...p,
+                                                attendees: e.target.checked
+                                                    ? [...p.attendees, m.id]
+                                                    : p.attendees.filter((id) => id !== m.id),
+                                            }))}
+                                            className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                        />
+                                        {m.full_name}
+                                    </label>
+                                )) : <p className="text-xs text-gray-400">No project members to invite</p>}
+                            </div>
+                        </div>
                     </div>
                     <div className="mt-3 flex justify-end gap-2">
                         <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
@@ -1357,6 +1379,17 @@ function CalendarTab({ project, canEdit }) {
                                         {event.location && <span>@ {event.location}</span>}
                                     </div>
                                     {event.description && <p className="mt-1 text-xs text-gray-500">{event.description}</p>}
+                                    {event.attendee_users?.length ? (
+                                        <div className="mt-1 flex flex-wrap gap-1">
+                                            {event.attendee_users.map((u) => (
+                                                <span key={u.id} className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
+                                                    {u.first_name} {u.last_name}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="mt-1 text-[10px] text-gray-400">No attendees</p>
+                                    )}
                                 </div>
                             </div>
                             {canEdit && (

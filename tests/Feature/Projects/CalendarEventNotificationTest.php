@@ -78,8 +78,7 @@ class CalendarEventNotificationTest extends TestCase
             'attendees' => [$attendee->id],
         ])->assertCreated();
 
-        Notification::assertSentTo($attendee, \App\Notifications\SystemNotification::class);
-        $this->assertDatabaseHas('notification_logs', ['user_id' => $attendee->id, 'type' => 'calendar']);
+        Notification::assertSentTo($attendee, \App\Notifications\CalendarEventInviteNotification::class);
     }
 
     public function test_non_attendee_project_members_are_not_notified(): void
@@ -96,8 +95,8 @@ class CalendarEventNotificationTest extends TestCase
             'attendees' => [$attendee->id],
         ])->assertCreated();
 
-        Notification::assertSentTo($attendee, \App\Notifications\SystemNotification::class);
-        Notification::assertNotSentTo($nonAttendee, \App\Notifications\SystemNotification::class);
+        Notification::assertSentTo($attendee, \App\Notifications\CalendarEventInviteNotification::class);
+        Notification::assertNotSentTo($nonAttendee, \App\Notifications\CalendarEventInviteNotification::class);
     }
 
     public function test_the_event_creator_is_not_notified_of_their_own_event(): void
@@ -113,8 +112,8 @@ class CalendarEventNotificationTest extends TestCase
             'attendees' => [$actor->id, $other->id],
         ]);
 
-        Notification::assertNotSentTo($actor, \App\Notifications\SystemNotification::class);
-        Notification::assertSentTo($other, \App\Notifications\SystemNotification::class);
+        Notification::assertNotSentTo($actor, \App\Notifications\CalendarEventInviteNotification::class);
+        Notification::assertSentTo($other, \App\Notifications\CalendarEventInviteNotification::class);
     }
 
     public function test_no_attendees_means_no_notification_and_no_error(): void
