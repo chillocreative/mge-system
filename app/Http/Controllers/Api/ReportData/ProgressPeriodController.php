@@ -62,7 +62,15 @@ class ProgressPeriodController extends Controller
     {
         $period = ProjectProgressPeriod::where('project_id', $projectId)->findOrFail($periodId);
         $validated = $this->validatePayload($request, $projectId, $periodId);
-        $merged = $this->progress->compute(array_merge($period->toArray(), $validated));
+
+        // Derived fields are recalculated unless the request overrides them: start from the
+        // period's own stored fillable attributes (not the appended variance attributes),
+        // overlay the validated input, then force ahead_delay_days/physical_status back to
+        // whatever the request supplied (or null) so compute() re-derives stale values.
+        $merged = array_merge($period->only($period->getFillable()), $validated);
+        $merged['ahead_delay_days'] = $validated['ahead_delay_days'] ?? null;
+        $merged['physical_status'] = $validated['physical_status'] ?? null;
+        $merged = $this->progress->compute($merged);
         unset($merged['physical_variance'], $merged['financial_variance']);
         $period->update($merged);
 
@@ -83,7 +91,7 @@ class ProgressPeriodController extends Controller
         return $request->validate([
             'period_no' => [$required, 'integer', 'min:1', Rule::unique('project_progress_periods')->where('project_id', $projectId)->ignore($ignoreId)],
             'period_start' => [$required, 'date'],
-            'period_end' => [$required, 'date', 'after:period_start'],
+            'period_end' => [$required, 'date', Rule::when($request->filled('period_start'), ['after:period_start'])],
             'planning_days_completion' => ['nullable', 'integer', 'min:0'],
             'physical_scheduled_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'physical_actual_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],

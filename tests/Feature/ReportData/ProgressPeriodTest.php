@@ -74,4 +74,41 @@ class ProgressPeriodTest extends TestCase
             'period_no' => 3, 'period_start' => '2026-01-16', 'period_end' => '2026-02-15',
         ])->assertStatus(422); // duplicate period_no
     }
+
+    public function test_update_recalculates_derived_fields_unless_overridden(): void
+    {
+        $project = $this->project();
+        $created = $this->actingAs($this->editor)->postJson("/api/projects/{$project->id}/progress-periods", [
+            'period_no' => 3, 'period_start' => '2025-12-16', 'period_end' => '2026-01-15',
+            'planning_days_completion' => 497,
+            'physical_scheduled_pct' => 2, 'physical_actual_pct' => 4,
+            'financial_scheduled_pct' => 15, 'financial_actual_pct' => 13,
+        ])->assertCreated();
+        $this->assertSame('AHEAD', $created->json('data.physical_status'));
+        $this->assertSame(10, $created->json('data.ahead_delay_days'));
+        $periodId = $created->json('data.id');
+
+        // (a) Updating only physical_actual_pct must recalculate ahead_delay_days/physical_status,
+        // not carry over the stale AHEAD/10 values from creation.
+        $res = $this->actingAs($this->editor)->putJson("/api/projects/{$project->id}/progress-periods/{$periodId}", [
+            'physical_actual_pct' => 1,
+        ])->assertOk();
+        $this->assertSame('DELAY', $res->json('data.physical_status'));
+        $this->assertSame(-5, $res->json('data.ahead_delay_days')); // round(-1/100 * 497)
+
+        // (b) Explicit overrides in the same update are kept, not recomputed.
+        $res = $this->actingAs($this->editor)->putJson("/api/projects/{$project->id}/progress-periods/{$periodId}", [
+            'physical_actual_pct' => 1,
+            'physical_status' => 'ON TRACK',
+            'ahead_delay_days' => 0,
+        ])->assertOk();
+        $this->assertSame('ON TRACK', $res->json('data.physical_status'));
+        $this->assertSame(0, $res->json('data.ahead_delay_days'));
+
+        // (c) Updating period_end alone must not trip an "after:period_start" failure
+        // when period_start isn't part of this request.
+        $this->actingAs($this->editor)->putJson("/api/projects/{$project->id}/progress-periods/{$periodId}", [
+            'period_end' => '2026-02-15',
+        ])->assertOk();
+    }
 }
