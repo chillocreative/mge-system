@@ -47,6 +47,11 @@ class ContractController extends Controller
 
         $contract = $this->contractService->update($id, $validated, $files, $pics);
 
+        if ($request->boolean('is_main')) {
+            $this->contractService->setMain($contract->project_id, $contract->id);
+            $contract = $this->contractService->getOne($contract->id);
+        }
+
         return $this->success($contract, 'Contract updated successfully.');
     }
 
@@ -218,6 +223,7 @@ class ContractController extends Controller
             'pics.*.company' => ['nullable', 'string', 'max:255'],
             'pics.*.designation' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:active,completed,terminated'],
+            'is_main' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string'],
             'files' => ['nullable', 'array', 'max:10'],
             'files.*' => ['file', 'max:1048576', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],

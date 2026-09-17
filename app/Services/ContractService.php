@@ -50,6 +50,19 @@ class ContractService
         ])->findOrFail($id);
     }
 
+    public function mainContract(int $projectId): ProjectContract
+    {
+        return ProjectContract::where('project_id', $projectId)->where('is_main', true)->firstOrFail();
+    }
+
+    public function setMain(int $projectId, int $contractId): void
+    {
+        DB::transaction(function () use ($projectId, $contractId) {
+            ProjectContract::where('project_id', $projectId)->where('id', '!=', $contractId)->update(['is_main' => false]);
+            ProjectContract::where('project_id', $projectId)->findOrFail($contractId)->update(['is_main' => true]);
+        });
+    }
+
     public function create(array $data, int $userId, array $files = [], ?array $pics = null): ProjectContract
     {
         return DB::transaction(function () use ($data, $userId, $files, $pics) {

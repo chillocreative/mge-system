@@ -26,6 +26,18 @@ class ProjectContract extends Model
         'created_by',
         'bq_file_path',
         'bq_file_name',
+        'is_main',
+        'contract_sum',
+        'performance_bond_amount',
+        'duration_months',
+        'dlp_months',
+        'lad_per_day',
+        'possession_date',
+        'completion_date',
+        'dlp_start_date',
+        'dlp_end_date',
+        'cidb_registration',
+        'insurances',
     ];
 
     protected function casts(): array
@@ -34,6 +46,12 @@ class ProjectContract extends Model
             'contract_value' => 'decimal:2',
             'start_date' => 'date:Y-m-d',
             'end_date' => 'date:Y-m-d',
+            'is_main' => 'boolean',
+            'insurances' => 'array',
+            'possession_date' => 'date:Y-m-d',
+            'completion_date' => 'date:Y-m-d',
+            'dlp_start_date' => 'date:Y-m-d',
+            'dlp_end_date' => 'date:Y-m-d',
         ];
     }
 

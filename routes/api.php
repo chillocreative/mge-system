@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\ProjectInvoiceController;
 use App\Http\Controllers\Api\ProjectPartyController;
 use App\Http\Controllers\Api\ProjectSiteController;
 use App\Http\Controllers\Api\QcController;
+use App\Http\Controllers\Api\ReportData\ContractParticularsController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SafetyController;
 use App\Http\Controllers\Api\SafetyStatisticsController;
@@ -148,6 +149,12 @@ Route::middleware('auth:sanctum')->group(function () {
                 ->middleware('permission:projects.edit');
             Route::delete('/{milestone}', [MilestoneController::class, 'destroy'])
                 ->middleware('permission:projects.edit');
+        });
+
+        // Contract particulars — nested under projects, operates on the project's main contract
+        Route::prefix('{project}/contract-particulars')->middleware('permission:projects.view')->group(function () {
+            Route::get('/', [ContractParticularsController::class, 'show']);
+            Route::put('/', [ContractParticularsController::class, 'update'])->middleware('permission:projects.edit');
         });
 
         // Site Logs — nested under projects
