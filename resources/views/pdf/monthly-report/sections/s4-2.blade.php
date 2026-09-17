@@ -57,7 +57,7 @@
             @endforeach
             <tr class="avoid">
                 <td colspan="2"><strong>Total</strong></td>
-                @foreach($chunk as $i)<td><strong>{{ $totals[$i] ?? '-' }}</strong></td>@endforeach
+                @foreach($chunk as $i)<td><strong>{{ empty($totals[$i]) ? '-' : $totals[$i] }}</strong></td>@endforeach
             </tr>
         </table>
     @endforeach
