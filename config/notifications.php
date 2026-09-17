@@ -7,17 +7,17 @@ return [
     | Email channel
     |--------------------------------------------------------------------------
     |
-    | Master switch for sending notifications by email. Off by default, and it
-    | must stay off until SPF/DKIM and the noreply@ mailbox are verified on the
-    | production server (go-live plan 27.10, decision AB9 — in-app only for now).
+    | Master switch for sending notifications by email. On by default since
+    | 2026-09-17: SMTP is configured in Settings > Email (Brevo relay) and the
+    | noreply@ sender is verified. Set NOTIFICATIONS_EMAIL_ENABLED=false to fall
+    | back to in-app only (for example while rotating SMTP credentials).
     |
     | While this is false the engine sends the in-app (database) channel only,
-    | exactly as before, no matter what any per-user preference says. Turning it
-    | on later needs no code change.
+    | no matter what any per-user preference says.
     |
     */
 
-    'email_enabled' => env('NOTIFICATIONS_EMAIL_ENABLED', false),
+    'email_enabled' => env('NOTIFICATIONS_EMAIL_ENABLED', true),
 
     /*
     |--------------------------------------------------------------------------

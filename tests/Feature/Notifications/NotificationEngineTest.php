@@ -35,17 +35,30 @@ class NotificationEngineTest extends TestCase
         ]);
     }
 
-    public function test_default_send_is_in_app_only_and_is_logged(): void
+    public function test_default_send_is_in_app_and_email_and_is_logged(): void
     {
         Notification::fake();
         $user = $this->user();
 
         $this->service()->notify($user, 'Hello', 'A message', category: 'leave');
 
+        // No preference row and no env override: email is on by default.
         Notification::assertSentTo($user, \App\Notifications\SystemNotification::class, function ($n) use ($user) {
-            return $n->via($user) === ['database'];
+            return $n->via($user) === ['database', 'mail'];
         });
         $this->assertDatabaseHas('notification_logs', ['user_id' => $user->id, 'channel' => 'database', 'status' => 'sent', 'type' => 'leave']);
+        $this->assertDatabaseHas('notification_logs', ['user_id' => $user->id, 'channel' => 'mail', 'status' => 'sent', 'type' => 'leave']);
+    }
+
+    public function test_a_user_can_opt_out_of_email_for_a_category(): void
+    {
+        Notification::fake();
+        $user = $this->user();
+        NotificationPreference::create(['user_id' => $user->id, 'type' => 'leave', 'mode' => 'instant', 'email_enabled' => false]);
+
+        $this->service()->notify($user, 'Hello', 'msg', category: 'leave');
+
+        Notification::assertSentTo($user, \App\Notifications\SystemNotification::class, fn ($n) => $n->via($user) === ['database']);
     }
 
     public function test_a_category_set_to_off_sends_nothing(): void

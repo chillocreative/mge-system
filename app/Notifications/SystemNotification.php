@@ -11,8 +11,8 @@ use Illuminate\Notifications\Notification;
  * from the recipient's preferences and the global email switch, then passed in
  * here. This class does not decide policy; it only renders each channel.
  *
- * Mail stays off unless config('notifications.email_enabled') is true, so a
- * misconfigured SMTP can never break a workflow (go-live decision AB9).
+ * Mail can be switched off globally via config('notifications.email_enabled');
+ * a mail failure is caught by NotificationService so it never breaks a workflow.
  */
 class SystemNotification extends Notification
 {

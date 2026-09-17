@@ -14,10 +14,10 @@ use Illuminate\Support\Facades\Log;
  *
  * Every send is:
  *  - preference-aware — a recipient can set a category to instant / digest / off,
- *    and opt into email per category;
- *  - channel-gated — in-app (database) is the default; email is added only when
- *    the global switch config('notifications.email_enabled') is on AND the
- *    recipient opted in AND they are under the hourly cap;
+ *    and opt out of email per category;
+ *  - channel-gated — in-app (database) always; email is added by default and
+ *    dropped only if the global switch config('notifications.email_enabled')
+ *    is off, the recipient opted out, or they are over the hourly cap;
  *  - logged — every send, skip and failure is recorded in notification_logs;
  *  - failure-isolated — a notification problem can never break the surrounding
  *    business workflow.
@@ -82,7 +82,7 @@ class NotificationService
         // now but is not emailed — the digest batch runner is a later phase, and
         // sending an instant email under a "digest" choice would contradict it.
         $emailWanted = $mode === 'instant'
-            && (bool) ($pref->email_enabled ?? false)
+            && (bool) ($pref->email_enabled ?? true)
             && config('notifications.email_enabled')
             && ! empty($user->email);
 
