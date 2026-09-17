@@ -4,13 +4,13 @@
     $scheduledPct = $data['series']['scheduled_pct'] ?? [];
     $actual = $data['series']['actual'] ?? [];
     $actualPct = $data['series']['actual_pct'] ?? [];
-    $chunks = array_chunk(array_keys($months), 12);
+    $chunks = array_chunk(array_keys($months), 6);
 @endphp
 @if(empty($months))
     <p class="placeholder">No data.</p>
 @else
     @foreach($chunks as $chunk)
-        <table class="grid small avoid">
+        <table class="grid small avoid" style="table-layout: fixed; width: 100%; word-wrap: break-word;">
             <tr>
                 <th>Month</th>
                 @foreach($chunk as $i)<th>{{ $months[$i] }}</th>@endforeach
