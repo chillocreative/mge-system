@@ -51,6 +51,11 @@ class ProjectInvoiceController extends Controller
             'payment_cert_date' => ['nullable', 'date'],
             'date_received_claim' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
+            'wjp_current' => ['nullable', 'numeric', 'min:0'],
+            'wjp_cumulative' => ['nullable', 'numeric', 'min:0'],
+            'certified_current' => ['nullable', 'numeric', 'min:0'],
+            'certified_cumulative' => ['nullable', 'numeric', 'min:0'],
+            'evaluation_date' => ['nullable', 'date'],
             'files' => ['nullable', 'array'],
             'files.*' => ['file', 'max:1048576', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
         ]);
@@ -85,6 +90,11 @@ class ProjectInvoiceController extends Controller
             'payment_cert_date' => ['nullable', 'date'],
             'date_received_claim' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
+            'wjp_current' => ['nullable', 'numeric', 'min:0'],
+            'wjp_cumulative' => ['nullable', 'numeric', 'min:0'],
+            'certified_current' => ['nullable', 'numeric', 'min:0'],
+            'certified_cumulative' => ['nullable', 'numeric', 'min:0'],
+            'evaluation_date' => ['nullable', 'date'],
             'files' => ['nullable', 'array'],
             'files.*' => ['file', 'max:1048576', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
         ]);

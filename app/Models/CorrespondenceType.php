@@ -11,6 +11,7 @@ class CorrespondenceType extends Model
         'name',
         'full_name',
         'color',
+        'report_group',
         'sort_order',
         'is_active',
     ];

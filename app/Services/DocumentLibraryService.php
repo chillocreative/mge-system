@@ -98,6 +98,9 @@ class DocumentLibraryService
         if (! empty($filters['tag'])) {
             $query->where('tag', $filters['tag']);
         }
+        if (! empty($filters['is_tender'])) {
+            $query->where('is_tender', true);
+        }
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }

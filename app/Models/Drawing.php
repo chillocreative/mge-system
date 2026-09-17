@@ -24,6 +24,7 @@ class Drawing extends Model
         'file_type',
         'file_size',
         'status',
+        'is_tender',
         'uploaded_by',
     ];
 
@@ -31,6 +32,7 @@ class Drawing extends Model
     {
         return [
             'file_size' => 'integer',
+            'is_tender' => 'boolean',
         ];
     }
 

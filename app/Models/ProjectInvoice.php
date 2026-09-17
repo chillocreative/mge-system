@@ -29,6 +29,11 @@ class ProjectInvoice extends Model
         'date_received_claim',
         'notes',
         'created_by',
+        'wjp_current',
+        'wjp_cumulative',
+        'certified_current',
+        'certified_cumulative',
+        'evaluation_date',
     ];
 
     protected function casts(): array
@@ -40,7 +45,12 @@ class ProjectInvoice extends Model
             'payment_to_subcon_date' => 'date:Y-m-d',
             'payment_cert_date' => 'date:Y-m-d',
             'date_received_claim' => 'date:Y-m-d',
+            'evaluation_date' => 'date:Y-m-d',
             'amount' => 'decimal:2',
+            'wjp_current' => 'decimal:2',
+            'wjp_cumulative' => 'decimal:2',
+            'certified_current' => 'decimal:2',
+            'certified_cumulative' => 'decimal:2',
         ];
     }
 

@@ -15,7 +15,7 @@ class DrawingController extends Controller
     public function index(Request $request): JsonResponse
     {
         $perPage = min($request->integer('per_page', 15), 100);
-        $filters = $request->only(['search', 'discipline', 'tag', 'status', 'project_id', 'contract_id']);
+        $filters = $request->only(['search', 'discipline', 'tag', 'status', 'project_id', 'contract_id', 'is_tender']);
 
         return $this->success($this->documentLibraryService->listDrawings($filters, $perPage));
     }
@@ -32,6 +32,7 @@ class DrawingController extends Controller
             'project_id' => ['nullable', 'exists:projects,id'],
             'contract_id' => ['nullable', 'exists:project_contracts,id'],
             'status' => ['nullable', 'in:draft,published,archived'],
+            'is_tender' => ['nullable', 'boolean'],
             'file' => ['required', 'file', 'extensions:dwg,dxf,pdf,png,jpg,jpeg', 'max:1048576'],
         ]);
 
@@ -63,6 +64,7 @@ class DrawingController extends Controller
             'project_id' => ['nullable', 'exists:projects,id'],
             'contract_id' => ['nullable', 'exists:project_contracts,id'],
             'status' => ['sometimes', 'in:draft,published,archived'],
+            'is_tender' => ['nullable', 'boolean'],
             'file' => ['nullable', 'file', 'extensions:dwg,dxf,pdf,png,jpg,jpeg', 'max:1048576'],
         ]);
 
