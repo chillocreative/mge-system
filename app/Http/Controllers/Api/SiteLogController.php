@@ -16,6 +16,7 @@ use App\Services\ReportData\ResourceCategoryService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class SiteLogController extends Controller
 {
@@ -342,8 +343,6 @@ class SiteLogController extends Controller
     private function validatePayload(Request $request, bool $creating, int $projectId): array
     {
         $required = $creating ? 'required' : 'sometimes';
-        $machineryTypes = implode(',', $this->categories->namesFor($projectId, 'machinery'));
-        $workerTypes = implode(',', $this->categories->namesFor($projectId, 'worker'));
         $weatherConditions = implode(',', self::WEATHER_CONDITIONS);
 
         return $request->validate([
@@ -359,11 +358,11 @@ class SiteLogController extends Controller
             'safety_notes' => ['nullable', 'string'],
             'issues' => ['nullable', 'string'],
             'machinery' => ['nullable', 'array'],
-            'machinery.*.machinery_type' => ['required_with:machinery', 'in:'.$machineryTypes],
+            'machinery.*.machinery_type' => ['required_with:machinery', Rule::in($this->categories->namesFor($projectId, 'machinery'))],
             'machinery.*.quantity' => ['nullable', 'integer', 'min:1'],
             'machinery.*.vehicle_id' => ['nullable', 'exists:vehicles,id'],
             'workers' => ['nullable', 'array'],
-            'workers.*.worker_type' => ['required_with:workers', 'in:'.$workerTypes],
+            'workers.*.worker_type' => ['required_with:workers', Rule::in($this->categories->namesFor($projectId, 'worker'))],
             'workers.*.count' => ['nullable', 'integer', 'min:1'],
             'weather_events' => ['nullable', 'array'],
             'weather_events.*.condition' => ['required_with:weather_events', 'in:'.$weatherConditions],
