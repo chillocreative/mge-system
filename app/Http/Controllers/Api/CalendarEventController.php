@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\Rule;
 
 class CalendarEventController extends Controller
 {
@@ -60,7 +61,7 @@ class CalendarEventController extends Controller
             'all_day' => ['nullable', 'boolean'],
             'location' => ['nullable', 'string', 'max:255'],
             'attendees' => ['nullable', 'array'],
-            'attendees.*' => ['exists:users,id'],
+            'attendees.*' => ['integer', Rule::exists('project_members', 'user_id')->where('project_id', $projectId)],
             'status' => ['nullable', 'in:scheduled,completed,cancelled'],
         ]);
 
@@ -102,7 +103,7 @@ class CalendarEventController extends Controller
             'all_day' => ['nullable', 'boolean'],
             'location' => ['nullable', 'string', 'max:255'],
             'attendees' => ['nullable', 'array'],
-            'attendees.*' => ['exists:users,id'],
+            'attendees.*' => ['integer', Rule::exists('project_members', 'user_id')->where('project_id', $projectId)],
             'status' => ['nullable', 'in:scheduled,completed,cancelled'],
         ]);
 

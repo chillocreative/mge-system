@@ -67,6 +67,23 @@ class CalendarEventAttendeesTest extends TestCase
         return $project;
     }
 
+    public function test_attendees_must_be_project_members(): void
+    {
+        Notification::fake();
+        $actor = $this->actor();
+        $member = $this->member();
+        $outsider = $this->member();
+        $project = $this->projectWithMembers([$member->id]);
+
+        $this->actingAs($actor)->postJson("/api/projects/{$project->id}/events", [
+            'title' => 'Site meeting',
+            'start_datetime' => '2026-10-01 10:00:00',
+            'attendees' => [$member->id, $outsider->id],
+        ])->assertStatus(422);
+
+        Notification::assertNothingSent();
+    }
+
     public function test_creating_an_event_with_attendees_notifies_them_and_not_the_creator(): void
     {
         Notification::fake();
