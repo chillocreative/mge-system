@@ -44,6 +44,7 @@ use App\Http\Controllers\Api\ReportData\OrgChartController;
 use App\Http\Controllers\Api\ReportData\ProgressPeriodController;
 use App\Http\Controllers\Api\ReportData\ProjectTestController;
 use App\Http\Controllers\Api\ReportData\ReportPartyController;
+use App\Http\Controllers\Api\ReportData\ResourceCategoryController;
 use App\Http\Controllers\Api\ReportData\ScheduleBaselineController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SafetyController;
@@ -198,6 +199,13 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/', [ProjectTestController::class, 'store'])->middleware('permission:projects.edit');
             Route::put('/{test}', [ProjectTestController::class, 'update'])->middleware('permission:projects.edit');
             Route::delete('/{test}', [ProjectTestController::class, 'destroy'])->middleware('permission:projects.edit');
+        });
+
+        // Resource categories — per-project overrides of site-log worker/machinery lists
+        Route::prefix('{project}/resource-categories')->middleware('permission:projects.view')->group(function () {
+            Route::get('/', [ResourceCategoryController::class, 'index']);
+            Route::put('/', [ResourceCategoryController::class, 'replace'])->middleware('permission:projects.edit');
+            Route::post('/seed-defaults', [ResourceCategoryController::class, 'seedDefaults'])->middleware('permission:projects.edit');
         });
 
         // Report parties — nested under projects; extends the existing project_parties table

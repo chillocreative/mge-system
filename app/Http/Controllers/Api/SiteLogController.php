@@ -12,6 +12,7 @@ use App\Models\SiteLogMachinery;
 use App\Models\Vehicle;
 use App\Services\AssetService;
 use App\Services\FileUploadService;
+use App\Services\ReportData\ResourceCategoryService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,20 +22,12 @@ class SiteLogController extends Controller
     use AssertsSiteInProject;
     use NormalizesNullableColumns;
 
-    private const MACHINERY_TYPES = [
-        'Excavator', 'Bulldozer', 'Crane', 'Compactor', 'Loader', 'Dump Truck', 'Generator', 'Other',
-    ];
-
-    private const WORKER_TYPES = [
-        'General Worker', 'Operator', 'Bar Bender', 'Carpenter', 'Steel Fixer',
-        'Mason', 'Electrician', 'Plumber', 'Welder', 'Supervisor', 'Other',
-    ];
-
     private const WEATHER_CONDITIONS = ['rain_start', 'rain_stop', 'overcast', 'clear'];
 
     public function __construct(
         private readonly FileUploadService $files,
         private readonly AssetService $assetService,
+        private readonly ResourceCategoryService $categories,
     ) {}
 
     public function index(int $projectId, Request $request): JsonResponse
@@ -52,7 +45,7 @@ class SiteLogController extends Controller
     {
         $project = Project::findOrFail($projectId);
 
-        $validated = $this->validatePayload($request, true);
+        $validated = $this->validatePayload($request, true, $projectId);
         $validated = $this->dropNullColumns($validated, ['workers_count']);
         $machinery = $validated['machinery'] ?? [];
         $workers = $validated['workers'] ?? [];
@@ -124,7 +117,7 @@ class SiteLogController extends Controller
 
         $this->assertEditable($request, $log);
 
-        $validated = $this->validatePayload($request, false);
+        $validated = $this->validatePayload($request, false, $projectId);
         $validated = $this->dropNullColumns($validated, ['workers_count']);
         $machinery = $validated['machinery'] ?? null;
         $workers = $validated['workers'] ?? null;
@@ -346,11 +339,11 @@ class SiteLogController extends Controller
         }
     }
 
-    private function validatePayload(Request $request, bool $creating): array
+    private function validatePayload(Request $request, bool $creating, int $projectId): array
     {
         $required = $creating ? 'required' : 'sometimes';
-        $machineryTypes = implode(',', self::MACHINERY_TYPES);
-        $workerTypes = implode(',', self::WORKER_TYPES);
+        $machineryTypes = implode(',', $this->categories->namesFor($projectId, 'machinery'));
+        $workerTypes = implode(',', $this->categories->namesFor($projectId, 'worker'));
         $weatherConditions = implode(',', self::WEATHER_CONDITIONS);
 
         return $request->validate([
