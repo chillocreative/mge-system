@@ -54,8 +54,9 @@ class PdfMerger
                     $pdf->SetTextColor(0, 0, 0);
                     $pdf->SetXY(14, $pdf->GetPageHeight() - 12);
                     $pdf->Cell(0, 5, $footerLeft, 0, 0, 'L');
-                    $pdf->SetXY(-64, $pdf->GetPageHeight() - 12);
-                    $pdf->Cell(50, 5, "Page {$pageNo} of {$alias}", 0, 0, 'R');
+                    // Left-aligned at a fixed X so the {nb} substitution cannot shift the text.
+                    $pdf->SetXY(-44, $pdf->GetPageHeight() - 12);
+                    $pdf->Cell(30, 5, "Page {$pageNo} of {$alias}", 0, 0, 'L');
                 }
             }
         } finally {
@@ -77,7 +78,9 @@ class PdfMerger
         try {
             $pdf = new Fpdi;
             $count = $pdf->setSourceFile($absolutePath);
-            $pdf->importPage(1);
+            for ($i = 1; $i <= $count; $i++) {
+                $pdf->importPage($i);
+            }
 
             return $count;
         } catch (PdfParserException|\Throwable $e) {
