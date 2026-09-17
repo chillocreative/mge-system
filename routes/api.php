@@ -39,8 +39,10 @@ use App\Http\Controllers\Api\ProjectPartyController;
 use App\Http\Controllers\Api\ProjectSiteController;
 use App\Http\Controllers\Api\QcController;
 use App\Http\Controllers\Api\ReportData\ContractParticularsController;
+use App\Http\Controllers\Api\ReportData\DelayNoticeController;
 use App\Http\Controllers\Api\ReportData\OrgChartController;
 use App\Http\Controllers\Api\ReportData\ProgressPeriodController;
+use App\Http\Controllers\Api\ReportData\ProjectTestController;
 use App\Http\Controllers\Api\ReportData\ReportPartyController;
 use App\Http\Controllers\Api\ReportData\ScheduleBaselineController;
 use App\Http\Controllers\Api\RoleController;
@@ -180,6 +182,22 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/', [ProgressPeriodController::class, 'store'])->middleware('permission:projects.edit');
             Route::put('/{period}', [ProgressPeriodController::class, 'update'])->middleware('permission:projects.edit');
             Route::delete('/{period}', [ProgressPeriodController::class, 'destroy'])->middleware('permission:projects.edit');
+        });
+
+        // Delay notices — nested under projects
+        Route::prefix('{project}/delay-notices')->middleware('permission:projects.view')->group(function () {
+            Route::get('/', [DelayNoticeController::class, 'index']);
+            Route::post('/', [DelayNoticeController::class, 'store'])->middleware('permission:projects.edit');
+            Route::put('/{notice}', [DelayNoticeController::class, 'update'])->middleware('permission:projects.edit');
+            Route::delete('/{notice}', [DelayNoticeController::class, 'destroy'])->middleware('permission:projects.edit');
+        });
+
+        // Tests & commissioning — nested under projects
+        Route::prefix('{project}/tests')->middleware('permission:projects.view')->group(function () {
+            Route::get('/', [ProjectTestController::class, 'index']);
+            Route::post('/', [ProjectTestController::class, 'store'])->middleware('permission:projects.edit');
+            Route::put('/{test}', [ProjectTestController::class, 'update'])->middleware('permission:projects.edit');
+            Route::delete('/{test}', [ProjectTestController::class, 'destroy'])->middleware('permission:projects.edit');
         });
 
         // Report parties — nested under projects; extends the existing project_parties table
