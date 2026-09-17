@@ -25,7 +25,7 @@ class MonthlyReportController extends Controller
             $query->where('status', $request->string('status'));
         }
 
-        return $this->success($query->orderByDesc('id')->paginate());
+        return $this->success($query->orderByDesc('id')->paginate(min(100, max(1, $request->integer('per_page', 15)))));
     }
 
     public function indexForProject(int $projectId, Request $request): JsonResponse
@@ -36,7 +36,7 @@ class MonthlyReportController extends Controller
             $query->where('status', $request->string('status'));
         }
 
-        return $this->success($query->orderByDesc('id')->paginate());
+        return $this->success($query->orderByDesc('id')->paginate(min(100, max(1, $request->integer('per_page', 15)))));
     }
 
     public function store(int $projectId, Request $request): JsonResponse
