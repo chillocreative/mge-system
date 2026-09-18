@@ -58,6 +58,14 @@ class ActivityNormaliserTest extends TestCase
         $this->assertNull(ActivityNormaliser::date(''));
     }
 
+    public function test_date_fallback_parser_is_never_reached_for_a_purely_alphabetic_string(): void
+    {
+        // A string with no digit at all can never be a date; guards against the loose
+        // `new \DateTime()` fallback silently accepting words like "today"/"now".
+        $this->assertNull(ActivityNormaliser::date('today'));
+        $this->assertNull(ActivityNormaliser::date('tomorrow'));
+    }
+
     // --- percent() ---
 
     public function test_percent_strips_percent_sign(): void
@@ -122,6 +130,50 @@ class ActivityNormaliserTest extends TestCase
     {
         $this->assertNull(ActivityNormaliser::durationDays('not a duration'));
         $this->assertNull(ActivityNormaliser::durationDays(null));
+    }
+
+    public function test_duration_days_accepts_ms_project_estimated_marker(): void
+    {
+        $this->assertSame(12, ActivityNormaliser::durationDays('12 days?'));
+        $this->assertSame(12, ActivityNormaliser::durationDays('12d?'));
+        $this->assertSame(12, ActivityNormaliser::durationDays('12?'));
+    }
+
+    public function test_duration_days_accepts_edays_unit(): void
+    {
+        $this->assertSame(7, ActivityNormaliser::durationDays('7 edays'));
+        $this->assertSame(7, ActivityNormaliser::durationDays('7edays'));
+    }
+
+    public function test_duration_days_negative_becomes_null(): void
+    {
+        $this->assertNull(ActivityNormaliser::durationDays(-5));
+        $this->assertNull(ActivityNormaliser::durationDays('-5'));
+        $this->assertNull(ActivityNormaliser::durationDays('-5 days'));
+    }
+
+    // --- clampName() / clampOutlineLevel() ---
+
+    public function test_clamp_name_trims_and_caps_at_255_chars(): void
+    {
+        $long = str_repeat('x', 300);
+        $clamped = ActivityNormaliser::clampName('  '.$long.'  ');
+
+        $this->assertSame(255, mb_strlen($clamped));
+        $this->assertSame(str_repeat('x', 255), $clamped);
+    }
+
+    public function test_clamp_name_leaves_short_names_untouched(): void
+    {
+        $this->assertSame('Excavation', ActivityNormaliser::clampName('  Excavation  '));
+    }
+
+    public function test_clamp_outline_level_stays_within_1_and_255(): void
+    {
+        $this->assertSame(1, ActivityNormaliser::clampOutlineLevel(0));
+        $this->assertSame(1, ActivityNormaliser::clampOutlineLevel(-3));
+        $this->assertSame(255, ActivityNormaliser::clampOutlineLevel(999));
+        $this->assertSame(5, ActivityNormaliser::clampOutlineLevel(5));
     }
 
     // --- outlineFromIndent() / inferIndentUnit() ---

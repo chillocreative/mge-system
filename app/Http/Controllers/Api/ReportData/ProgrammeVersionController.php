@@ -108,16 +108,22 @@ class ProgrammeVersionController extends Controller
 
         $ext = pathinfo($relativePath, PATHINFO_EXTENSION);
         $newPath = $this->dir($projectId).'/'.Str::uuid().'.'.$ext;
-        Storage::disk('local')->move($relativePath, $newPath);
 
-        $version = $this->programmeService->createVersion($projectId, [
-            'label' => $validated['label'],
-            'status_date' => $validated['status_date'] ?? null,
-            'source_type' => 'xlsx',
-            'source_file_path' => $newPath,
-            'source_file_name' => $validated['file_name'] ?? basename($relativePath),
-            'set_current' => $validated['set_current'] ?? true,
-        ], $activities, $request->user()->id);
+        try {
+            $version = $this->programmeService->createVersion($projectId, [
+                'label' => $validated['label'],
+                'status_date' => $validated['status_date'] ?? null,
+                'source_type' => 'xlsx',
+                'source_file_path' => $newPath,
+                'source_file_name' => $validated['file_name'] ?? basename($relativePath),
+                'set_current' => $validated['set_current'] ?? true,
+            ], $activities, $request->user()->id);
+        } catch (ValidationException $e) {
+            Storage::disk('local')->delete($relativePath);
+            throw $e;
+        }
+
+        Storage::disk('local')->move($relativePath, $newPath);
 
         return $this->created($version, 'Programme imported.');
     }

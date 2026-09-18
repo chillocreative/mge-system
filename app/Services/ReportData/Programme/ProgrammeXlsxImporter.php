@@ -3,8 +3,11 @@
 namespace App\Services\ReportData\Programme;
 
 use Illuminate\Validation\ValidationException;
-use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\Csv;
 use PhpOffice\PhpSpreadsheet\Reader\IReadFilter;
+use PhpOffice\PhpSpreadsheet\Reader\Xls;
+use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class ProgrammeXlsxImporter
@@ -37,14 +40,7 @@ class ProgrammeXlsxImporter
      */
     public function preview(string $absolutePath): array
     {
-        $reader = IOFactory::createReaderForFile($absolutePath);
-        $reader->setReadDataOnly(true);
-
-        if (method_exists($reader, 'setReadFilter')) {
-            $reader->setReadFilter($this->scanCapFilter());
-        }
-
-        $spreadsheet = $reader->load($absolutePath);
+        $spreadsheet = $this->loadSpreadsheet($absolutePath, $this->scanCapFilter());
         $sheet = $spreadsheet->getActiveSheet();
 
         $rows = $this->rowsAsStrings($sheet, self::SCAN_CAP);
@@ -87,12 +83,10 @@ class ProgrammeXlsxImporter
             ]);
         }
 
-        $reader = IOFactory::createReaderForFile($absolutePath);
-        $reader->setReadDataOnly(true);
-        $spreadsheet = $reader->load($absolutePath);
+        $spreadsheet = $this->loadSpreadsheet($absolutePath, $this->scanCapFilter());
         $sheet = $spreadsheet->getActiveSheet();
 
-        $rows = $this->rowsAsStrings($sheet, null);
+        $rows = $this->rowsAsStrings($sheet, self::SCAN_CAP);
 
         $headerIndex = null;
         foreach ($rows as $i => $row) {
@@ -106,6 +100,17 @@ class ProgrammeXlsxImporter
         $headers = $headerIndex === null ? [] : $rows[$headerIndex];
         $dataRows = $headerIndex === null ? [] : array_slice($rows, $headerIndex + 1);
 
+        $nonEmptyDataRowCount = count(array_filter(
+            $dataRows,
+            fn ($row) => trim($row[$nameCol] ?? '') !== ''
+        ));
+
+        if ($nonEmptyDataRowCount > self::ROW_COUNT_CAP) {
+            throw ValidationException::withMessages([
+                'file' => 'The programme has more than 2,000 activities.',
+            ]);
+        }
+
         $rawNames = [];
         foreach ($dataRows as $row) {
             $rawNames[] = $row[$nameCol] ?? '';
@@ -113,8 +118,8 @@ class ProgrammeXlsxImporter
         $indentUnit = ActivityNormaliser::inferIndentUnit($rawNames);
 
         $fractionMode = [
-            'actual_pct' => $this->detectFractionMode($dataRows, $mapping['actual_pct'] ?? null, $headers),
-            'plan_pct' => $this->detectFractionMode($dataRows, $mapping['plan_pct'] ?? null, $headers),
+            'actual_pct' => $this->detectFractionMode($dataRows, $mapping['actual_pct'] ?? null),
+            'plan_pct' => $this->detectFractionMode($dataRows, $mapping['plan_pct'] ?? null),
         ];
 
         $activities = [];
@@ -129,8 +134,8 @@ class ProgrammeXlsxImporter
             $outlineRaw = $outlineCol !== null ? ($row[$outlineCol] ?? '') : '';
 
             if ($outlineCol !== null && is_numeric($outlineRaw)) {
-                $level = max(1, (int) round((float) $outlineRaw));
-                $name = trim($rawName);
+                $level = ActivityNormaliser::clampOutlineLevel((int) round((float) $outlineRaw));
+                $name = ActivityNormaliser::clampName($rawName);
             } else {
                 $derived = ActivityNormaliser::outlineFromIndent($rawName, $indentUnit);
                 $level = $derived['level'];
@@ -192,25 +197,26 @@ class ProgrammeXlsxImporter
         return $suggested;
     }
 
-    private function detectFractionMode(array $dataRows, ?int $col, array $headers): bool
+    private function detectFractionMode(array $dataRows, ?int $col): bool
     {
         if ($col === null) {
             return false;
         }
 
-        $header = (string) ($headers[$col] ?? '');
-        if (str_contains($header, '%')) {
-            return false;
-        }
-
         $sawNumeric = false;
         foreach ($dataRows as $row) {
-            $raw = $row[$col] ?? '';
+            $raw = (string) ($row[$col] ?? '');
             if ($raw === '') {
                 continue;
             }
 
-            $value = str_replace(['%', ','], ['', '.'], (string) $raw);
+            // A raw value carrying its own '%' sign (e.g. "45%") is already a whole percent,
+            // regardless of how small it is — never treat it as a 0-1 fraction.
+            if (str_contains($raw, '%')) {
+                return false;
+            }
+
+            $value = str_replace(',', '.', $raw);
             if (! is_numeric($value)) {
                 continue;
             }
@@ -222,6 +228,42 @@ class ProgrammeXlsxImporter
         }
 
         return $sawNumeric;
+    }
+
+    /**
+     * Load a spreadsheet by picking the reader explicitly from the file's lowercase
+     * extension, rather than IOFactory::createReaderForFile()'s auto-detection, which can
+     * fall through to Csv::canRead() -> mime_content_type() and fatal in production when
+     * the `fileinfo` extension is missing. Any load failure (corrupt/garbage bytes,
+     * unreadable content) is normalised to a ValidationException instead of an uncaught
+     * PhpSpreadsheet Reader\Exception or a raw \Throwable.
+     */
+    private function loadSpreadsheet(string $absolutePath, ?IReadFilter $readFilter = null): Spreadsheet
+    {
+        $extension = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
+
+        $reader = match ($extension) {
+            'xlsx' => new Xlsx,
+            'xls' => new Xls,
+            'csv' => new Csv,
+            default => throw ValidationException::withMessages([
+                'file' => 'The file could not be read as a spreadsheet.',
+            ]),
+        };
+
+        $reader->setReadDataOnly(true);
+
+        if ($readFilter !== null && method_exists($reader, 'setReadFilter')) {
+            $reader->setReadFilter($readFilter);
+        }
+
+        try {
+            return $reader->load($absolutePath);
+        } catch (\Throwable) {
+            throw ValidationException::withMessages([
+                'file' => 'The file could not be read as a spreadsheet.',
+            ]);
+        }
     }
 
     /**

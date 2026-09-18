@@ -55,7 +55,7 @@ class RegisterSectionsTest extends TestCase
         $data = SectionRegistry::make('2.5')->build($this->context());
 
         $this->assertSame(1, $data['schema']);
-        $this->assertSame('Work programme import is available in a later phase.', $data['note']);
+        $this->assertSame('No work programme has been imported for this project yet (Report Data › Work Programme).', $data['note']);
         $this->assertSame([], $data['rows']);
     }
 

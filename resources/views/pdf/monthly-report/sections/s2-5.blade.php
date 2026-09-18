@@ -5,7 +5,7 @@
 @endphp
 
 @if($version)
-    <p>Programme: {{ $version['label'] ?? '' }} (status date {{ $version['status_date'] ?? '' }})</p>
+    <p>Programme: {{ $version['label'] ?? '' }}@if(!empty($version['status_date'])) (status date {{ $version['status_date'] }})@endif</p>
 @endif
 
 @if(empty($data['rows']))
@@ -29,12 +29,12 @@
             @foreach($data['rows'] as $row)
                 @php
                     $level = (int) ($row['level'] ?? 1);
-                    $indent = ($level - 1) * 3;
+                    $indentStyle = $level > 1 ? ' padding-left: '.(($level - 1) * 3).'mm;' : '';
                     $isSummary = ! empty($row['summary']);
                 @endphp
                 <tr style="page-break-inside: avoid;">
                     <td style="font-size: {{ $fontSize }};">{!! $isSummary ? '<strong>'.e($row['no'] ?? '').'</strong>' : e($row['no'] ?? '') !!}</td>
-                    <td style="font-size: {{ $fontSize }}; padding-left: {{ $indent }}mm;">{!! $isSummary ? '<strong>'.e($row['task'] ?? '').'</strong>' : e($row['task'] ?? '') !!}</td>
+                    <td style="font-size: {{ $fontSize }};{{ $indentStyle }}">{!! $isSummary ? '<strong>'.e($row['task'] ?? '').'</strong>' : e($row['task'] ?? '') !!}</td>
                     <td style="font-size: {{ $fontSize }};">{!! $isSummary ? '<strong>'.e($row['duration'] ?? '').'</strong>' : e($row['duration'] ?? '') !!}</td>
                     <td style="font-size: {{ $fontSize }};">{!! $isSummary ? '<strong>'.e($row['start'] ?? '').'</strong>' : e($row['start'] ?? '') !!}</td>
                     <td style="font-size: {{ $fontSize }};">{!! $isSummary ? '<strong>'.e($row['finish'] ?? '').'</strong>' : e($row['finish'] ?? '') !!}</td>

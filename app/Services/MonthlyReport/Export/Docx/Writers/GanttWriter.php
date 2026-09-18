@@ -30,7 +30,11 @@ final class GanttWriter implements SectionWriter
         $hasPdfOnly = $imagePages === 0 && $assets->isNotEmpty();
 
         if ($version) {
-            $doc->paragraph("Programme: {$version['label']} (status date {$version['status_date']})");
+            $caption = "Programme: {$version['label']}";
+            if (! empty($version['status_date'])) {
+                $caption .= " (status date {$version['status_date']})";
+            }
+            $doc->paragraph($caption);
         }
 
         if ($imagePages > 0) {

@@ -89,20 +89,23 @@ class ProgrammeService
     {
         $projectId = $version->project_id;
         $wasCurrent = $version->is_current;
+        $filePath = $version->source_file_path;
 
-        if ($version->source_file_path) {
-            Storage::disk('local')->delete($version->source_file_path);
-        }
+        DB::transaction(function () use ($version, $projectId, $wasCurrent) {
+            $version->delete();
 
-        $version->delete();
+            if ($wasCurrent) {
+                $latest = ProjectProgrammeVersion::where('project_id', $projectId)
+                    ->orderByDesc('status_date')
+                    ->orderByDesc('id')
+                    ->first();
 
-        if ($wasCurrent) {
-            $latest = ProjectProgrammeVersion::where('project_id', $projectId)
-                ->orderByDesc('status_date')
-                ->orderByDesc('id')
-                ->first();
+                $latest?->update(['is_current' => true]);
+            }
+        });
 
-            $latest?->update(['is_current' => true]);
+        if ($filePath) {
+            Storage::disk('local')->delete($filePath);
         }
     }
 

@@ -2,13 +2,18 @@
 
 namespace Tests\Feature\ReportData;
 
+use App\Models\MonthlyReport;
 use App\Models\Project;
 use App\Models\ProjectProgrammeVersion;
+use App\Models\ProjectProgressPeriod;
 use App\Models\User;
+use App\Services\MonthlyReport\Export\PdfExporter;
+use App\Services\MonthlyReport\MonthlyReportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Csv;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -293,5 +298,137 @@ class ProgrammeApiTest extends TestCase
 
         $this->getJson("/api/projects/{$project->id}/programme-versions")->assertStatus(401);
         $this->postJson("/api/projects/{$project->id}/programme-versions/preview", [])->assertStatus(401);
+    }
+
+    public function test_import_with_more_than_2000_activities_returns_422_and_leaves_no_leftover_files(): void
+    {
+        $project = $this->project();
+
+        $rows = [['Activity Name', 'Duration']];
+        for ($i = 0; $i < 2100; $i++) {
+            $rows[] = ["Task {$i}", '1'];
+        }
+
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        foreach ($rows as $r => $row) {
+            foreach ($row as $c => $value) {
+                $sheet->setCellValueByColumnAndRow($c + 1, $r + 1, $value);
+            }
+        }
+        $path = sys_get_temp_dir().'/programme-api-big-'.uniqid().'.xlsx';
+        $this->tempFiles[] = $path;
+        (new Xlsx($spreadsheet))->save($path);
+
+        $res = $this->actingAs($this->editor)
+            ->post("/api/projects/{$project->id}/programme-versions/preview", [
+                'file' => new UploadedFile($path, 'big.xlsx', null, null, true),
+            ])
+            ->assertOk();
+
+        $preview = $res->json('data');
+
+        $this->actingAs($this->editor)
+            ->postJson("/api/projects/{$project->id}/programme-versions/import", [
+                'token' => $preview['token'],
+                'mapping' => [
+                    'name' => $preview['suggested']['name'],
+                    'duration' => $preview['suggested']['duration'],
+                ],
+                'label' => 'Too big',
+            ])
+            ->assertStatus(422);
+
+        $this->assertEmpty(Storage::disk('local')->allFiles($this->dir($project->id)));
+    }
+
+    private function dir(int $projectId): string
+    {
+        return "programmes/{$projectId}";
+    }
+
+    public function test_csv_multipart_preview_and_import_succeeds(): void
+    {
+        $project = $this->project();
+
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        foreach ($this->sampleRows() as $r => $row) {
+            foreach ($row as $c => $value) {
+                $sheet->setCellValueByColumnAndRow($c + 1, $r + 1, $value);
+            }
+        }
+        $path = sys_get_temp_dir().'/programme-api-csv-'.uniqid().'.csv';
+        $this->tempFiles[] = $path;
+        (new Csv($spreadsheet))->save($path);
+
+        $previewRes = $this->actingAs($this->editor)
+            ->post("/api/projects/{$project->id}/programme-versions/preview", [
+                'file' => new UploadedFile($path, 'programme.csv', null, null, true),
+            ])
+            ->assertOk();
+
+        $preview = $previewRes->json('data');
+        $this->assertSame('Activity Name', $preview['headers'][0]);
+
+        $importRes = $this->actingAs($this->editor)
+            ->postJson("/api/projects/{$project->id}/programme-versions/import", [
+                'token' => $preview['token'],
+                'mapping' => [
+                    'name' => $preview['suggested']['name'],
+                    'duration' => $preview['suggested']['duration'],
+                    'start' => $preview['suggested']['start'],
+                    'finish' => $preview['suggested']['finish'],
+                    'actual_pct' => $preview['suggested']['actual_pct'],
+                    'plan_pct' => $preview['suggested']['plan_pct'],
+                ],
+                'label' => 'CSV Import',
+            ])
+            ->assertCreated();
+
+        $version = ProjectProgrammeVersion::findOrFail($importRes->json('data.id'));
+        $this->assertSame('xlsx', $version->source_type);
+        $this->assertSame(3, $version->activity_count);
+        Storage::disk('local')->assertExists($version->source_file_path);
+    }
+
+    public function test_deleting_a_programme_version_keeps_the_reports_2_5_snapshot_rows(): void
+    {
+        $project = $this->project();
+        $period = ProjectProgressPeriod::create([
+            'project_id' => $project->id, 'period_no' => 1, 'period_start' => '2026-01-01', 'period_end' => '2026-01-31',
+            'physical_scheduled_pct' => 1, 'physical_actual_pct' => 1, 'financial_scheduled_pct' => 1, 'financial_actual_pct' => 1,
+            'financial_actual_amount' => 1,
+        ]);
+
+        $version = ProjectProgrammeVersion::create([
+            'project_id' => $project->id, 'label' => 'Baseline', 'status_date' => '2026-01-15',
+            'source_type' => 'manual', 'is_current' => true, 'activity_count' => 1,
+        ]);
+        $version->activities()->create([
+            'seq' => 1, 'outline_level' => 1, 'name' => 'Earthworks', 'duration_days' => 5,
+            'start' => '2026-01-01', 'finish' => '2026-01-05', 'actual_pct' => 50, 'plan_pct' => 60, 'is_summary' => false,
+        ]);
+
+        /** @var MonthlyReport $report */
+        $report = app(MonthlyReportService::class)->create($project->id, ['period_id' => $period->id], $this->editor->id);
+        $report->sections()->where('key', '2.5')->update(['include' => true]);
+        app(MonthlyReportService::class)->regenerate($report, '2.5');
+
+        $snapshotBefore = $report->fresh()->sections()->where('key', '2.5')->first()->data;
+        $this->assertNotEmpty($snapshotBefore['rows']);
+        $this->assertSame('Earthworks', $snapshotBefore['rows'][0]['task']);
+
+        $this->actingAs($this->editor)
+            ->deleteJson("/api/projects/{$project->id}/programme-versions/{$version->id}")
+            ->assertOk();
+
+        $this->assertNull(ProjectProgrammeVersion::find($version->id));
+
+        $snapshotAfter = $report->fresh()->sections()->where('key', '2.5')->first()->data;
+        $this->assertSame($snapshotBefore, $snapshotAfter);
+
+        $html = app(PdfExporter::class)->html($report->fresh(['sections', 'project', 'period']), ['2.5']);
+        $this->assertStringContainsString('Earthworks', $html);
     }
 }

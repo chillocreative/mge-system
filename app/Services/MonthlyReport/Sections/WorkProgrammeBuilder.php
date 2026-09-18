@@ -16,7 +16,7 @@ final class WorkProgrammeBuilder extends AbstractBuilder
             return [
                 'schema' => 1,
                 'version' => null,
-                'note' => 'Work programme import is available in a later phase.',
+                'note' => 'No work programme has been imported for this project yet (Report Data › Work Programme).',
                 'rows' => [],
             ];
         }

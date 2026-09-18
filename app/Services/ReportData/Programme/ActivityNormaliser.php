@@ -60,6 +60,10 @@ class ActivityNormaliser
             }
         }
 
+        if (! preg_match('/\d/', $value)) {
+            return null;
+        }
+
         try {
             $dt = new \DateTime($value);
 
@@ -112,12 +116,23 @@ class ActivityNormaliser
         }
 
         if (is_numeric($v)) {
-            return (int) round((float) $v);
+            return self::clampDuration((int) round((float) $v));
         }
 
         $value = trim((string) $v);
         if ($value === '') {
             return null;
+        }
+
+        // MS Project marks an "estimated" duration with a trailing '?', e.g. "12 days?".
+        $value = rtrim($value, '? ');
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            return self::clampDuration((int) round((float) $value));
         }
 
         // ISO 8601 duration from MSPDI, e.g. PT40H0M0S. Hours / 8, rounded.
@@ -127,22 +142,44 @@ class ActivityNormaliser
             $seconds = isset($m['seconds']) && $m['seconds'] !== '' ? (float) $m['seconds'] : 0.0;
             $totalHours = $hours + ($minutes / 60) + ($seconds / 3600);
 
-            return (int) round($totalHours / 8);
+            return self::clampDuration((int) round($totalHours / 8));
         }
 
-        // "12 days", "12d", "1.5 wks", "2 weeks", etc.
-        if (preg_match('/^([\d.]+)\s*(day|days|d|wk|wks|week|weeks|w)?$/i', $value, $m)) {
+        // "12 days", "12d", "1.5 wks", "2 weeks", "12 edays" (elapsed days), etc.
+        if (preg_match('/^([\d.]+)\s*(edays|day|days|d|wk|wks|week|weeks|w)?$/i', $value, $m)) {
             $num = (float) $m[1];
             $unit = strtolower($m[2] ?? 'd');
 
             if (in_array($unit, ['wk', 'wks', 'week', 'weeks', 'w'], true)) {
-                return (int) round($num * 5);
+                return self::clampDuration((int) round($num * 5));
             }
 
-            return (int) round($num);
+            return self::clampDuration((int) round($num));
         }
 
         return null;
+    }
+
+    /** A negative duration is not meaningful; normalise it to null rather than storing it. */
+    private static function clampDuration(int $days): ?int
+    {
+        return $days < 0 ? null : $days;
+    }
+
+    /**
+     * Clamp an activity name to the database column's 255-char limit.
+     */
+    public static function clampName(string $name): string
+    {
+        return mb_substr(trim($name), 0, 255);
+    }
+
+    /**
+     * Clamp an outline level into the 1..255 range the database column allows.
+     */
+    public static function clampOutlineLevel(int $level): int
+    {
+        return max(1, min(255, $level));
     }
 
     /**
@@ -172,8 +209,8 @@ class ActivityNormaliser
         $level = 1 + (int) floor($count / $unit);
 
         return [
-            'level' => $level,
-            'name' => trim($name),
+            'level' => self::clampOutlineLevel($level),
+            'name' => self::clampName($name),
         ];
     }
 

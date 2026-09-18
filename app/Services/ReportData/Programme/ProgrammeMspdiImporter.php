@@ -56,7 +56,7 @@ class ProgrammeMspdiImporter
             }
 
             $outlineLevel = isset($node->OutlineLevel) && is_numeric((string) $node->OutlineLevel)
-                ? max(1, (int) (string) $node->OutlineLevel)
+                ? ActivityNormaliser::clampOutlineLevel((int) (string) $node->OutlineLevel)
                 : 1;
 
             $duration = isset($node->Duration) ? ActivityNormaliser::durationDays((string) $node->Duration) : null;
@@ -66,7 +66,7 @@ class ProgrammeMspdiImporter
             $isSummary = isset($node->Summary) && (string) $node->Summary === '1';
 
             $activities[] = [
-                'name' => trim($name),
+                'name' => ActivityNormaliser::clampName($name),
                 'outline_level' => $outlineLevel,
                 'duration_days' => $duration,
                 'start' => $start,

@@ -252,4 +252,124 @@ class ProgrammeXlsxImporterTest extends TestCase
 
         $importer->import($path, ['name' => 0]);
     }
+
+    public function test_import_throws_validation_exception_for_unreadable_garbage_bytes(): void
+    {
+        $path = $this->tempPath('xlsx');
+        file_put_contents($path, random_bytes(256));
+
+        $importer = new ProgrammeXlsxImporter;
+
+        $this->expectException(ValidationException::class);
+
+        $importer->import($path, ['name' => 0]);
+    }
+
+    public function test_preview_throws_validation_exception_for_unreadable_garbage_bytes(): void
+    {
+        $path = $this->tempPath('xlsx');
+        file_put_contents($path, random_bytes(256));
+
+        $importer = new ProgrammeXlsxImporter;
+
+        $this->expectException(ValidationException::class);
+
+        $importer->preview($path);
+    }
+
+    public function test_import_throws_validation_exception_for_unsupported_extension(): void
+    {
+        $path = $this->tempPath('txt');
+        file_put_contents($path, 'Activity Name,Duration'.PHP_EOL.'Mobilization,5'.PHP_EOL);
+
+        $importer = new ProgrammeXlsxImporter;
+
+        $this->expectException(ValidationException::class);
+
+        $importer->import($path, ['name' => 0]);
+    }
+
+    public function test_import_throws_when_more_than_2000_activities(): void
+    {
+        $rows = [['Activity Name', 'Duration']];
+        for ($i = 0; $i < 2100; $i++) {
+            $rows[] = ["Task {$i}", '1'];
+        }
+
+        $path = $this->writeXlsx($rows);
+        $importer = new ProgrammeXlsxImporter;
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessageMatches('/more than 2,000 activities/');
+
+        $importer->import($path, ['name' => 0]);
+    }
+
+    public function test_import_clamps_long_names_and_outline_levels_and_negative_durations(): void
+    {
+        $longName = str_repeat('A', 300);
+        $rows = [
+            ['Activity Name', 'Duration', 'Level'],
+            [$longName, '-5', '999'],
+        ];
+        $path = $this->writeXlsx($rows);
+        $importer = new ProgrammeXlsxImporter;
+
+        $activities = $importer->import($path, ['name' => 0, 'duration' => 1, 'outline_level' => 2]);
+
+        $this->assertSame(255, strlen($activities[0]['name']));
+        $this->assertSame(str_repeat('A', 255), $activities[0]['name']);
+        $this->assertSame(255, $activities[0]['outline_level']);
+        $this->assertNull($activities[0]['duration_days']);
+    }
+
+    public function test_fraction_mode_is_detected_even_when_header_contains_percent_sign(): void
+    {
+        // Excel percent-formatted cells store the underlying fraction (0.45), not "45%"; the
+        // header containing '%' must not short-circuit fraction detection.
+        $rows = [
+            ['Activity Name', '% Complete'],
+            ['Mobilization', '0.45'],
+            ['Excavation', '0.9'],
+        ];
+        $path = $this->writeXlsx($rows);
+        $importer = new ProgrammeXlsxImporter;
+
+        $activities = $importer->import($path, ['name' => 0, 'actual_pct' => 1]);
+
+        $this->assertSame(45.0, $activities[0]['actual_pct']);
+        $this->assertSame(90.0, $activities[1]['actual_pct']);
+    }
+
+    public function test_fraction_mode_is_not_used_when_raw_values_carry_a_percent_sign(): void
+    {
+        $rows = [
+            ['Activity Name', 'Progress'],
+            ['Mobilization', '45%'],
+            ['Excavation', '0.9%'],
+        ];
+        $path = $this->writeXlsx($rows);
+        $importer = new ProgrammeXlsxImporter;
+
+        $activities = $importer->import($path, ['name' => 0, 'actual_pct' => 1]);
+
+        $this->assertSame(45.0, $activities[0]['actual_pct']);
+        $this->assertSame(0.9, $activities[1]['actual_pct']);
+    }
+
+    public function test_fraction_mode_all_zeros_is_not_treated_as_fraction_mode(): void
+    {
+        $rows = [
+            ['Activity Name', 'Progress'],
+            ['Mobilization', '0'],
+            ['Excavation', '0'],
+        ];
+        $path = $this->writeXlsx($rows);
+        $importer = new ProgrammeXlsxImporter;
+
+        $activities = $importer->import($path, ['name' => 0, 'actual_pct' => 1]);
+
+        $this->assertSame(0.0, $activities[0]['actual_pct']);
+        $this->assertSame(0.0, $activities[1]['actual_pct']);
+    }
 }
