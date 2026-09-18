@@ -34,15 +34,18 @@ final class AssetService
             }
         }
 
+        $replacedFile = null;
+
         try {
-            return DB::transaction(function () use ($report, $kind, $path, $file, $ext, $pages) {
+            $asset = DB::transaction(function () use ($report, $kind, $path, $file, $ext, $pages, &$replacedFile) {
                 $isChart = in_array($kind, self::CHART_KINDS, true);
 
                 if ($isChart) {
-                    // Chart snapshots replace in place: one asset per kind per report.
+                    // Chart snapshots replace in place: one asset per kind per report. The old
+                    // file is removed only after the transaction commits (disk isn't transactional).
                     $previous = MonthlyReportAsset::where('report_id', $report->id)->where('kind', $kind)->first();
                     if ($previous) {
-                        Storage::disk('local')->delete($previous->file_path);
+                        $replacedFile = $previous->file_path;
                         $previous->delete();
                     }
 
@@ -72,6 +75,12 @@ final class AssetService
             Storage::disk('local')->delete($path);
             throw $e;
         }
+
+        if ($replacedFile && $replacedFile !== $path) {
+            Storage::disk('local')->delete($replacedFile);
+        }
+
+        return $asset;
     }
 
     public function reorder(MonthlyReportAsset $asset, int $sortOrder): MonthlyReportAsset
