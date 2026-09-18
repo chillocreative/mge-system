@@ -219,6 +219,47 @@ class DocxExportTest extends TestCase
         $this->assertNoEmptySectionBodies($xml);
     }
 
+    public function test_scurve_physical_page_asset_replaces_chart_snapshot_with_attached_wording(): void
+    {
+        Storage::fake('local');
+
+        $project = Project::create(['name' => 'Attached Chart Test', 'code' => 'ACT-'.uniqid(), 'status' => 'in_progress']);
+
+        ProjectScheduleBaseline::create(['project_id' => $project->id, 'month' => '2025-12-01', 'scheduled_physical_pct' => 1, 'scheduled_financial_amount' => 100000, 'scheduled_financial_pct' => 1]);
+        ProjectScheduleBaseline::create(['project_id' => $project->id, 'month' => '2026-01-01', 'scheduled_physical_pct' => 2, 'scheduled_financial_amount' => 200000, 'scheduled_financial_pct' => 2]);
+
+        $period = ProjectProgressPeriod::create(['project_id' => $project->id, 'period_no' => 1, 'period_start' => '2025-12-16', 'period_end' => '2026-01-15', 'physical_scheduled_pct' => 1, 'physical_actual_pct' => 1, 'financial_scheduled_pct' => 1, 'financial_actual_pct' => 1, 'financial_actual_amount' => 100000]);
+
+        $user = User::create(['first_name' => 'Attached', 'last_name' => 'Chart', 'email' => 'ac-'.uniqid().'@mge-eng.com', 'password' => bcrypt('x'), 'status' => 'active']);
+
+        /** @var MonthlyReportService $service */
+        $service = app(MonthlyReportService::class);
+        $report = $service->create($project->id, ['period_id' => $period->id], $user->id);
+
+        $png = $this->tinyPng();
+        $path = "monthly-reports/{$report->id}/assets/scurve-physical.png";
+        Storage::disk('local')->put($path, $png);
+        MonthlyReportAsset::create([
+            'report_id' => $report->id,
+            'kind' => 'scurve_physical_page',
+            'file_path' => $path,
+            'file_name' => 'scurve-physical.png',
+            'extension' => 'png',
+            'size' => strlen($png),
+            'pages' => 1,
+            'sort_order' => 0,
+        ]);
+
+        $report = $report->fresh(['sections', 'project', 'period']);
+        $bytes = app(DocxExporter::class)->render($report);
+        $xml = $this->documentXml($bytes);
+
+        $this->assertStringContainsString('The S-curve chart is attached on the following 1 page(s).', $xml);
+
+        $physicalRegion = $this->regionBetween($xml, '2.2 PHYSICAL S-CURVE', '2.3');
+        $this->assertStringNotContainsString('Chart not captured', $physicalRegion, '2.2 must not show the "not captured" fallback once a page is attached');
+    }
+
     public function test_work_programme_table_contains_task_repeat_header_and_bold_summary(): void
     {
         $report = $this->makeReport();

@@ -2,9 +2,9 @@
 
 namespace App\Services\MonthlyReport\Export\Docx\Writers;
 
+use App\Services\MonthlyReport\AttachedPages;
 use App\Services\MonthlyReport\Export\Docx\DocxDocument;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Storage;
+use App\Services\MonthlyReport\Export\Docx\Writers\Concerns\WritesAttachedPages;
 use PhpOffice\PhpWord\Shared\Converter;
 
 /**
@@ -19,14 +19,14 @@ use PhpOffice\PhpWord\Shared\Converter;
  */
 final class GanttWriter implements SectionWriter
 {
-    private const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg'];
+    use WritesAttachedPages;
 
     public function write(DocxDocument $doc, string $key, array $data, ?string $note, array $ctx): void
     {
         $rows = $data['rows'] ?? [];
         $version = $data['version'] ?? null;
-        $assets = $this->ganttAssets($ctx);
-        $imagePages = $assets->filter(fn ($asset) => $this->isImageAsset($asset))->count();
+        $assets = $this->attachedAssets($ctx, AttachedPages::kindFor('2.5'));
+        $imagePages = $this->attachedImagePageCount($assets);
         $hasPdfOnly = $imagePages === 0 && $assets->isNotEmpty();
 
         if ($version) {
@@ -37,11 +37,7 @@ final class GanttWriter implements SectionWriter
             $doc->paragraph($caption);
         }
 
-        if ($imagePages > 0) {
-            $doc->paragraph("The work programme (Gantt chart) is attached on the following {$imagePages} page(s).");
-        } elseif ($hasPdfOnly) {
-            $doc->paragraph('The work programme (Gantt chart) PDF is attached separately (see the PDF export).');
-        }
+        $this->writeAttachedMessage($doc, $assets, 'The work programme (Gantt chart)');
 
         if (empty($rows)) {
             if ($imagePages === 0 && ! $hasPdfOnly) {
@@ -77,44 +73,6 @@ final class GanttWriter implements SectionWriter
             ]);
         }
 
-        $this->writeGanttAssets($doc, $assets);
-    }
-
-    private function ganttAssets(array $ctx): Collection
-    {
-        $report = $ctx['report'] ?? null;
-        if ($report === null) {
-            return collect();
-        }
-
-        return $report->assets()->where('kind', 'gantt_page')->orderBy('sort_order')->orderBy('id')->get();
-    }
-
-    private function isImageAsset($asset): bool
-    {
-        $ext = strtolower($asset->extension ?? pathinfo($asset->file_path, PATHINFO_EXTENSION));
-
-        return in_array($ext, self::IMAGE_EXTENSIONS, true);
-    }
-
-    private function writeGanttAssets(DocxDocument $doc, Collection $assets): void
-    {
-        foreach ($assets as $asset) {
-            $label = $asset->file_name ?: basename($asset->file_path);
-
-            if ($this->isImageAsset($asset)) {
-                if (! Storage::disk('local')->exists($asset->file_path)) {
-                    continue;
-                }
-
-                $doc->newSection('landscape');
-                $doc->image(Storage::disk('local')->get($asset->file_path));
-
-                continue;
-            }
-
-            $pages = $asset->pages ?? 1;
-            $doc->paragraph("• Attached: {$label} ({$pages} pages) — see the PDF export for the embedded pages.");
-        }
+        $this->writeAttachedAssets($doc, $assets);
     }
 }

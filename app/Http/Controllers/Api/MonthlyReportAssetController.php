@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MonthlyReport;
 use App\Models\MonthlyReportAsset;
 use App\Services\MonthlyReport\AssetService;
+use App\Services\MonthlyReport\AttachedPages;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -32,7 +33,7 @@ class MonthlyReportAssetController extends Controller
             'file' => $isChart
                 ? ['required', 'file', 'extensions:png', 'max:2048']
                 : ['required', 'file', 'extensions:pdf,png,jpg,jpeg', 'max:20480'],
-            'kind' => ['sometimes', Rule::in(['gantt_page', 'custom', ...self::CHART_KINDS])],
+            'kind' => ['sometimes', Rule::in([...array_values(AttachedPages::KINDS), 'custom', ...self::CHART_KINDS])],
         ]);
 
         $asset = $this->service->store($report, $validated['file'], $validated['kind'] ?? 'gantt_page');

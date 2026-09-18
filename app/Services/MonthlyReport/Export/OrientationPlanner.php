@@ -2,6 +2,8 @@
 
 namespace App\Services\MonthlyReport\Export;
 
+use App\Services\MonthlyReport\AttachedPages;
+
 final class OrientationPlanner
 {
     public const DEFAULT_LANDSCAPE = ['2.2', '2.3', '2.4', '2.5', '4.1', '4.2'];
@@ -34,9 +36,10 @@ final class OrientationPlanner
                 $current = ['orientation' => $orientation, 'keys' => [$key]];
             }
 
-            // Uploaded Gantt pages are appended right after section 2.5, so force a chunk
-            // boundary here even when the following section shares the same orientation.
-            if ($key === '2.5') {
+            // Uploaded attachment pages (2.2/2.4 S-curve charts, 2.5 Gantt chart) are appended
+            // right after their section, so force a chunk boundary here even when the following
+            // section shares the same orientation.
+            if (array_key_exists($key, AttachedPages::KINDS)) {
                 $chunks[] = $current;
                 $current = null;
             }

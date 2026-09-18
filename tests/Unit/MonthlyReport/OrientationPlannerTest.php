@@ -13,7 +13,8 @@ class OrientationPlannerTest extends TestCase
 
         $this->assertSame([
             ['orientation' => 'portrait', 'keys' => ['cover', '1.1', '2.1']],
-            ['orientation' => 'landscape', 'keys' => ['2.2', '2.3', '2.4']],
+            ['orientation' => 'landscape', 'keys' => ['2.2']],
+            ['orientation' => 'landscape', 'keys' => ['2.3', '2.4']],
             ['orientation' => 'portrait', 'keys' => ['2.6']],
             ['orientation' => 'landscape', 'keys' => ['4.1', '4.2']],
             ['orientation' => 'portrait', 'keys' => ['5.0']],
@@ -36,7 +37,19 @@ class OrientationPlannerTest extends TestCase
         $chunks = OrientationPlanner::plan(['2.4', '2.5', '2.6'], ['2.4', '2.5', '2.6']);
 
         $this->assertSame([
-            ['orientation' => 'landscape', 'keys' => ['2.4', '2.5']],
+            ['orientation' => 'landscape', 'keys' => ['2.4']],
+            ['orientation' => 'landscape', 'keys' => ['2.5']],
+            ['orientation' => 'landscape', 'keys' => ['2.6']],
+        ], $chunks);
+    }
+
+    public function test_forces_chunk_boundary_after_2_2_and_2_4_even_with_same_orientation(): void
+    {
+        $chunks = OrientationPlanner::plan(['2.2', '2.3', '2.4', '2.6'], ['2.2', '2.3', '2.4', '2.6']);
+
+        $this->assertSame([
+            ['orientation' => 'landscape', 'keys' => ['2.2']],
+            ['orientation' => 'landscape', 'keys' => ['2.3', '2.4']],
             ['orientation' => 'landscape', 'keys' => ['2.6']],
         ], $chunks);
     }

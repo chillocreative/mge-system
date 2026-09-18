@@ -55,7 +55,9 @@ final class AssetService
 
                     // Gantt pages are appended right after section 2.5, so make sure that
                     // section is part of the export instead of falling to the end of the PDF.
-                    if ($kind === 'gantt_page') {
+                    // 2.2/2.4's uploaded chart pages don't need this: those sections are
+                    // included by default (only 2.5 defaults to excluded).
+                    if ($kind === AttachedPages::kindFor('2.5')) {
                         $report->sections()->where('key', '2.5')->update(['include' => true]);
                     }
                 }

@@ -206,6 +206,22 @@ class AssetApiTest extends TestCase
         ])->assertStatus(422);
     }
 
+    public function test_upload_png_scurve_physical_page_does_not_flip_section_2_5_include(): void
+    {
+        Storage::fake('local');
+        [$manager, $report] = $this->managerAndReport();
+        $this->assertFalse((bool) $report->sections()->where('key', '2.5')->value('include'));
+
+        $res = $this->actingAs($manager)->postJson("/api/monthly-reports/{$report->id}/assets", [
+            'file' => UploadedFile::fake()->create('scurve-physical.png', 120, 'image/png'),
+            'kind' => 'scurve_physical_page',
+        ]);
+
+        $res->assertCreated()->assertJsonPath('data.kind', 'scurve_physical_page')->assertJsonPath('data.extension', 'png');
+        Storage::disk('local')->assertExists($res->json('data.file_path'));
+        $this->assertFalse((bool) $report->fresh()->sections()->where('key', '2.5')->value('include'), 'Uploading a 2.2 S-curve page must not auto-include section 2.5');
+    }
+
     public function test_chart_kind_upload_does_not_flip_section_2_5_include(): void
     {
         Storage::fake('local');

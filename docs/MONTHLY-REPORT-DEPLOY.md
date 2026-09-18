@@ -85,9 +85,12 @@ new to this feature).
   (`app/Http/Controllers/Api/MonthlyReportController.php`).
 - Embedded image cap: 3 MB per image (`ReportViewData::MAX_IMAGE_BYTES`) —
   oversized images are skipped rather than embedded.
-- Upload caps: Gantt chart page PDF/JPG 20 MB, Gantt PNG 2 MB
-  (`MonthlyReportAssetController`); work-programme XLSX/XLS/CSV 10 MB, MSPDI
-  XML 20 MB (`ReportData\ProgrammeVersionController`); report images 20 MB
+- Upload caps: attached page PDF/PNG/JPG 20 MB — covers section 2.5's Gantt
+  chart pages and sections 2.2/2.4's uploaded S-curve chart pages; the
+  separate chart-snapshot PNG kinds (`chart_physical_scurve`,
+  `chart_financial_scurve`) cap at 2 MB (`MonthlyReportAssetController`);
+  work-programme XLSX/XLS/CSV 10 MB, MSPDI XML 20 MB
+  (`ReportData\ProgrammeVersionController`); report images 20 MB
   (`ReportData\ReportImageController`).
 - Programme activity cap: 2,000 activities per programme
   (`ReportData\ProgrammeService`, enforced again as a row cap during XLSX
@@ -101,10 +104,14 @@ new to this feature).
 - **No cell rowspan support** in the DOCX writer — tables that would
   logically need a rowspan (e.g. section 3.1 header) are rendered with the
   header stacked instead.
-- **Gantt PDF pages are listed, not embedded**, in the Word export — a PDF
-  page uploaded for section 2.5 cannot be inlined into a `.docx`; it is
-  referenced as an attachment. Upload the Gantt chart page as PNG/JPG instead
-  if it needs to appear inline in Word.
+- **Attached PDF pages are listed, not embedded**, in the Word export — a PDF
+  page uploaded for section 2.5 (Gantt chart), 2.2 (physical S-curve) or 2.4
+  (financial S-curve) cannot be inlined into a `.docx`; it is referenced as
+  an attachment. Upload the chart page as PNG/JPG instead if it needs to
+  appear inline in Word. In both the PDF and Word export, an uploaded chart
+  page for 2.2/2.4 always takes priority over the auto-generated S-curve
+  chart for that section — the generated SVG/PNG chart is only used as a
+  fallback when no page has been uploaded.
 - **Table of Contents does not auto-refresh** — Word shows stale page numbers
   until the field is updated (right-click the TOC → "Update Field", or press
   F9; Word may also prompt "Update fields?" when the document is first
@@ -114,11 +121,12 @@ new to this feature).
   retroactively change the report; click "Regenerate" on the affected
   section (or "Regenerate all") to pull in the latest system data. Saved
   edits (overrides) and notes are preserved across regeneration.
-- **Free FPDI cannot read compressed PDF streams** — a Gantt PDF page upload
-  may fail with a "compression"-related error if the source PDF uses a
-  compression filter the free FPDI build doesn't support. Re-save the PDF as
-  PDF 1.4 (or "Print to PDF") before re-uploading, or upload a PNG/JPG image
-  of the same page instead.
+- **Free FPDI cannot read compressed PDF streams** — an attached PDF page
+  upload (Gantt chart for 2.5, S-curve chart for 2.2/2.4) may fail with a
+  "compression"-related error if the source PDF uses a compression filter the
+  free FPDI build doesn't support. Re-save the PDF as PDF 1.4 (or "Print to
+  PDF") before re-uploading, or upload a PNG/JPG image of the same page
+  instead.
 
 ## Troubleshooting
 

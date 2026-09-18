@@ -238,4 +238,49 @@ class PdfExportTest extends TestCase
         $this->assertArrayHasKey('label', $recorder->recordedParts[$chunkIndexWith25 + 1], 'The Gantt asset must immediately follow the chunk containing 2.5.');
         $this->assertSame('gantt.pdf', $recorder->recordedParts[$chunkIndexWith25 + 1]['label']);
     }
+
+    public function test_scurve_physical_page_is_inserted_immediately_after_the_chunk_containing_2_2_and_replaces_the_chart(): void
+    {
+        Storage::fake('local');
+        $report = $this->makeReportWithSeries();
+
+        $png = \Barryvdh\DomPDF\Facade\Pdf::loadHTML('<p>x</p>')->output(); // any bytes; extension drives handling, not content
+        $path = "monthly-reports/{$report->id}/assets/scurve-physical.png";
+        Storage::disk('local')->put($path, $png);
+        MonthlyReportAsset::create([
+            'report_id' => $report->id, 'kind' => 'scurve_physical_page', 'file_path' => $path,
+            'file_name' => 'scurve-physical.png', 'extension' => 'png', 'sort_order' => 1, 'pages' => 1,
+        ]);
+
+        $recorder = new class extends PdfMerger
+        {
+            /** @var array<int, array{pdf?: string, file?: string, label?: string}> */
+            public array $recordedParts = [];
+
+            public function merge(array $parts, string $footerLeft): string
+            {
+                $this->recordedParts = $parts;
+
+                return '%PDF-FAKE';
+            }
+        };
+        $this->app->instance(PdfMerger::class, $recorder);
+
+        $report = $report->fresh(['sections', 'project', 'period']);
+        app(PdfExporter::class)->render($report);
+
+        $includedKeys = $report->sections->where('include', true)->sortBy('sort_order')->pluck('key')->values()->all();
+        $chunks = OrientationPlanner::plan($includedKeys, $report->options['landscape_sections'] ?? null);
+        $chunkIndexWith22 = collect($chunks)->search(fn ($chunk) => in_array('2.2', $chunk['keys'], true));
+
+        $this->assertNotFalse($chunkIndexWith22, 'Expected a chunk containing section 2.2.');
+        $this->assertArrayNotHasKey('label', $recorder->recordedParts[$chunkIndexWith22], 'The 2.2 chunk itself is a rendered PDF part, not a labelled asset part.');
+        $this->assertArrayNotHasKey('label', $recorder->recordedParts[$chunkIndexWith22 + 1], 'A PNG attachment page renders as a DomPDF part (no label), immediately after the 2.2 chunk.');
+
+        $html = app(PdfExporter::class)->html($report);
+        $this->assertStringContainsString('The S-curve chart is attached on the following 1 page(s).', $html);
+        // 2.2's own chart is suppressed by the attachment; 2.4 still has no attachment, so its
+        // auto-generated SVG chart remains — exactly one svg data URI, not two.
+        $this->assertSame(1, substr_count($html, 'data:image/svg+xml;base64,'));
+    }
 }

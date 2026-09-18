@@ -4,6 +4,7 @@ namespace App\Services\MonthlyReport\Export;
 
 use App\Models\MonthlyReport;
 use App\Models\ReportImage;
+use App\Services\MonthlyReport\AttachedPages;
 use App\Services\MonthlyReport\Charts\SCurveSvg;
 use App\Services\MonthlyReport\ReportContext;
 use App\Services\MonthlyReport\SectionRegistry;
@@ -57,12 +58,29 @@ final class ReportViewData
             $notes[$section->key] = $section->notes;
         }
 
+        // 'attached_pages': the number of uploaded pages (Gantt/S-curve chart) attached right
+        // after this section in the PDF export — computed for every section that accepts them
+        // (2.2, 2.4, 2.5), not just 2.5.
+        foreach (AttachedPages::KINDS as $key => $kind) {
+            if (! isset($sections[$key])) {
+                continue;
+            }
+            $sections[$key]['attached_pages'] = (int) $report->assets()->where('kind', $kind)->sum('pages');
+        }
+
         foreach (['2.2', '2.4'] as $key) {
             if (! isset($sections[$key])) {
                 continue;
             }
-            $series = $sections[$key]['series'] ?? [];
             $sections[$key]['chart_svg_uri'] = null;
+
+            // Uploaded chart pages take priority over the auto-generated chart: don't bother
+            // rendering an SVG that will never be shown (s2-2.blade.php / s2-4.blade.php).
+            if (($sections[$key]['attached_pages'] ?? 0) > 0) {
+                continue;
+            }
+
+            $series = $sections[$key]['series'] ?? [];
             if (empty($series['months'])) {
                 continue;
             }
@@ -72,10 +90,6 @@ final class ReportViewData
             } catch (\Throwable $e) {
                 Log::warning("Monthly report chart {$key} could not be rendered: {$e->getMessage()}", ['report_id' => $report->id]);
             }
-        }
-
-        if (isset($sections['2.5'])) {
-            $sections['2.5']['gantt_pages'] = (int) $report->assets()->where('kind', 'gantt_page')->sum('pages');
         }
 
         if (isset($sections['cover'])) {

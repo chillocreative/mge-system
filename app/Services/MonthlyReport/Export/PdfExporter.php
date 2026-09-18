@@ -3,6 +3,7 @@
 namespace App\Services\MonthlyReport\Export;
 
 use App\Models\MonthlyReport;
+use App\Services\MonthlyReport\AttachedPages;
 use App\Services\MonthlyReport\SectionRegistry;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
@@ -54,20 +55,31 @@ final class PdfExporter
         $data['tocKeys'] = array_values(array_intersect(array_keys(SectionRegistry::TITLES), array_keys($data['sections'])));
 
         $parts = [];
-        $ganttInserted = false;
+        $insertedKeys = [];
         foreach ($chunks as $index => $chunk) {
             $html = $this->chunkHtml($data, $chunk['keys'], $chunk['orientation'], $index === 0);
             $parts[] = ['pdf' => Pdf::loadHTML($html)->setPaper('a4', $chunk['orientation'])->output()];
-            if (in_array('2.5', $chunk['keys'], true)) {
-                $parts = array_merge($parts, $this->ganttParts($report));
-                $ganttInserted = true;
+
+            foreach ($chunk['keys'] as $key) {
+                $kind = AttachedPages::kindFor($key);
+                if ($kind === null) {
+                    continue;
+                }
+
+                $parts = array_merge($parts, $this->attachedParts($report, $kind));
+                $insertedKeys[$key] = true;
             }
         }
 
-        // Section 2.5 is excluded from most reports by default, but uploaded Gantt pages should
-        // still be appended even when there is no 2.5 chunk to anchor them to.
-        if (! $ganttInserted) {
-            $parts = array_merge($parts, $this->ganttParts($report));
+        // A section that accepts attached pages (2.2, 2.4, 2.5) is excluded from most reports
+        // by default (2.5), but its uploaded pages should still be appended even when there is
+        // no chunk for that section to anchor them to.
+        foreach (AttachedPages::KINDS as $key => $kind) {
+            if (isset($insertedKeys[$key])) {
+                continue;
+            }
+
+            $parts = array_merge($parts, $this->attachedParts($report, $kind));
         }
 
         return $this->merger->merge($parts, "Monthly Progress Report No.{$report->report_no}");
@@ -87,9 +99,9 @@ final class PdfExporter
     }
 
     /** @return array<int, array{pdf?: string, file?: string, label?: string}> */
-    private function ganttParts(MonthlyReport $report): array
+    private function attachedParts(MonthlyReport $report, string $kind): array
     {
-        $assets = $report->assets()->where('kind', 'gantt_page')->orderBy('sort_order')->orderBy('id')->get();
+        $assets = $report->assets()->where('kind', $kind)->orderBy('sort_order')->orderBy('id')->get();
 
         $parts = [];
         foreach ($assets as $asset) {
@@ -98,7 +110,7 @@ final class PdfExporter
 
             if ($ext === 'pdf') {
                 if (! Storage::disk('local')->exists($asset->file_path)) {
-                    Log::warning("Monthly report Gantt PDF asset missing from disk: {$asset->file_path}", ['report_id' => $report->id, 'asset_id' => $asset->id]);
+                    Log::warning("Monthly report attached PDF asset missing from disk: {$asset->file_path}", ['report_id' => $report->id, 'asset_id' => $asset->id, 'kind' => $kind]);
 
                     continue;
                 }
@@ -120,7 +132,7 @@ final class PdfExporter
             } catch (\Throwable $e) {
                 // DomPDF's PNG-alpha handling calls GD unguarded; on a GD-less host this
                 // throws \Error rather than degrading gracefully.
-                Log::warning("Monthly report Gantt image {$label} could not be rendered: {$e->getMessage()}", ['report_id' => $report->id, 'asset_id' => $asset->id]);
+                Log::warning("Monthly report attached image {$label} could not be rendered: {$e->getMessage()}", ['report_id' => $report->id, 'asset_id' => $asset->id, 'kind' => $kind]);
                 $parts[] = ['pdf' => $this->placeholderPdf("Attached page could not be read: {$label}"), 'label' => $label];
             }
         }

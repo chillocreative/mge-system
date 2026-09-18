@@ -2,17 +2,23 @@
 
 namespace App\Services\MonthlyReport\Export\Docx\Writers;
 
+use App\Services\MonthlyReport\AttachedPages;
 use App\Services\MonthlyReport\Export\Docx\DocxDocument;
+use App\Services\MonthlyReport\Export\Docx\Writers\Concerns\WritesAttachedPages;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Renders 2.2 PHYSICAL S-CURVE / 2.4 FINANCIAL S-CURVE: the latest captured chart PNG asset
- * (embedded — the view data's chart_svg_uri is SVG, which Word cannot render), or a fallback
- * paragraph when none was captured, followed by the month series table(s) chunked like the PDF
- * (s2-2.blade.php / s2-4.blade.php).
+ * Renders 2.2 PHYSICAL S-CURVE / 2.4 FINANCIAL S-CURVE: uploaded S-curve chart pages take
+ * priority — when present, the "attached on the following N page(s)" line and those pages are
+ * written instead of a chart image (see WritesAttachedPages). Otherwise falls back to the
+ * latest captured chart PNG asset (embedded — the view data's chart_svg_uri is SVG, which Word
+ * cannot render), or a placeholder paragraph when none was captured. Either way, the month
+ * series table(s) follow, chunked like the PDF (s2-2.blade.php / s2-4.blade.php).
  */
 final class ChartWriter implements SectionWriter
 {
+    use WritesAttachedPages;
+
     /** @var array<string, string> */
     private const ASSET_KIND = [
         '2.2' => 'chart_physical_scurve',
@@ -31,7 +37,15 @@ final class ChartWriter implements SectionWriter
 
         $isLandscape = ($ctx['orientation'] ?? 'portrait') === 'landscape';
 
-        $this->writeChartImage($doc, $key, $ctx, $isLandscape);
+        $pageKind = AttachedPages::kindFor($key);
+        $attached = $pageKind ? $this->attachedAssets($ctx, $pageKind) : collect();
+
+        if ($attached->isNotEmpty()) {
+            $this->writeAttachedMessage($doc, $attached, 'The S-curve chart');
+            $this->writeAttachedAssets($doc, $attached);
+        } else {
+            $this->writeChartImage($doc, $key, $ctx, $isLandscape);
+        }
 
         if ($key === '2.4') {
             $this->writeFinancialTables($doc, $data['series'], $isLandscape);
