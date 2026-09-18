@@ -136,6 +136,9 @@ final class DocxDocument
      * @param  string[]|null  $headers  Column headers, or null for no header row.
      * @param  array<int, array<int, mixed>>  $rows  Rows of cells (string|int|float|null, or
      *                                               ['text' => ..., 'colspan' => n]).
+     * @param  array  $opts  ... 'emptyAs' (default '-'): text substituted for a null/''/[] cell
+     *                       value — pass '' (or a non-breaking space) for a grid where a blank
+     *                       cell should stay visually blank instead of showing a dash.
      */
     public function table(?array $headers, array $rows, array $opts = []): void
     {
@@ -145,6 +148,7 @@ final class DocxDocument
         $repeatHeader = $opts['repeatHeader'] ?? true;
         $shading = $opts['shading'] ?? null;
         $boldRows = $opts['bold'] ?? [];
+        $emptyAs = array_key_exists('emptyAs', $opts) ? (string) $opts['emptyAs'] : '-';
 
         $table = $this->requireSection()->addTable(self::TABLE_STYLE);
 
@@ -181,7 +185,8 @@ final class DocxDocument
                     $cell,
                     $value,
                     ['bold' => in_array($r, $boldRows, true), 'size' => $fontSize],
-                    ['alignment' => $this->alignmentFor($align[$c] ?? null)]
+                    ['alignment' => $this->alignmentFor($align[$c] ?? null)],
+                    $emptyAs
                 );
 
                 $c += $colspan;
@@ -372,18 +377,18 @@ final class DocxDocument
      * paragraph per item, and any item (or a plain string) containing "\n" is split into one
      * paragraph per line — so newlines never leak into document.xml as a raw literal "\n".
      */
-    private function addCellLines(Cell $cell, mixed $value, array $fontStyle, array $paragraphStyle = []): void
+    private function addCellLines(Cell $cell, mixed $value, array $fontStyle, array $paragraphStyle = [], string $emptyAs = '-'): void
     {
-        foreach ($this->cellLines($value) as $line) {
+        foreach ($this->cellLines($value, $emptyAs) as $line) {
             $cell->addText($line, $fontStyle, $paragraphStyle);
         }
     }
 
     /** @return string[] non-empty list of plain-text lines */
-    private function cellLines(mixed $value): array
+    private function cellLines(mixed $value, string $emptyAs = '-'): array
     {
         if ($value === null || $value === '' || $value === []) {
-            return ['-'];
+            return [$emptyAs];
         }
 
         $items = is_array($value) ? $value : [$value];

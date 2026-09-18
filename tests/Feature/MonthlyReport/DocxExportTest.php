@@ -12,7 +12,9 @@ use App\Models\ProjectResourceCategory;
 use App\Models\ProjectScheduleBaseline;
 use App\Models\SiteLog;
 use App\Models\User;
+use App\Services\MonthlyReport\Export\Docx\DocxDocument;
 use App\Services\MonthlyReport\Export\Docx\DocxExporter;
+use App\Services\MonthlyReport\Export\Docx\Writers\MatrixWriter;
 use App\Services\MonthlyReport\MonthlyReportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -121,6 +123,49 @@ class DocxExportTest extends TestCase
         $this->assertStringContainsString('General Worker', $xml);
         $this->assertStringContainsString('<w:pict>', $xml); // 2.2 chart asset embedded (PHPWord renders images as VML, not <w:drawing>)
         $this->assertStringContainsString('Chart not captured', $xml); // 2.4 has no chart asset
+
+        // 4.3's 24 hour cells must stay blank when unfilled, not render as a wall of '-' dashes
+        // (only the Hrs column may legitimately show '-' for a dry day).
+        $weatherRegion = $this->regionBetween($xml, '4.3 WEATHER REPORT', '5.0 PROGRESS PHOTOGRAPH');
+        $this->assertLessThan(24, substr_count($weatherRegion, '>-<'));
+    }
+
+    public function test_matrix_totals_are_computed_from_rows_not_a_stale_totals_field(): void
+    {
+        $data = [
+            'schema' => 1,
+            'days' => [
+                ['date' => '2025-12-16', 'label' => '16', 'month' => 'Dec-25'],
+                ['date' => '2025-12-17', 'label' => '17', 'month' => 'Dec-25'],
+            ],
+            'rows' => [
+                ['no' => 1, 'description' => 'Excavator', 'counts' => [3, 5]],
+                ['no' => 2, 'description' => 'Crane', 'counts' => [1, 0]],
+            ],
+            // Deliberately wrong/stale — the writer must ignore this and sum the rows above
+            // (3+1=4, 5+0=5), the same rule as s4-1.blade.php's own $totals computation.
+            'totals' => [999, 999],
+        ];
+
+        $doc = new DocxDocument(['title' => 'Matrix totals test']);
+        $doc->newSection('portrait');
+        (new MatrixWriter)->write($doc, '4.2', $data, null, ['orientation' => 'portrait']);
+        $xml = $this->documentXml($doc->save());
+
+        $this->assertStringContainsString('>4<', $xml);
+        $this->assertStringContainsString('>5<', $xml);
+        $this->assertStringNotContainsString('>999<', $xml);
+    }
+
+    /** Substring of $xml starting at $startMarker and ending just before $endMarker. */
+    private function regionBetween(string $xml, string $startMarker, string $endMarker): string
+    {
+        $start = strpos($xml, $startMarker);
+        $this->assertNotFalse($start, "Marker not found: {$startMarker}");
+        $end = strpos($xml, $endMarker, $start);
+        $this->assertNotFalse($end, "Marker not found: {$endMarker}");
+
+        return substr($xml, $start, $end - $start);
     }
 
     private function tinyPng(): string

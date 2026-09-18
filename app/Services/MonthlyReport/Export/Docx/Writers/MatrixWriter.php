@@ -27,7 +27,9 @@ final class MatrixWriter implements SectionWriter
             return;
         }
 
-        $totals = $data['totals'] ?? [];
+        // Computed from the rendered rows (like s4-1.blade.php's $totals, not the section's
+        // possibly-stale 'totals' field) so the printed total always matches what's on the page.
+        $totals = $this->computeTotals($days, $groups);
         $isLandscape = ($ctx['orientation'] ?? 'portrait') === 'landscape';
         $dayIndexes = array_keys($days);
         $chunks = $isLandscape ? [$dayIndexes] : array_chunk($dayIndexes, 16);
@@ -85,6 +87,24 @@ final class MatrixWriter implements SectionWriter
             'bold' => $boldRows,
             'shading' => fn ($r, $c) => $r < 2 ? self::HEADER_FILL : null,
         ]);
+    }
+
+    /** @return array<int, int|float> sum of every row's count at day index $i, across all groups */
+    private function computeTotals(array $days, array $groups): array
+    {
+        $totals = [];
+
+        foreach (array_keys($days) as $i) {
+            $sum = 0;
+            foreach ($groups as $group) {
+                foreach (($group['rows'] ?? []) as $row) {
+                    $sum += (float) ($row['counts'][$i] ?? 0);
+                }
+            }
+            $totals[$i] = $sum == (int) $sum ? (int) $sum : $sum;
+        }
+
+        return $totals;
     }
 
     /** @return array<int, array{month: string, span: int}> */

@@ -45,6 +45,10 @@ final class WeatherWriter implements SectionWriter
         $doc->table($headers, $rows, [
             'fontSize' => 6,
             'align' => array_fill(0, 26, 'c'),
+            // Hour cells carry no text at all in the Blade (just a shaded/unshaded box), so an
+            // empty cell here must stay blank — not DocxDocument::table()'s usual '-' filler.
+            // The Hrs column still gets an explicit '-' string above when there's no rain.
+            'emptyAs' => '',
             'shading' => function ($r, $c) use ($days) {
                 if ($c < 1 || $c > 24) {
                     return null;

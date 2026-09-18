@@ -92,6 +92,8 @@ final class ChartWriter implements SectionWriter
         $scheduledPct = $series['scheduled_pct'] ?? [];
         $actual = $series['actual'] ?? [];
         $actualPct = $series['actual_pct'] ?? [];
+        // Matches s2-4.blade.php's $chunks (financial has 5 data rows vs 2.2's 2, so it fits
+        // fewer months per portrait page: 6 here vs 12 in writePhysicalTables()).
         $chunkSize = $isLandscape ? 13 : 6;
 
         foreach (array_chunk(array_keys($months), $chunkSize) as $chunk) {
