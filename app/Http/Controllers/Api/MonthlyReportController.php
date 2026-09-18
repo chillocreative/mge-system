@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\MonthlyReport;
 use App\Services\MonthlyReport\Charts\SCurveSvg;
+use App\Services\MonthlyReport\Export\Docx\DocxExporter;
 use App\Services\MonthlyReport\Export\PdfExporter;
 use App\Services\MonthlyReport\MonthlyReportService;
 use App\Services\MonthlyReport\SectionRegistry;
@@ -15,7 +16,7 @@ use Illuminate\Validation\Rule;
 
 class MonthlyReportController extends Controller
 {
-    public function __construct(private MonthlyReportService $service, private PdfExporter $pdfExporter) {}
+    public function __construct(private MonthlyReportService $service, private PdfExporter $pdfExporter, private DocxExporter $docxExporter) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -130,6 +131,23 @@ class MonthlyReportController extends Controller
 
         return response($bytes, 200, [
             'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
+    public function exportDocx(int $reportId)
+    {
+        set_time_limit(120);
+        ini_set('memory_limit', '512M');
+
+        $report = MonthlyReport::with(['sections', 'project', 'period'])->findOrFail($reportId);
+        $bytes = $this->docxExporter->render($report);
+
+        $projectCode = preg_replace('/[^A-Za-z0-9]+/', '-', (string) $report->project?->code) ?: 'project';
+        $filename = "MPR-{$projectCode}-No{$report->report_no}.docx";
+
+        return response($bytes, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }

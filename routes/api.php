@@ -303,6 +303,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/{asset}', [MonthlyReportAssetController::class, 'destroy'])->middleware('permission:reports.manage');
         });
         Route::get('/{report}/export/pdf', [MonthlyReportController::class, 'exportPdf'])->middleware('permission:reports.view');
+        Route::get('/{report}/export/docx', [MonthlyReportController::class, 'exportDocx'])->middleware('permission:reports.view');
         Route::get('/{report}/charts/{key}', [MonthlyReportController::class, 'chart'])->middleware('permission:reports.view');
         Route::get('/{report}', [MonthlyReportController::class, 'show'])->middleware('permission:reports.view');
         Route::put('/{report}', [MonthlyReportController::class, 'update'])->middleware('permission:reports.manage');
