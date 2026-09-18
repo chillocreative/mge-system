@@ -5,6 +5,7 @@ namespace App\Services\MonthlyReport\Export\Docx\Writers;
 use App\Services\MonthlyReport\Export\Docx\DocxDocument;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpWord\Shared\Converter;
 
 /**
  * Renders 2.5 ACTUAL WORK PROGRESS: the "attached on the following N page(s)" line when Gantt
@@ -23,9 +24,14 @@ final class GanttWriter implements SectionWriter
     public function write(DocxDocument $doc, string $key, array $data, ?string $note, array $ctx): void
     {
         $rows = $data['rows'] ?? [];
+        $version = $data['version'] ?? null;
         $assets = $this->ganttAssets($ctx);
         $imagePages = $assets->filter(fn ($asset) => $this->isImageAsset($asset))->count();
         $hasPdfOnly = $imagePages === 0 && $assets->isNotEmpty();
+
+        if ($version) {
+            $doc->paragraph("Programme: {$version['label']} (status date {$version['status_date']})");
+        }
 
         if ($imagePages > 0) {
             $doc->paragraph("The work programme (Gantt chart) is attached on the following {$imagePages} page(s).");
@@ -38,7 +44,8 @@ final class GanttWriter implements SectionWriter
                 $doc->paragraph('No data.', ['italic' => true, 'color' => '555555']);
             }
         } else {
-            $headers = ['No.', 'Task', 'Duration', 'Start', 'Finish', 'Actual', 'Plan'];
+            $isLandscape = ($ctx['orientation'] ?? 'landscape') === 'landscape';
+            $headers = ['No.', 'Task', 'Duration', 'Start', 'Finish', 'Actual %', 'Plan %'];
             $tableRows = array_map(fn ($row) => [
                 $row['no'] ?? '',
                 $row['task'] ?? '',
@@ -47,9 +54,23 @@ final class GanttWriter implements SectionWriter
                 $row['finish'] ?? '',
                 $row['actual'] ?? '',
                 $row['plan'] ?? '',
-            ], $rows);
+            ], array_values($rows));
 
-            $doc->table($headers, $tableRows, ['fontSize' => 8]);
+            $levels = array_map(fn ($row) => max(1, (int) ($row['level'] ?? 1)), array_values($rows));
+            $summaries = array_map(fn ($row) => (bool) ($row['summary'] ?? false), array_values($rows));
+
+            $doc->table($headers, $tableRows, [
+                'fontSize' => $isLandscape ? 6 : 7,
+                'repeatHeader' => true,
+                'cellStyle' => function (int $r, int $c) use ($levels, $summaries) {
+                    $style = ['bold' => $summaries[$r] ?? false];
+                    if ($c === 1) {
+                        $style['indent'] = (int) round(Converter::cmToTwip((($levels[$r] ?? 1) - 1) * 0.3));
+                    }
+
+                    return $style;
+                },
+            ]);
         }
 
         $this->writeGanttAssets($doc, $assets);

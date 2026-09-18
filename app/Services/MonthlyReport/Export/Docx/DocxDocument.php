@@ -183,6 +183,9 @@ final class DocxDocument
      * @param  array  $opts  ... 'emptyAs' (default '-'): text substituted for a null/''/[] cell
      *                       value — pass '' (or a non-breaking space) for a grid where a blank
      *                       cell should stay visually blank instead of showing a dash.
+     *                       'cellStyle': fn(int $row, int $col): array{indent?: ?int, bold?: ?bool}
+     *                       — per-body-cell overrides, applied on top of 'bold' row indices;
+     *                       'indent' is a left paragraph indent in twips.
      */
     public function table(?array $headers, array $rows, array $opts = []): void
     {
@@ -193,6 +196,7 @@ final class DocxDocument
         $shading = $opts['shading'] ?? null;
         $boldRows = $opts['bold'] ?? [];
         $emptyAs = array_key_exists('emptyAs', $opts) ? (string) $opts['emptyAs'] : '-';
+        $cellStyleFor = $opts['cellStyle'] ?? null;
 
         $table = $this->requireSection()->addTable(self::TABLE_STYLE);
 
@@ -225,11 +229,19 @@ final class DocxDocument
                 }
 
                 $cell = $table->addCell($this->cellWidth($widths[$c] ?? null), $cellStyle);
+
+                $extra = $cellStyleFor ? ($cellStyleFor($r, $c) ?? []) : [];
+                $bold = in_array($r, $boldRows, true) || ! empty($extra['bold']);
+                $paragraphStyle = ['alignment' => $this->alignmentFor($align[$c] ?? null)];
+                if (! empty($extra['indent'])) {
+                    $paragraphStyle['indentation'] = ['left' => (int) $extra['indent']];
+                }
+
                 $this->addCellLines(
                     $cell,
                     $value,
-                    ['bold' => in_array($r, $boldRows, true), 'size' => $fontSize],
-                    ['alignment' => $this->alignmentFor($align[$c] ?? null)],
+                    ['bold' => $bold, 'size' => $fontSize],
+                    $paragraphStyle,
                     $emptyAs
                 );
 

@@ -7,6 +7,7 @@ use App\Models\MonthlyReportAsset;
 use App\Models\Project;
 use App\Models\ProjectContract;
 use App\Models\ProjectParty;
+use App\Models\ProjectProgrammeVersion;
 use App\Models\ProjectProgressPeriod;
 use App\Models\ProjectScheduleBaseline;
 use App\Models\SiteLog;
@@ -166,6 +167,36 @@ class PdfExportTest extends TestCase
         $this->expectException(ValidationException::class);
 
         app(PdfExporter::class)->render($report->fresh(['sections', 'project', 'period']));
+    }
+
+    public function test_work_programme_section_renders_caption_task_and_indent(): void
+    {
+        $report = $this->makeReport();
+        $report->sections()->where('key', '2.5')->update(['include' => true]);
+
+        $version = ProjectProgrammeVersion::create([
+            'project_id' => $report->project_id, 'label' => 'Baseline', 'status_date' => '2026-01-15',
+            'source_type' => 'manual', 'is_current' => true, 'activity_count' => 3,
+        ]);
+        $version->activities()->create([
+            'seq' => 1, 'outline_level' => 1, 'name' => 'Earthworks', 'is_summary' => true,
+        ]);
+        $version->activities()->create([
+            'seq' => 2, 'outline_level' => 2, 'name' => 'Excavation', 'duration_days' => 5,
+            'start' => '2026-01-02', 'finish' => '2026-01-06', 'actual_pct' => 45, 'plan_pct' => 50, 'is_summary' => false,
+        ]);
+        $version->activities()->create([
+            'seq' => 3, 'outline_level' => 2, 'name' => 'Backfilling', 'duration_days' => 12,
+            'start' => '2026-01-07', 'finish' => '2026-01-18', 'actual_pct' => 0, 'plan_pct' => 100, 'is_summary' => false,
+        ]);
+
+        app(MonthlyReportService::class)->regenerate($report, '2.5');
+
+        $html = app(PdfExporter::class)->html($report->fresh(['sections', 'project', 'period']));
+
+        $this->assertStringContainsString('Programme: Baseline (status date 15/01/2026)', $html);
+        $this->assertStringContainsString('Excavation', $html);
+        $this->assertStringContainsString('padding-left', $html);
     }
 
     public function test_gantt_pages_are_inserted_immediately_after_the_chunk_containing_2_5(): void

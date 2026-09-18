@@ -7,6 +7,7 @@ use App\Models\MonthlyReportAsset;
 use App\Models\Project;
 use App\Models\ProjectContract;
 use App\Models\ProjectParty;
+use App\Models\ProjectProgrammeVersion;
 use App\Models\ProjectProgressPeriod;
 use App\Models\ProjectResourceCategory;
 use App\Models\ProjectScheduleBaseline;
@@ -216,6 +217,45 @@ class DocxExportTest extends TestCase
 
         $this->assertStringContainsString('2.6 NOTICE OF DELAY', $xml, 'the section after the Gantt image must still be written');
         $this->assertNoEmptySectionBodies($xml);
+    }
+
+    public function test_work_programme_table_contains_task_repeat_header_and_bold_summary(): void
+    {
+        $report = $this->makeReport();
+        $report->sections()->where('key', '2.5')->update(['include' => true]);
+
+        $version = ProjectProgrammeVersion::create([
+            'project_id' => $report->project_id, 'label' => 'Baseline', 'status_date' => '2026-01-15',
+            'source_type' => 'manual', 'is_current' => true, 'activity_count' => 3,
+        ]);
+        $version->activities()->create([
+            'seq' => 1, 'outline_level' => 1, 'name' => 'Earthworks', 'is_summary' => true,
+        ]);
+        $version->activities()->create([
+            'seq' => 2, 'outline_level' => 2, 'name' => 'Excavation', 'duration_days' => 5,
+            'start' => '2026-01-02', 'finish' => '2026-01-06', 'actual_pct' => 45, 'plan_pct' => 50, 'is_summary' => false,
+        ]);
+        $version->activities()->create([
+            'seq' => 3, 'outline_level' => 2, 'name' => 'Backfilling', 'duration_days' => 12,
+            'start' => '2026-01-07', 'finish' => '2026-01-18', 'actual_pct' => 0, 'plan_pct' => 100, 'is_summary' => false,
+        ]);
+
+        app(MonthlyReportService::class)->regenerate($report, '2.5');
+
+        $report = $report->fresh(['sections', 'project', 'period']);
+        $bytes = app(DocxExporter::class)->render($report);
+        $xml = $this->documentXml($bytes);
+
+        $this->assertStringContainsString('Programme: Baseline (status date 15/01/2026)', $xml);
+        $this->assertStringContainsString('Excavation', $xml);
+        $this->assertStringContainsString('w:tblHeader', $xml);
+
+        // The summary row ("Earthworks") must be written with a bold run: assert a single
+        // <w:r>...</w:r> run carries both the bold property and the "Earthworks" text.
+        $this->assertMatchesRegularExpression(
+            '/<w:r>(?:(?!<\/w:r>).)*?<w:b(?:\s+w:val="1")?\/>(?:(?!<\/w:r>).)*?Earthworks(?:(?!<\/w:r>).)*?<\/w:r>/s',
+            $xml
+        );
     }
 
     public function test_gantt_writer_reports_pdf_only_attachment_when_no_image_pages(): void
