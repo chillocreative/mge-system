@@ -11,7 +11,7 @@ Monthly Progress Report feature (Phases A–F).
 | `xml` | DOCX export, MS Project XML (MSPDI) programme import | |
 | `dom` | DOCX export (PhpWord), XLSX read/write (PhpSpreadsheet) | |
 | `fileinfo` | **Any** file upload (Report Images, programme XLSX/XML, Gantt PDF/PNG, monthly report assets) | Missing `fileinfo` crashes Laravel's local Flysystem driver with `Error: Class "finfo" not found` the moment an uploaded file is stored — this is the single most common "Server Error" report. See CLAUDE.md note #5. Enable in cPanel → Select PHP Version → Extensions (or MultiPHP INI Editor) for the app's PHP version. |
-| `gd` (optional) | Downscaling uploaded PNG Gantt chart pages and progress photos | If absent, downscaling is skipped and the original file is kept as-is (still subject to the size caps below). |
+| `gd` (optional) | Downscaling uploaded Report Images (progress/location photos); Gantt PNG pages are stored as-is | If absent, downscaling is skipped and the original file is kept as-is (still subject to the size caps below). |
 
 Composer packages used by export, already committed to `vendor/` (no extra
 `composer install` step needed, but verify they exist after a fresh clone):

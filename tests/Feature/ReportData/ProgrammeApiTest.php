@@ -476,6 +476,43 @@ class ProgrammeApiTest extends TestCase
         Storage::disk('local')->assertExists($freshPath);
     }
 
+    public function test_import_with_legacy_plain_string_token_returns_422(): void
+    {
+        $project = $this->project();
+
+        $legacyToken = Crypt::encryptString($this->dir($project->id).'/tmp-x.xlsx');
+
+        $res = $this->actingAs($this->editor)
+            ->postJson("/api/projects/{$project->id}/programme-versions/import", [
+                'token' => $legacyToken,
+                'mapping' => ['name' => 0],
+                'label' => 'Legacy token',
+            ])
+            ->assertStatus(422);
+
+        $this->assertSame('The preview token is invalid — upload the file again.', $res->json('message'));
+    }
+
+    public function test_import_with_malformed_typed_token_payload_returns_422(): void
+    {
+        $project = $this->project();
+
+        $malformedToken = Crypt::encryptString(json_encode([
+            'path' => 5,
+            'issued_at' => 'x',
+        ]));
+
+        $res = $this->actingAs($this->editor)
+            ->postJson("/api/projects/{$project->id}/programme-versions/import", [
+                'token' => $malformedToken,
+                'mapping' => ['name' => 0],
+                'label' => 'Malformed token',
+            ])
+            ->assertStatus(422);
+
+        $this->assertSame('The preview token is invalid — upload the file again.', $res->json('message'));
+    }
+
     public function test_index_and_activities_return_404_for_unknown_project(): void
     {
         $this->actingAs($this->editor)

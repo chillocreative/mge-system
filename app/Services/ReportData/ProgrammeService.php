@@ -3,6 +3,7 @@
 namespace App\Services\ReportData;
 
 use App\Models\ProgrammeActivity;
+use App\Models\Project;
 use App\Models\ProjectProgrammeVersion;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -29,6 +30,8 @@ class ProgrammeService
         $setCurrent = $meta['set_current'] ?? true;
 
         return DB::transaction(function () use ($projectId, $meta, $activities, $userId, $count, $setCurrent) {
+            Project::whereKey($projectId)->lockForUpdate()->first();
+
             if ($setCurrent) {
                 $siblingIds = ProjectProgrammeVersion::where('project_id', $projectId)
                     ->lockForUpdate()
@@ -76,6 +79,8 @@ class ProgrammeService
     public function setCurrent(ProjectProgrammeVersion $version): void
     {
         DB::transaction(function () use ($version) {
+            Project::whereKey($version->project_id)->lockForUpdate()->first();
+
             $siblingIds = ProjectProgrammeVersion::where('project_id', $version->project_id)
                 ->lockForUpdate()
                 ->pluck('id');

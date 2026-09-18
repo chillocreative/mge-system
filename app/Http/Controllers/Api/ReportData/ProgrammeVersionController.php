@@ -73,7 +73,7 @@ class ProgrammeVersionController extends Controller
                 'path' => $relativePath,
                 'file_name' => $fileName,
                 'issued_at' => now()->timestamp,
-            ])),
+            ], JSON_INVALID_UTF8_SUBSTITUTE)),
             'file_name' => $fileName,
         ]);
     }
@@ -89,8 +89,12 @@ class ProgrammeVersionController extends Controller
                 continue;
             }
 
-            if (Storage::disk('local')->lastModified($path) < $cutoff) {
-                Storage::disk('local')->delete($path);
+            try {
+                if (Storage::disk('local')->lastModified($path) < $cutoff) {
+                    Storage::disk('local')->delete($path);
+                }
+            } catch (Throwable) {
+                continue;
             }
         }
     }
@@ -110,8 +114,10 @@ class ProgrammeVersionController extends Controller
             return $invalid();
         }
 
-        if (! is_array($payload) || ! isset($payload['path'], $payload['issued_at'])) {
-            return $invalid();
+        if (! is_array($payload)
+            || ! is_string($payload['path'] ?? null)
+            || ! is_int($payload['issued_at'] ?? null)) {
+            return $this->error('The preview token is invalid — upload the file again.', 422);
         }
 
         if ($payload['issued_at'] < now()->subDay()->timestamp) {
