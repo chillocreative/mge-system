@@ -158,6 +158,7 @@ php artisan db:seed
 
 ## Notes
 
+- Monthly Progress Report deployment prerequisites and limits: see docs/MONTHLY-REPORT-DEPLOY.md
 - CORS configured in `config/cors.php`
 - Broadcasting auth: `POST /api/broadcasting/auth`
 - PDF generation uses DomPDF via service classes
