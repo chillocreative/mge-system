@@ -17,6 +17,7 @@ import {
     HiOutlineViewGrid,
 } from 'react-icons/hi';
 import SECTION_EDITORS, { DEFAULT_LANDSCAPE } from './editor/sectionConfig';
+import SECTION_SOURCES from './editor/sectionSources';
 import ValueSection from './editor/ValueSection';
 import TableSection from './editor/TableSection';
 import TextSection from './editor/TextSection';
@@ -44,6 +45,60 @@ function buildSectionDrafts(sections) {
         drafts[s.key] = { overrides: s.overrides || {}, notes: s.notes || '', include: s.include };
     });
     return drafts;
+}
+
+// Simple "N minutes/hours/days ago" formatter for the stale-override banner
+// — no new dependency needed for this.
+function relativeTime(dateStr) {
+    if (!dateStr) return 'recently';
+    const then = new Date(dateStr).getTime();
+    if (Number.isNaN(then)) return 'recently';
+    const diffMin = Math.round((Date.now() - then) / 60000);
+    if (diffMin < 1) return 'just now';
+    if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? '' : 's'} ago`;
+    const diffHr = Math.round(diffMin / 60);
+    if (diffHr < 24) return `${diffHr} hour${diffHr === 1 ? '' : 's'} ago`;
+    const diffDay = Math.round(diffHr / 24);
+    return `${diffDay} day${diffDay === 1 ? '' : 's'} ago`;
+}
+
+// Whether a section's merged data has nothing meaningful to show yet, per
+// the shape each section type uses (see sectionConfig.js / section-shapes.md).
+function isSectionEmpty(key, merged) {
+    if (!merged) return true;
+    switch (key) {
+        case '1.1':
+        case '1.2':
+        case '1.5':
+        case '2.3':
+        case '2.5':
+        case '2.6':
+        case '3.4':
+        case '3.6':
+        case '3.7':
+            return !(merged.rows && merged.rows.length > 0);
+        case '1.3':
+            return !(merged.images && merged.images.length > 0);
+        case '1.4':
+            return !(merged.tree && merged.tree.length > 0);
+        case '2.1':
+            return !((merged.physical?.rows?.length > 0) || (merged.financial?.rows?.length > 0));
+        case '2.2':
+        case '2.4':
+            return !(merged.series?.months?.length > 0);
+        case '3.1':
+        case '3.2':
+            return !(merged.groups && merged.groups.length > 0);
+        case '4.1':
+        case '4.2':
+            return !(merged.days && merged.days.length > 0);
+        case '4.3':
+            return !(merged.days && merged.days.length > 0);
+        case '5.0':
+            return !((merged.site_access?.length > 0) || (merged.key_plan?.length > 0) || (merged.pairs?.length > 0));
+        default:
+            return !!merged.placeholder;
+    }
 }
 
 function buildReportDraft(report) {
@@ -261,6 +316,38 @@ export default function MonthlyReportEditor() {
             toast.error(err.response?.data?.message || (hasDirty ? 'Failed to save changes before regenerating' : 'Failed to regenerate section'));
         } finally {
             setRegeneratingKey(null);
+        }
+    };
+
+    // Stale-override banner actions (see the section pane below). Both
+    // persist immediately (independent of `saveAll`/dirty tracking) and
+    // refetch keeping any *other* section's unsaved drafts intact.
+    const useSystemDataForSection = async (section) => {
+        if (!(await confirm({
+            title: 'Use system data?',
+            message: 'This section will revert to the current system data and your saved edits for it will be discarded.',
+            danger: true,
+            confirmText: 'Use system data',
+        }))) return;
+        try {
+            await monthlyReportService.saveSection(report.id, section.key, { overrides: {} });
+            const res = await monthlyReportService.get(report.id);
+            applyReportKeepingDrafts(res.data);
+            toast.success('Reverted to system data');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to reset section');
+        }
+    };
+
+    const keepMyEditsForSection = async (section) => {
+        const overrides = sectionDrafts[section.key]?.overrides ?? section.overrides ?? {};
+        try {
+            await monthlyReportService.saveSection(report.id, section.key, { overrides });
+            const res = await monthlyReportService.get(report.id);
+            applyReportKeepingDrafts(res.data);
+            toast.success('Edits kept');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to save section');
         }
     };
 
@@ -558,6 +645,7 @@ export default function MonthlyReportEditor() {
                                 </button>
                                 <div className="flex shrink-0 items-center gap-1">
                                     {isLandscape && <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500" title="Prints landscape">L</span>}
+                                    {s.stale && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700" title="System data changed since this section was last edited">changed</span>}
                                     {edited && <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700" title="Has overrides">edited</span>}
                                     {hasNotes && <span className="rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-700" title="Has notes">notes</span>}
                                 </div>
@@ -583,6 +671,41 @@ export default function MonthlyReportEditor() {
                     </div>
 
                     <div key={`${activeSection.id}-${activeSection.regenerated_at}`}>
+                        {activeSection.stale && canEdit && (
+                            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-amber-200">
+                                <span>
+                                    System data changed since you edited this section (regenerated {relativeTime(activeSection.regenerated_at)}). Your edits are kept.
+                                </span>
+                                <div className="flex shrink-0 items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => useSystemDataForSection(activeSection)}
+                                        className="rounded-lg border border-amber-300 bg-white px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                                    >
+                                        Use system data
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => keepMyEditsForSection(activeSection)}
+                                        className="rounded-lg bg-amber-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-amber-700"
+                                    >
+                                        Keep my edits
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        {SECTION_SOURCES[activeSection.key] && isSectionEmpty(activeSection.key, effectiveMerged) && (
+                            <div className="mb-4 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600 ring-1 ring-gray-200">
+                                No data yet — enter it under{' '}
+                                <Link
+                                    to={SECTION_SOURCES[activeSection.key].to(report.project_id)}
+                                    className="font-semibold text-primary-700 hover:underline"
+                                >
+                                    {SECTION_SOURCES[activeSection.key].label}
+                                </Link>
+                                , then click <span className="font-semibold">Regenerate this section</span>.
+                            </div>
+                        )}
                         {renderEditor()}
                         <SectionNotes
                             value={draft.notes}
