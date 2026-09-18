@@ -37,6 +37,22 @@ class DocxDocumentTest extends TestCase
         $this->assertStringContainsString('RTB SG.MUAR', $headerXml);
     }
 
+    public function test_escapes_xml_special_characters_in_text(): void
+    {
+        $doc = new DocxDocument(['title' => 'R', 'project_title' => 'M&E <Works>', 'contract_no' => 'C']);
+        $doc->newSection();
+        $doc->heading('1.2 M&E <Works>');
+        $doc->table(['Item'], [['< 100mm & "quoted"']]);
+
+        $bytes = $doc->save();
+        $xml = $this->documentXml($bytes);
+
+        $this->assertStringContainsString('M&amp;E &lt;Works&gt;', $xml);
+        $this->assertStringContainsString('&lt; 100mm &amp;', $xml);
+        $dom = new \DOMDocument;
+        $this->assertTrue($dom->loadXML($xml), 'document.xml must be well-formed');
+    }
+
     private function documentXml(string $bytes): string
     {
         return $this->partXml($bytes, 'word/document.xml');

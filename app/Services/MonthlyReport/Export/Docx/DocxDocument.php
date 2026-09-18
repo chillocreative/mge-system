@@ -5,6 +5,7 @@ namespace App\Services\MonthlyReport\Export\Docx;
 use PhpOffice\PhpWord\Element\Section;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
+use PhpOffice\PhpWord\Settings;
 use PhpOffice\PhpWord\Shared\Converter;
 use PhpOffice\PhpWord\SimpleType\Jc;
 
@@ -41,6 +42,10 @@ final class DocxDocument
     public function __construct(array $meta)
     {
         $this->meta = $meta;
+
+        // PHPWord writes text raw by default; report data ("M&E", "< 100mm") must be escaped
+        // or the resulting document.xml is invalid and Word refuses to open the file.
+        Settings::setOutputEscapingEnabled(true);
 
         $phpWord = new PhpWord;
         $phpWord->getSettings()->setUpdateFields(true);
@@ -198,18 +203,19 @@ final class DocxDocument
     public function save(): string
     {
         $tmp = tempnam(sys_get_temp_dir(), 'docx');
-        IOFactory::createWriter($this->phpWord, 'Word2007')->save($tmp);
-        $bytes = (string) file_get_contents($tmp);
-        unlink($tmp);
+        try {
+            IOFactory::createWriter($this->phpWord, 'Word2007')->save($tmp);
 
-        foreach ($this->tempFiles as $file) {
-            if (is_file($file)) {
-                unlink($file);
+            return (string) file_get_contents($tmp);
+        } finally {
+            @unlink($tmp);
+            foreach ($this->tempFiles as $file) {
+                if (is_file($file)) {
+                    unlink($file);
+                }
             }
+            $this->tempFiles = [];
         }
-        $this->tempFiles = [];
-
-        return $bytes;
     }
 
     private function addHeaderFooter(Section $section): void
