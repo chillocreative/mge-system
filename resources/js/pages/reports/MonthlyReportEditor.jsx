@@ -26,6 +26,11 @@ import GanttAssetsPanel from './editor/GanttAssetsPanel';
 import ReportOptionsDialog from './editor/ReportOptionsDialog';
 import SectionNotes from './editor/SectionNotes';
 import applyDraft from './editor/applyDraft';
+import { snapshotChartPng } from './editor/chartSnapshot';
+
+// Section keys whose chart snapshot gets uploaded as a Word-export asset,
+// mapped to the asset `kind` the backend replaces in place.
+const CHART_ASSET_KINDS = { '2.2': 'chart_physical_scurve', '2.4': 'chart_financial_scurve' };
 
 const statusColors = {
     draft: 'bg-gray-100 text-gray-600',
@@ -67,6 +72,8 @@ export default function MonthlyReportEditor() {
     const [statusBusy, setStatusBusy] = useState(false);
     const [chartVersion, setChartVersion] = useState(0);
     const [showOptions, setShowOptions] = useState(false);
+    const [exportingWord, setExportingWord] = useState(false);
+    const docxAnchorRef = useRef(null);
     const reportRef = useRef(null);
     useEffect(() => {
         reportRef.current = report;
@@ -293,6 +300,44 @@ export default function MonthlyReportEditor() {
         }
     };
 
+    const openDocx = () => {
+        const anchor = docxAnchorRef.current;
+        if (!anchor || !report) return;
+        anchor.href = monthlyReportService.getDocxUrl(report.id);
+        anchor.click();
+    };
+
+    const exportWord = async () => {
+        if (!canManage || isFinal) {
+            openDocx();
+            return;
+        }
+        setExportingWord(true);
+        const toastId = toast.loading('Preparing charts…');
+        try {
+            let anyFailed = false;
+            for (const key of Object.keys(CHART_ASSET_KINDS)) {
+                const section = report.sections.find((s) => s.key === key);
+                if (!section?.include) continue;
+                try {
+                    // eslint-disable-next-line no-await-in-loop
+                    const blob = await snapshotChartPng(monthlyReportService.getChartUrl(report.id, key, chartVersion));
+                    // eslint-disable-next-line no-await-in-loop
+                    await monthlyReportService.uploadAsset(report.id, new File([blob], `chart-${key}.png`, { type: 'image/png' }), CHART_ASSET_KINDS[key]);
+                } catch {
+                    anyFailed = true;
+                }
+            }
+            if (anyFailed) {
+                toast.error('Charts could not be captured — the Word file will contain the data tables instead');
+            }
+        } finally {
+            toast.dismiss(toastId);
+            setExportingWord(false);
+        }
+        openDocx();
+    };
+
     if (loading) return <LoadingSpinner />;
     if (!report) {
         return (
@@ -435,6 +480,15 @@ export default function MonthlyReportEditor() {
                     >
                         <HiOutlineDownload className="h-4 w-4" /> Export PDF
                     </a>
+                    <a ref={docxAnchorRef} target="_blank" rel="noopener" className="hidden" aria-hidden="true" />
+                    <button
+                        type="button"
+                        onClick={exportWord}
+                        disabled={exportingWord}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                        <HiOutlineDownload className="h-4 w-4" /> {exportingWord ? 'Preparing…' : 'Export Word'}
+                    </button>
                     {canManage && !isFinal && (
                         <button
                             type="button"

@@ -13,6 +13,8 @@ use Illuminate\Validation\ValidationException;
 
 final class AssetService
 {
+    private const CHART_KINDS = ['chart_physical_scurve', 'chart_financial_scurve'];
+
     public function __construct(private PdfMerger $merger) {}
 
     public function store(MonthlyReport $report, UploadedFile $file, string $kind): MonthlyReportAsset
@@ -34,12 +36,25 @@ final class AssetService
 
         try {
             return DB::transaction(function () use ($report, $kind, $path, $file, $ext, $pages) {
-                $nextSortOrder = (int) MonthlyReportAsset::where('report_id', $report->id)->max('sort_order') + 1;
+                $isChart = in_array($kind, self::CHART_KINDS, true);
 
-                // Gantt pages are appended right after section 2.5, so make sure that
-                // section is part of the export instead of falling to the end of the PDF.
-                if ($kind === 'gantt_page') {
-                    $report->sections()->where('key', '2.5')->update(['include' => true]);
+                if ($isChart) {
+                    // Chart snapshots replace in place: one asset per kind per report.
+                    $previous = MonthlyReportAsset::where('report_id', $report->id)->where('kind', $kind)->first();
+                    if ($previous) {
+                        Storage::disk('local')->delete($previous->file_path);
+                        $previous->delete();
+                    }
+
+                    $sortOrder = 0;
+                } else {
+                    $sortOrder = (int) MonthlyReportAsset::where('report_id', $report->id)->max('sort_order') + 1;
+
+                    // Gantt pages are appended right after section 2.5, so make sure that
+                    // section is part of the export instead of falling to the end of the PDF.
+                    if ($kind === 'gantt_page') {
+                        $report->sections()->where('key', '2.5')->update(['include' => true]);
+                    }
                 }
 
                 return MonthlyReportAsset::create([
@@ -50,7 +65,7 @@ final class AssetService
                     'extension' => $ext,
                     'size' => $file->getSize(),
                     'pages' => $pages,
-                    'sort_order' => $nextSortOrder,
+                    'sort_order' => $sortOrder,
                 ]);
             });
         } catch (\Throwable $e) {

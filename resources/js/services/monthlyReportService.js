@@ -44,6 +44,9 @@ const monthlyReportService = {
     getPdfUrl(id) {
         return `/api/monthly-reports/${id}/export/pdf`;
     },
+    getDocxUrl(id) {
+        return `/api/monthly-reports/${id}/export/docx`;
+    },
     getChartUrl(id, key, version) {
         const v = version ?? Date.now();
         return `/api/monthly-reports/${id}/charts/${key}?v=${v}`;

@@ -21,11 +21,18 @@ class MonthlyReportAssetController extends Controller
         return $this->success($assets);
     }
 
+    private const CHART_KINDS = ['chart_physical_scurve', 'chart_financial_scurve'];
+
     public function store(MonthlyReport $report, Request $request): JsonResponse
     {
+        $kind = $request->input('kind', 'gantt_page');
+        $isChart = in_array($kind, self::CHART_KINDS, true);
+
         $validated = $request->validate([
-            'file' => ['required', 'file', 'extensions:pdf,png,jpg,jpeg', 'max:20480'],
-            'kind' => ['sometimes', Rule::in(['gantt_page', 'custom'])],
+            'file' => $isChart
+                ? ['required', 'file', 'extensions:png', 'max:2048']
+                : ['required', 'file', 'extensions:pdf,png,jpg,jpeg', 'max:20480'],
+            'kind' => ['sometimes', Rule::in(['gantt_page', 'custom', ...self::CHART_KINDS])],
         ]);
 
         $asset = $this->service->store($report, $validated['file'], $validated['kind'] ?? 'gantt_page');

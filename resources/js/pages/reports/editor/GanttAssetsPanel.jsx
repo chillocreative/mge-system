@@ -27,7 +27,7 @@ export default function GanttAssetsPanel({ reportId, canEdit, onUploaded }) {
         setLoading(true);
         try {
             const res = await monthlyReportService.listAssets(reportId);
-            setAssets(res.data || []);
+            setAssets((res.data || []).filter((a) => a.kind === 'gantt_page'));
         } catch {
             toast.error('Failed to load Gantt pages');
         } finally {

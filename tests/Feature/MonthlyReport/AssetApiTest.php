@@ -166,4 +166,57 @@ class AssetApiTest extends TestCase
 
         $this->assertSame($after + 1, $before);
     }
+
+    public function test_chart_kind_png_upload_replaces_previous_asset_of_same_kind(): void
+    {
+        Storage::fake('local');
+        [$manager, $report] = $this->managerAndReport();
+
+        $first = $this->actingAs($manager)->postJson("/api/monthly-reports/{$report->id}/assets", [
+            'file' => UploadedFile::fake()->create('chart-2.2.png', 50, 'image/png'),
+            'kind' => 'chart_physical_scurve',
+        ])->assertCreated();
+        $firstPath = $first->json('data.file_path');
+        Storage::disk('local')->assertExists($firstPath);
+
+        $second = $this->actingAs($manager)->postJson("/api/monthly-reports/{$report->id}/assets", [
+            'file' => UploadedFile::fake()->create('chart-2.2-v2.png', 50, 'image/png'),
+            'kind' => 'chart_physical_scurve',
+        ])->assertCreated();
+        $secondPath = $second->json('data.file_path');
+
+        Storage::disk('local')->assertMissing($firstPath);
+        Storage::disk('local')->assertExists($secondPath);
+
+        $this->actingAs($manager)->getJson("/api/monthly-reports/{$report->id}/assets")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.kind', 'chart_physical_scurve')
+            ->assertJsonPath('data.0.sort_order', 0);
+    }
+
+    public function test_chart_kind_rejects_non_png_extension(): void
+    {
+        Storage::fake('local');
+        [$manager, $report] = $this->managerAndReport();
+
+        $this->actingAs($manager)->postJson("/api/monthly-reports/{$report->id}/assets", [
+            'file' => UploadedFile::fake()->create('chart-2.4.jpg', 50, 'image/jpeg'),
+            'kind' => 'chart_financial_scurve',
+        ])->assertStatus(422);
+    }
+
+    public function test_chart_kind_upload_does_not_flip_section_2_5_include(): void
+    {
+        Storage::fake('local');
+        [$manager, $report] = $this->managerAndReport();
+        $this->assertFalse((bool) $report->sections()->where('key', '2.5')->value('include'));
+
+        $this->actingAs($manager)->postJson("/api/monthly-reports/{$report->id}/assets", [
+            'file' => UploadedFile::fake()->create('chart-2.4.png', 50, 'image/png'),
+            'kind' => 'chart_financial_scurve',
+        ])->assertCreated();
+
+        $this->assertFalse((bool) $report->fresh()->sections()->where('key', '2.5')->value('include'), 'Chart snapshot uploads must not auto-include section 2.5');
+    }
 }
