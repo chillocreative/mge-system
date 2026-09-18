@@ -29,6 +29,7 @@ import ReportOptionsDialog from './editor/ReportOptionsDialog';
 import SectionNotes from './editor/SectionNotes';
 import applyDraft from './editor/applyDraft';
 import { snapshotChartPng } from './editor/chartSnapshot';
+import ATTACHED_PAGE_KINDS from './editor/attachedPages';
 
 // Section keys whose chart snapshot gets uploaded as a Word-export asset,
 // mapped to the asset `kind` the backend replaces in place.
@@ -444,10 +445,23 @@ export default function MonthlyReportEditor() {
         setExportingWord(true);
         const toastId = toast.loading('Preparing charts…');
         try {
+            // A section with attached pages (uploaded via AttachedPagesPanel,
+            // like 2.5's Gantt pages) already has its own export content —
+            // skip snapshotting/uploading the generated chart for it.
+            let attachedAssets = [];
+            try {
+                const assetsRes = await monthlyReportService.listAssets(report.id);
+                attachedAssets = assetsRes.data || [];
+            } catch {
+                attachedAssets = [];
+            }
             let anyFailed = false;
             for (const key of Object.keys(CHART_ASSET_KINDS)) {
                 const section = report.sections.find((s) => s.key === key);
                 if (!section?.include) continue;
+                const attachedKind = ATTACHED_PAGE_KINDS[key];
+                const hasAttachedPages = attachedKind && attachedAssets.some((a) => a.kind === attachedKind);
+                if (hasAttachedPages) continue;
                 try {
                     // eslint-disable-next-line no-await-in-loop
                     const blob = await snapshotChartPng(monthlyReportService.getChartUrl(report.id, key, chartVersion));
@@ -521,6 +535,7 @@ export default function MonthlyReportEditor() {
                         merged={effectiveMerged}
                         canEdit={canEdit}
                         onOverridesChange={onOverridesChange}
+                        onUploaded={refetchQuiet}
                         version={chartVersion}
                     />
                 );
