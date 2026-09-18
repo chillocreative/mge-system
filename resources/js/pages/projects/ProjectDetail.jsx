@@ -80,6 +80,17 @@ export default function ProjectDetail() {
         tabs.some((t) => t.id === tabParam) ? tabParam : 'overview'
     );
 
+    // Keep `activeTab` in sync when the `tab` search param changes to a
+    // known tab id from outside a click here (e.g. a deep link elsewhere in
+    // the app updating the URL, or browser back/forward). `handleTabClick`
+    // already sets `activeTab` and `tabParam` together, so this is a no-op
+    // on that path and never loops.
+    useEffect(() => {
+        if (tabParam && tabs.some((t) => t.id === tabParam) && tabParam !== activeTab) {
+            setActiveTab(tabParam);
+        }
+    }, [tabParam]);
+
     const handleTabClick = (tabId) => {
         setActiveTab(tabId);
         setSearchParams(
@@ -180,6 +191,9 @@ export default function ProjectDetail() {
             {activeTab === 'discussions' && <ProjectDiscussions projectId={project.id} />}
             {activeTab === 'report-data' && (
                 <ReportDataTab
+                    // ReportDataTab only reads `initialPanel` at mount (useState
+                    // initializer); remount it whenever the `panel` param changes
+                    // externally (e.g. a deep link) so it picks up the new value.
                     project={project}
                     canEdit={canEdit}
                     initialPanel={searchParams.get('panel')}

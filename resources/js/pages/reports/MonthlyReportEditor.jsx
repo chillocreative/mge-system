@@ -64,10 +64,25 @@ function relativeTime(dateStr) {
 
 // Whether a section's merged data has nothing meaningful to show yet, per
 // the shape each section type uses (see sectionConfig.js / section-shapes.md).
+// A cell/value counts as "present" unless it's null, an empty string, or the
+// literal placeholder dash used by the builders for missing data.
+function isBlankValue(v) {
+    return v === null || v === undefined || v === '' || v === '-';
+}
+
+// Recursively walks a group's fields looking for any non-zero numeric leaf
+// (used by 3.1, whose groups always exist but may hold only zero counts).
+function groupHasNonZeroCount(node) {
+    if (node == null) return false;
+    if (typeof node === 'number') return node !== 0;
+    if (Array.isArray(node)) return node.some(groupHasNonZeroCount);
+    if (typeof node === 'object') return Object.values(node).some(groupHasNonZeroCount);
+    return false;
+}
+
 function isSectionEmpty(key, merged) {
     if (!merged) return true;
     switch (key) {
-        case '1.1':
         case '1.2':
         case '1.5':
         case '2.3':
@@ -77,25 +92,30 @@ function isSectionEmpty(key, merged) {
         case '3.6':
         case '3.7':
             return !(merged.rows && merged.rows.length > 0);
+        case '1.1':
+            return !(merged.rows?.some((r) => !isBlankValue(r.value)));
         case '1.3':
             return !(merged.images && merged.images.length > 0);
         case '1.4':
             return !(merged.tree && merged.tree.length > 0);
-        case '2.1':
-            return !((merged.physical?.rows?.length > 0) || (merged.financial?.rows?.length > 0));
+        case '2.1': {
+            const rows = [...(merged.physical?.rows || []), ...(merged.financial?.rows || [])];
+            return !rows.some((r) => !isBlankValue(r.prev) || !isBlankValue(r.cur));
+        }
         case '2.2':
         case '2.4':
             return !(merged.series?.months?.length > 0);
         case '3.1':
+            return !(merged.groups?.some((g) => groupHasNonZeroCount(g)));
         case '3.2':
-            return !(merged.groups && merged.groups.length > 0);
+            return !(merged.groups?.some((g) => g.rows?.length > 0));
         case '4.1':
             // `days` is just the calendar; the content is the grouped category rows.
             return !(merged.groups?.some((g) => g.rows?.length > 0));
         case '4.2':
             return !(merged.rows && merged.rows.length > 0);
         case '4.3':
-            return !(merged.days && merged.days.length > 0);
+            return !(merged.summary?.raining_days > 0) && !(merged.days?.some((d) => d.intervals?.length > 0));
         case '5.0':
             return !((merged.site_access?.length > 0) || (merged.key_plan?.length > 0) || (merged.pairs?.length > 0));
         default:
@@ -335,6 +355,16 @@ export default function MonthlyReportEditor() {
             await monthlyReportService.saveSection(report.id, section.key, { overrides: {} });
             const res = await monthlyReportService.get(report.id);
             applyReportKeepingDrafts(res.data);
+            // Drop any in-progress draft for this section now that its
+            // overrides were explicitly reset on the server — otherwise the
+            // stale local draft would keep re-applying the discarded edits
+            // on top of the freshly reverted `merged` data.
+            setSectionDrafts((prev) => {
+                if (!(section.key in prev)) return prev;
+                const next = { ...prev };
+                delete next[section.key];
+                return next;
+            });
             toast.success('Reverted to system data');
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to reset section');
@@ -342,7 +372,11 @@ export default function MonthlyReportEditor() {
     };
 
     const keepMyEditsForSection = async (section) => {
-        const overrides = sectionDrafts[section.key]?.overrides ?? section.overrides ?? {};
+        // Re-save the server's own overrides (not the in-progress local
+        // draft) — this banner action only needs to clear the "stale" flag
+        // by bumping the section's saved-at timestamp; it must not silently
+        // persist unrelated unsaved edits sitting in `sectionDrafts`.
+        const overrides = section.overrides || {};
         try {
             await monthlyReportService.saveSection(report.id, section.key, { overrides });
             const res = await monthlyReportService.get(report.id);

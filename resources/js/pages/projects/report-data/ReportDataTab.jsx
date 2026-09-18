@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import ContractParticularsPanel from './ContractParticularsPanel';
 import PartiesPanel from './PartiesPanel';
 import OrgChartPanel from './OrgChartPanel';
@@ -23,6 +23,14 @@ export default function ReportDataTab({ project, canEdit, initialPanel, onPanelC
     const [active, setActive] = useState(
         PANELS.some((p) => p.id === initialPanel) ? initialPanel : PANELS[0].id
     );
+    // Follow external ?panel= changes (deep links, history navigation) without remounting.
+    useEffect(() => {
+        if (initialPanel && initialPanel !== active && PANELS.some((p) => p.id === initialPanel)) {
+            setActive(initialPanel);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialPanel]);
+
     const Panel = PANELS.find((p) => p.id === active)?.component;
 
     const handlePanelClick = (panelId) => {
