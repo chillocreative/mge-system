@@ -86,6 +86,10 @@ final class MatrixWriter implements SectionWriter
             'fontSize' => 6,
             'bold' => $boldRows,
             'shading' => fn ($r, $c) => $r < 2 ? self::HEADER_FILL : null,
+            // The month/day header rows have genuinely blank cells (e.g. above the No./
+            // Description columns) — they must stay blank, not render as '-'. Data cells
+            // already supply their own literal '-' for a missing count, so this is a no-op there.
+            'emptyAs' => '',
         ]);
     }
 

@@ -40,6 +40,20 @@ final class DocxDocument
 
     private int $contentWidthTwips = self::A4_PORTRAIT_WIDTH_TWIPS - (2 * 1134);
 
+    /** True once something has been written into the currently open section. */
+    private bool $sectionHasContent = false;
+
+    /** Orientation of the currently open section (only meaningful once $section !== null). */
+    private string $currentOrientation = 'portrait';
+
+    /**
+     * Orientation requested via ensureSection() but not yet materialised into an actual
+     * PHPWord section — the section is only opened lazily, the next time content is written,
+     * so a "restore orientation" request that nothing ends up writing into never produces an
+     * empty section/page.
+     */
+    private ?string $pendingOrientation = null;
+
     public function __construct(array $meta)
     {
         $this->meta = $meta;
@@ -77,11 +91,34 @@ final class DocxDocument
         }
 
         $pageWidth = $orientation === 'landscape' ? self::A4_LANDSCAPE_WIDTH_TWIPS : self::A4_PORTRAIT_WIDTH_TWIPS;
-        $this->contentWidthTwips = $pageWidth - (2 * $margin);
+        $this->contentWidthTwips = (int) $pageWidth - (2 * $margin);
 
         $this->section = $this->phpWord->addSection($settings);
+        $this->sectionHasContent = false;
+        $this->currentOrientation = $orientation;
+        $this->pendingOrientation = null;
 
         $this->addHeaderFooter($this->section);
+    }
+
+    /**
+     * Requests that the given orientation be in effect the next time content is written, without
+     * opening a section immediately. Used to "restore" the chunk orientation after a writer (e.g.
+     * GanttWriter) opens its own mid-chunk landscape section(s): if nothing is ever written after
+     * the request, no section is materialised, so no blank page is emitted. A no-op when the
+     * currently open section is already in the requested orientation.
+     */
+    public function ensureSection(string $orientation): void
+    {
+        $orientation = $orientation === 'landscape' ? 'landscape' : 'portrait';
+
+        if ($this->section !== null && $this->currentOrientation === $orientation) {
+            $this->pendingOrientation = null;
+
+            return;
+        }
+
+        $this->pendingOrientation = $orientation;
     }
 
     public function heading(string $text, int $level = 1): void
@@ -120,7 +157,7 @@ final class DocxDocument
     public function toc(): void
     {
         $section = $this->requireSection();
-        $section->addTOC(['size' => 9], ['tocTitle' => null]);
+        $section->addTOC(['size' => 9], ['tocTitle' => null], 1, 1);
         $section->addText(
             'Right-click → Update Field (or press F9) to refresh the table of contents.',
             ['italic' => true, 'size' => 8, 'color' => '808080']
@@ -129,6 +166,13 @@ final class DocxDocument
 
     public function pageBreak(): void
     {
+        // A no-op on a section that has no content yet (including one only "requested" via
+        // ensureSection() and not yet materialised) — a page break can never be the first thing
+        // in a section, or Word renders an extra blank page before it.
+        if ($this->pendingOrientation !== null || $this->section === null || ! $this->sectionHasContent) {
+            return;
+        }
+
         $this->requireSection()->addPageBreak();
     }
 
@@ -209,11 +253,17 @@ final class DocxDocument
     {
         $tmp = $this->tempImageFile($binary);
 
-        $imageOpts = ['alignment' => $opts['align'] ?? Jc::CENTER];
+        if (! $this->isEmbeddableImage($tmp)) {
+            $this->discardTempFile($tmp);
+            $this->paragraph('Image could not be embedded.', ['italic' => true, 'color' => '808080']);
 
-        $widthMm = $opts['width'] ?? null;
-        $widthTwips = $widthMm !== null ? (int) round(Converter::cmToTwip($widthMm / 10)) : $this->contentWidthTwips;
-        $imageOpts['width'] = $this->pixelsFromTwips($widthTwips);
+            return;
+        }
+
+        $imageOpts = [
+            'alignment' => $opts['align'] ?? Jc::CENTER,
+            'width' => $this->imageWidthPoints($opts['width'] ?? null),
+        ];
 
         $this->requireSection()->addImage($tmp, $imageOpts);
     }
@@ -310,30 +360,63 @@ final class DocxDocument
             return (string) file_get_contents($tmp);
         } finally {
             @unlink($tmp);
-            foreach ($this->tempFiles as $file) {
-                if (is_file($file)) {
-                    unlink($file);
-                }
-            }
-            $this->tempFiles = [];
+            $this->cleanupTempFiles();
         }
     }
 
+    /**
+     * Defense-in-depth: if rendering throws before save() runs (e.g. a writer error), the
+     * temp image files created so far are still cleaned up when this object is destructed.
+     */
+    public function __destruct()
+    {
+        $this->cleanupTempFiles();
+    }
+
+    private function cleanupTempFiles(): void
+    {
+        foreach ($this->tempFiles as $file) {
+            if (is_file($file)) {
+                @unlink($file);
+            }
+        }
+        $this->tempFiles = [];
+    }
+
+    /**
+     * Header: a borderless 3-cell table — client logo | project title + contract no (centred) |
+     * MGE logo — a cell's image is skipped when its binary is null/invalid (addImageToCell
+     * guards that). Footer: a borderless 2-cell table — the report title left, "Page N of M"
+     * right.
+     */
     private function addHeaderFooter(Section $section): void
     {
-        $header = $section->addHeader();
-        $header->addText((string) ($this->meta['title'] ?? ''), ['bold' => true, 'size' => 10]);
+        $borderless = ['borderSize' => 0, 'borderColor' => 'FFFFFF', 'cellMargin' => 0];
 
-        $subtitle = trim(
-            ($this->meta['project_title'] ?? '').
-            (! empty($this->meta['contract_no']) ? '  —  '.$this->meta['contract_no'] : '')
-        );
-        if ($subtitle !== '') {
-            $header->addText($subtitle, ['size' => 8]);
+        $header = $section->addHeader();
+        $logoWidth = (int) round($this->contentWidthTwips * 0.18);
+        $centerWidth = $this->contentWidthTwips - (2 * $logoWidth);
+
+        $headerTable = $header->addTable($borderless);
+        $headerTable->addRow();
+
+        $this->addImageToCell($headerTable->addCell($logoWidth), $this->meta['client_logo'] ?? null, 14);
+
+        $centerCell = $headerTable->addCell($centerWidth);
+        $centerCell->addText((string) ($this->meta['project_title'] ?? ''), ['bold' => true, 'size' => 10], ['alignment' => Jc::CENTER]);
+        if (! empty($this->meta['contract_no'])) {
+            $centerCell->addText((string) $this->meta['contract_no'], ['size' => 8], ['alignment' => Jc::CENTER]);
         }
 
+        $this->addImageToCell($headerTable->addCell($logoWidth), $this->meta['mge_logo'] ?? null, 14);
+
         $footer = $section->addFooter();
-        $footer->addPreserveText('Page {PAGE} of {NUMPAGES}', ['size' => 8], ['alignment' => Jc::CENTER]);
+        $half = (int) round($this->contentWidthTwips / 2);
+
+        $footerTable = $footer->addTable($borderless);
+        $footerTable->addRow();
+        $footerTable->addCell($half)->addText((string) ($this->meta['title'] ?? ''), ['size' => 8]);
+        $footerTable->addCell($half)->addPreserveText('Page {PAGE} of {NUMPAGES}', ['size' => 8], ['alignment' => Jc::END]);
     }
 
     private function tempImageFile(string $binary): string
@@ -345,10 +428,34 @@ final class DocxDocument
         return $tmp;
     }
 
-    // 1 twip = 1/20 point; Converter has no twip->pixel helper, so go via points.
-    private function pixelsFromTwips(int $twips): float
+    /**
+     * PHPWord's Style\Image width/height are in points, not pixels — 1mm = 72/25.4 points.
+     * A null width falls back to the full content width (already tracked in points-equivalent
+     * twips, so /20 converts twips to points).
+     */
+    private function imageWidthPoints(?float $widthMm): float
     {
-        return Converter::pointToPixel($twips / 20);
+        if ($widthMm !== null) {
+            return $widthMm * 72 / 25.4;
+        }
+
+        return $this->contentWidthTwips / 20;
+    }
+
+    /** @param  mixed  $info  getimagesize() result, kept mixed since it's typed false|array upstream */
+    private function isEmbeddableImage(string $path): bool
+    {
+        $info = @getimagesize($path);
+
+        return is_array($info) && in_array($info[2] ?? null, [IMAGETYPE_PNG, IMAGETYPE_JPEG, IMAGETYPE_GIF], true);
+    }
+
+    private function discardTempFile(string $path): void
+    {
+        if (is_file($path)) {
+            @unlink($path);
+        }
+        $this->tempFiles = array_values(array_filter($this->tempFiles, fn ($file) => $file !== $path));
     }
 
     private function addImageToCell(Cell $cell, ?string $binary, float $widthMm): void
@@ -358,16 +465,28 @@ final class DocxDocument
         }
 
         $tmp = $this->tempImageFile($binary);
-        $widthTwips = (int) round(Converter::cmToTwip($widthMm / 10));
 
-        $cell->addImage($tmp, ['width' => $this->pixelsFromTwips($widthTwips), 'alignment' => Jc::CENTER]);
+        if (! $this->isEmbeddableImage($tmp)) {
+            $this->discardTempFile($tmp);
+            $cell->addText('Image could not be embedded.', ['italic' => true, 'size' => 8, 'color' => '808080']);
+
+            return;
+        }
+
+        $cell->addImage($tmp, ['width' => $this->imageWidthPoints($widthMm), 'alignment' => Jc::CENTER]);
     }
 
     private function requireSection(): Section
     {
+        if ($this->pendingOrientation !== null) {
+            $this->newSection($this->pendingOrientation);
+        }
+
         if ($this->section === null) {
             $this->newSection('portrait');
         }
+
+        $this->sectionHasContent = true;
 
         return $this->section;
     }

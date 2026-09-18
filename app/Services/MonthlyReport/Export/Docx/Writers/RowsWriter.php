@@ -30,13 +30,14 @@ final class RowsWriter implements SectionWriter
 
         $columns = $spec['columns'] ?? $this->inferColumns($rows[array_key_first($rows)]);
         $headers = array_map(fn ($column) => $column['label'], $columns);
+        $align = array_map(fn ($column) => $column['align'] ?? null, $columns);
 
         $tableRows = [];
         foreach ($rows as $row) {
             $tableRows[] = array_map(fn ($column) => $this->cellValue($row, $column), $columns);
         }
 
-        $doc->table($headers, $tableRows, ['fontSize' => 8]);
+        $doc->table($headers, $tableRows, ['fontSize' => 8, 'align' => $align]);
     }
 
     /**

@@ -95,6 +95,12 @@ final class DocxExporter
             }
 
             foreach ($chunkKeys as $i => $key) {
+                // Restores the chunk's own orientation before the next key's content, in case
+                // the previous writer (e.g. GanttWriter) left the document mid a different
+                // orientation for its own assets. Lazy: only materialises a section once
+                // something is actually written, so it never emits an empty page.
+                $doc->ensureSection($chunk['orientation']);
+
                 if ($i > 0) {
                     $doc->pageBreak();
                 }
@@ -104,6 +110,8 @@ final class DocxExporter
                 $sectionData = $data['sections'][$key] ?? ['placeholder' => true];
                 $note = $data['notes'][$key] ?? null;
                 $this->write($doc, $key, $sectionData, $note, $writerCtx);
+
+                $doc->ensureSection($chunk['orientation']);
                 $doc->note($note);
             }
         }

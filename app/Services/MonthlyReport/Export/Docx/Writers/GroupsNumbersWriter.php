@@ -53,6 +53,9 @@ final class GroupsNumbersWriter implements SectionWriter
             'fontSize' => 8,
             'bold' => [0, 1],
             'shading' => fn ($r, $c) => $r < 2 ? self::HEADER_FILL : null,
+            // The second header row's leading cell (above "Type") is genuinely blank — it must
+            // stay blank, not render as '-'. Data cells default to 0, not '', so unaffected.
+            'emptyAs' => '',
         ]);
     }
 }

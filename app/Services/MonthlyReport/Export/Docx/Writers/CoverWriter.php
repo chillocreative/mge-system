@@ -27,9 +27,10 @@ final class CoverWriter implements SectionWriter
             return;
         }
 
-        $doc->heading(
+        // Bold paragraph, not heading() — a Title-styled heading would list the cover on the TOC.
+        $doc->paragraph(
             'MONTHLY PROGRESS REPORT NO.'.($data['report_no'] ?? '').' ('.($data['report_no_words'] ?? '').')',
-            1
+            ['bold' => true, 'size' => 14]
         );
 
         $keyFacts = [

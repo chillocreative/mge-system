@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\MonthlyReport\Export\Docx\DocxDocument;
 use App\Services\MonthlyReport\Export\Docx\DocxExporter;
 use App\Services\MonthlyReport\Export\Docx\Writers\MatrixWriter;
+use App\Services\MonthlyReport\Export\Docx\Writers\RowsWriter;
 use App\Services\MonthlyReport\MonthlyReportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -128,6 +129,159 @@ class DocxExportTest extends TestCase
         // (only the Hrs column may legitimately show '-' for a dry day).
         $weatherRegion = $this->regionBetween($xml, '4.3 WEATHER REPORT', '5.0 PROGRESS PHOTOGRAPH');
         $this->assertLessThan(24, substr_count($weatherRegion, '>-<'));
+    }
+
+    public function test_docx_export_survives_a_corrupt_chart_asset(): void
+    {
+        Storage::fake('local');
+
+        $project = Project::create(['name' => 'Corrupt Chart Test', 'code' => 'CCT-'.uniqid(), 'status' => 'in_progress']);
+
+        ProjectScheduleBaseline::create(['project_id' => $project->id, 'month' => '2025-12-01', 'scheduled_physical_pct' => 1, 'scheduled_financial_amount' => 100000, 'scheduled_financial_pct' => 1]);
+        ProjectScheduleBaseline::create(['project_id' => $project->id, 'month' => '2026-01-01', 'scheduled_physical_pct' => 2, 'scheduled_financial_amount' => 200000, 'scheduled_financial_pct' => 2]);
+
+        $period = ProjectProgressPeriod::create(['project_id' => $project->id, 'period_no' => 1, 'period_start' => '2025-12-16', 'period_end' => '2026-01-15', 'physical_scheduled_pct' => 1, 'physical_actual_pct' => 1, 'financial_scheduled_pct' => 1, 'financial_actual_pct' => 1]);
+
+        $user = User::create(['first_name' => 'Corrupt', 'last_name' => 'Chart', 'email' => 'cc-'.uniqid().'@mge-eng.com', 'password' => bcrypt('x'), 'status' => 'active']);
+
+        /** @var MonthlyReportService $service */
+        $service = app(MonthlyReportService::class);
+        $report = $service->create($project->id, ['period_id' => $period->id], $user->id);
+
+        $garbage = 'this is not a valid image file, just garbage bytes truncated mid-way';
+        $chartPath = "monthly-reports/{$report->id}/assets/chart.png";
+        Storage::disk('local')->put($chartPath, $garbage);
+        MonthlyReportAsset::create([
+            'report_id' => $report->id,
+            'kind' => 'chart_physical_scurve',
+            'file_path' => $chartPath,
+            'file_name' => 'chart.png',
+            'extension' => 'png',
+            'size' => strlen($garbage),
+            'pages' => 1,
+            'sort_order' => 0,
+        ]);
+
+        $before = glob(sys_get_temp_dir().'/docximg*');
+
+        $report = $report->fresh(['sections', 'project', 'period']);
+        $bytes = app(DocxExporter::class)->render($report);
+        $xml = $this->documentXml($bytes);
+
+        $this->assertStringStartsWith('PK', $bytes, 'export must still produce a valid DOCX despite the corrupt image');
+        $this->assertStringContainsString('Image could not be embedded.', $xml);
+
+        $after = glob(sys_get_temp_dir().'/docximg*');
+        $this->assertSame($before, $after, 'no leaked docximg* temp files after a garbage image asset');
+    }
+
+    public function test_finalised_report_docx_export_returns_a_valid_docx(): void
+    {
+        $report = $this->makeReport();
+
+        app(MonthlyReportService::class)->finalise($report, (int) $report->generated_by);
+
+        $report = $report->fresh(['sections', 'project', 'period']);
+        $this->assertSame(MonthlyReport::STATUS_FINAL, $report->status);
+
+        $bytes = app(DocxExporter::class)->render($report);
+
+        $this->assertStringStartsWith('PK', $bytes);
+    }
+
+    public function test_gantt_landscape_image_section_leaves_no_empty_page_before_the_next_section(): void
+    {
+        Storage::fake('local');
+
+        $report = $this->makeReport();
+        $report->sections()->where('key', '2.5')->update(['include' => true]);
+
+        $png = $this->tinyPng();
+        $path = "monthly-reports/{$report->id}/assets/gantt.png";
+        Storage::disk('local')->put($path, $png);
+        MonthlyReportAsset::create([
+            'report_id' => $report->id,
+            'kind' => 'gantt_page',
+            'file_path' => $path,
+            'file_name' => 'gantt.png',
+            'extension' => 'png',
+            'size' => strlen($png),
+            'pages' => 1,
+            'sort_order' => 0,
+        ]);
+
+        $report = $report->fresh(['sections', 'project', 'period']);
+        $bytes = app(DocxExporter::class)->render($report);
+        $xml = $this->documentXml($bytes);
+
+        $this->assertStringContainsString('2.6 NOTICE OF DELAY', $xml, 'the section after the Gantt image must still be written');
+        $this->assertNoEmptySectionBodies($xml);
+    }
+
+    public function test_gantt_writer_reports_pdf_only_attachment_when_no_image_pages(): void
+    {
+        Storage::fake('local');
+
+        $report = $this->makeReport();
+        $report->sections()->where('key', '2.5')->update(['include' => true]);
+
+        $pdf = '%PDF-1.4 fake pdf bytes';
+        $path = "monthly-reports/{$report->id}/assets/gantt.pdf";
+        Storage::disk('local')->put($path, $pdf);
+        MonthlyReportAsset::create([
+            'report_id' => $report->id,
+            'kind' => 'gantt_page',
+            'file_path' => $path,
+            'file_name' => 'gantt.pdf',
+            'extension' => 'pdf',
+            'size' => strlen($pdf),
+            'pages' => 3,
+            'sort_order' => 0,
+        ]);
+
+        $report = $report->fresh(['sections', 'project', 'period']);
+        $bytes = app(DocxExporter::class)->render($report);
+        $xml = $this->documentXml($bytes);
+
+        $this->assertStringContainsString('The work programme (Gantt chart) PDF is attached separately (see the PDF export).', $xml);
+        $this->assertStringNotContainsString('is attached on the following', $xml);
+    }
+
+    public function test_2_3_money_columns_are_right_aligned(): void
+    {
+        $data = ['rows' => [[
+            'ipc_no' => '1', 'submission_date' => '-', 'evaluation_date' => '-',
+            'claim_amount' => 1000.5, 'certified' => 900, 'wjp_current' => 1, 'wjp_cumulative' => 1,
+            'paid_current' => 1, 'paid_cumulative' => 1, 'remarks' => 'Paid',
+        ]]];
+
+        $doc = new DocxDocument(['title' => 'Align test']);
+        $doc->newSection('portrait');
+        (new RowsWriter)->write($doc, '2.3', $data, null, []);
+        $xml = $this->documentXml($doc->save());
+
+        $this->assertStringContainsString('w:val="end"', $xml);
+    }
+
+    /**
+     * Splits document.xml on each <w:sectPr>...</w:sectPr> boundary and asserts every resulting
+     * chunk (one per section body) contains at least one real paragraph run or table — i.e. no
+     * section in the body is entirely empty.
+     */
+    private function assertNoEmptySectionBodies(string $xml): void
+    {
+        $chunks = preg_split('/<w:sectPr\b.*?<\/w:sectPr>/s', $xml);
+        $sectPrCount = substr_count($xml, '<w:sectPr');
+        $this->assertGreaterThan(1, $sectPrCount, 'expected multiple sections in the fixture');
+
+        foreach ($chunks as $i => $chunk) {
+            if ($i === count($chunks) - 1 && trim(strip_tags($chunk)) === '') {
+                continue; // tail after the final sectPr, normally empty
+            }
+
+            $hasContent = (bool) preg_match('/<w:t[ >]|<w:tbl>|<w:pict>|<w:drawing>/', $chunk);
+            $this->assertTrue($hasContent, "Section body #{$i} between sectPr boundaries is empty");
+        }
     }
 
     public function test_matrix_totals_are_computed_from_rows_not_a_stale_totals_field(): void

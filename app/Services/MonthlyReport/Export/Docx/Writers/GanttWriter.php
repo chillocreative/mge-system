@@ -3,6 +3,7 @@
 namespace App\Services\MonthlyReport\Export\Docx\Writers;
 
 use App\Services\MonthlyReport\Export\Docx\DocxDocument;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -10,8 +11,10 @@ use Illuminate\Support\Facades\Storage;
  * pages were uploaded, the rows table if any (s2-5.blade.php), then the uploaded gantt_page
  * assets themselves — image pages become full-width images in their own landscape section, PDF
  * pages become a one-line "Attached: …" reference (the PDF export embeds those pages instead).
- * Ends by reopening a section in the chunk's original orientation so later writes (the note,
- * and the next chunk's own newSection() call) aren't left mid-landscape.
+ * Leaves the current section in whatever orientation the last Gantt asset needed (landscape, if
+ * any image page was inserted); the exporter is responsible for restoring the chunk's original
+ * orientation via DocxDocument::ensureSection() before writing the next thing, so a "restore"
+ * that ends up writing nothing never materialises an empty section/page.
  */
 final class GanttWriter implements SectionWriter
 {
@@ -19,15 +22,19 @@ final class GanttWriter implements SectionWriter
 
     public function write(DocxDocument $doc, string $key, array $data, ?string $note, array $ctx): void
     {
-        $ganttPages = (int) ($data['gantt_pages'] ?? 0);
         $rows = $data['rows'] ?? [];
+        $assets = $this->ganttAssets($ctx);
+        $imagePages = $assets->filter(fn ($asset) => $this->isImageAsset($asset))->count();
+        $hasPdfOnly = $imagePages === 0 && $assets->isNotEmpty();
 
-        if ($ganttPages > 0) {
-            $doc->paragraph("The work programme (Gantt chart) is attached on the following {$ganttPages} page(s).");
+        if ($imagePages > 0) {
+            $doc->paragraph("The work programme (Gantt chart) is attached on the following {$imagePages} page(s).");
+        } elseif ($hasPdfOnly) {
+            $doc->paragraph('The work programme (Gantt chart) PDF is attached separately (see the PDF export).');
         }
 
         if (empty($rows)) {
-            if ($ganttPages === 0) {
+            if ($imagePages === 0 && ! $hasPdfOnly) {
                 $doc->paragraph('No data.', ['italic' => true, 'color' => '555555']);
             }
         } else {
@@ -45,34 +52,37 @@ final class GanttWriter implements SectionWriter
             $doc->table($headers, $tableRows, ['fontSize' => 8]);
         }
 
-        $this->writeGanttAssets($doc, $ctx);
+        $this->writeGanttAssets($doc, $assets);
     }
 
-    private function writeGanttAssets(DocxDocument $doc, array $ctx): void
+    private function ganttAssets(array $ctx): Collection
     {
         $report = $ctx['report'] ?? null;
         if ($report === null) {
-            return;
+            return collect();
         }
 
-        $assets = $report->assets()->where('kind', 'gantt_page')->orderBy('sort_order')->orderBy('id')->get();
-        if ($assets->isEmpty()) {
-            return;
-        }
+        return $report->assets()->where('kind', 'gantt_page')->orderBy('sort_order')->orderBy('id')->get();
+    }
 
-        $insertedLandscape = false;
+    private function isImageAsset($asset): bool
+    {
+        $ext = strtolower($asset->extension ?? pathinfo($asset->file_path, PATHINFO_EXTENSION));
 
+        return in_array($ext, self::IMAGE_EXTENSIONS, true);
+    }
+
+    private function writeGanttAssets(DocxDocument $doc, Collection $assets): void
+    {
         foreach ($assets as $asset) {
-            $ext = strtolower($asset->extension ?? pathinfo($asset->file_path, PATHINFO_EXTENSION));
             $label = $asset->file_name ?: basename($asset->file_path);
 
-            if (in_array($ext, self::IMAGE_EXTENSIONS, true)) {
+            if ($this->isImageAsset($asset)) {
                 if (! Storage::disk('local')->exists($asset->file_path)) {
                     continue;
                 }
 
                 $doc->newSection('landscape');
-                $insertedLandscape = true;
                 $doc->image(Storage::disk('local')->get($asset->file_path));
 
                 continue;
@@ -80,10 +90,6 @@ final class GanttWriter implements SectionWriter
 
             $pages = $asset->pages ?? 1;
             $doc->paragraph("• Attached: {$label} ({$pages} pages) — see the PDF export for the embedded pages.");
-        }
-
-        if ($insertedLandscape) {
-            $doc->newSection($ctx['orientation'] ?? 'portrait');
         }
     }
 }
