@@ -16,13 +16,15 @@ class ProgrammeXlsxImporter
     private const ROW_COUNT_CAP = 2000;
 
     private const SUGGEST_KEYWORDS = [
-        'name' => '/name|task|activity|description/i',
-        'duration' => '/duration|dur/i',
+        // Checked in this order; a header is consumed by the first key it matches, and the
+        // percent keys require a percent/complete context so "Actual Start" stays a date.
+        'outline_level' => '/outline\s*level|wbs\s*level|\blevel\b/i',
+        'actual_pct' => '/%\s*comp|percent\s*comp|actual\s*(%|percent|progress)|physical\s*(%|percent|progress)|\bcomplete\b/i',
+        'plan_pct' => '/plan(ned)?\s*(%|percent|progress)|scheduled\s*(%|percent|progress)|\bplan\s*%/i',
         'start' => '/start/i',
-        'finish' => '/finish|end/i',
-        'actual_pct' => '/%\s*complete|percent\s*complete|actual|physical/i',
-        'plan_pct' => '/plan|planned|scheduled/i',
-        'outline_level' => '/outline\s*level|level|wbs\s*level/i',
+        'finish' => '/finish|\bend\b/i',
+        'duration' => '/duration|\bdur\b/i',
+        'name' => '/name|task|activity|description/i',
     ];
 
     /**
@@ -181,6 +183,8 @@ class ProgrammeXlsxImporter
             foreach (self::SUGGEST_KEYWORDS as $key => $pattern) {
                 if ($suggested[$key] === null && preg_match($pattern, (string) $header)) {
                     $suggested[$key] = $index;
+
+                    continue 2; // one header feeds at most one field
                 }
             }
         }

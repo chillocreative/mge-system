@@ -102,6 +102,24 @@ class ProgrammeXlsxImporterTest extends TestCase
         $this->assertNull($preview['suggested']['outline_level']);
     }
 
+    public function test_suggestions_do_not_let_actual_start_claim_the_percent_column(): void
+    {
+        $path = $this->writeXlsx([
+            ['Task Name', 'Actual Start', 'Actual Finish', '% Complete', 'Duration', 'Outline Level'],
+            ['Piling', '01/01/2026', '10/01/2026', '45%', '10 days', 1],
+        ]);
+
+        $suggested = (new ProgrammeXlsxImporter)->preview($path)['suggested'];
+
+        $this->assertSame(0, $suggested['name']);
+        $this->assertSame(1, $suggested['start']);
+        $this->assertSame(2, $suggested['finish']);
+        $this->assertSame(3, $suggested['actual_pct']);
+        $this->assertSame(4, $suggested['duration']);
+        $this->assertSame(5, $suggested['outline_level']);
+        $this->assertNull($suggested['plan_pct']);
+    }
+
     public function test_preview_supports_csv(): void
     {
         $path = $this->writeCsv($this->sampleRows());
