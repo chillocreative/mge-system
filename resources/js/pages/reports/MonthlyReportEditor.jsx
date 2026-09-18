@@ -23,6 +23,7 @@ import TextSection from './editor/TextSection';
 import ImageSection from './editor/ImageSection';
 import ChartSection from './editor/ChartSection';
 import GanttAssetsPanel from './editor/GanttAssetsPanel';
+import ProgrammeSection from './editor/ProgrammeSection';
 import ReportOptionsDialog from './editor/ReportOptionsDialog';
 import SectionNotes from './editor/SectionNotes';
 import applyDraft from './editor/applyDraft';
@@ -403,7 +404,7 @@ export default function MonthlyReportEditor() {
             case 'gantt':
                 return (
                     <div className="space-y-4">
-                        <TextSection data={effectiveMerged} />
+                        <ProgrammeSection data={effectiveMerged} projectId={report.project_id} />
                         <GanttAssetsPanel
                             reportId={report.id}
                             canEdit={canEdit}

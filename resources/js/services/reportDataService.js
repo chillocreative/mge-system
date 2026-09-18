@@ -40,6 +40,25 @@ const reportDataService = {
     async replaceCategories(projectId, kind, rows) { return (await apiClient.put(p(projectId, `/resource-categories?kind=${kind}`), { kind, rows })).data; },
     async seedCategories(projectId, kind) { return (await apiClient.post(p(projectId, `/resource-categories/seed-defaults?kind=${kind}`))).data; },
 
+    async listProgrammeVersions(projectId) { return (await apiClient.get(p(projectId, '/programme-versions'))).data; },
+    async previewProgrammeXlsx(projectId, file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return (await apiClient.post(p(projectId, '/programme-versions/preview'), formData)).data;
+    },
+    async importProgrammeXlsx(projectId, payload) { return (await apiClient.post(p(projectId, '/programme-versions/import'), payload)).data; },
+    async importProgrammeMspdi(projectId, file, meta = {}) {
+        const formData = new FormData();
+        formData.append('file', file);
+        Object.entries(meta).forEach(([k, v]) => {
+            if (v !== null && v !== undefined && v !== '') formData.append(k, v);
+        });
+        return (await apiClient.post(p(projectId, '/programme-versions/import-mspdi'), formData)).data;
+    },
+    async updateProgrammeVersion(projectId, id, data) { return (await apiClient.put(p(projectId, `/programme-versions/${id}`), data)).data; },
+    async deleteProgrammeVersion(projectId, id) { return (await apiClient.delete(p(projectId, `/programme-versions/${id}`))).data; },
+    async listProgrammeActivities(projectId, id, params = {}) { return (await apiClient.get(p(projectId, `/programme-versions/${id}/activities`), { params })).data; },
+
     async listImages(projectId, params = {}) { return (await apiClient.get(p(projectId, '/report-images'), { params })).data; },
     async uploadImage(projectId, formData) {
         return (await apiClient.post(p(projectId, '/report-images'), formData, { headers: { 'Content-Type': 'multipart/form-data' } })).data;

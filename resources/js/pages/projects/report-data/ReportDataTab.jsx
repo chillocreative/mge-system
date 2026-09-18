@@ -3,6 +3,7 @@ import ContractParticularsPanel from './ContractParticularsPanel';
 import PartiesPanel from './PartiesPanel';
 import OrgChartPanel from './OrgChartPanel';
 import ProgressPanel from './ProgressPanel';
+import WorkProgrammePanel from './WorkProgrammePanel';
 import RegistersPanel from './RegistersPanel';
 import ResourceCategoriesPanel from './ResourceCategoriesPanel';
 import ReportImagesPanel from './ReportImagesPanel';
@@ -12,6 +13,7 @@ const PANELS = [
     { id: 'parties', label: 'Parties & Contacts', component: PartiesPanel },
     { id: 'org-chart', label: 'Organisation Chart', component: OrgChartPanel },
     { id: 'progress', label: 'Progress & Baseline', component: ProgressPanel },
+    { id: 'programme', label: 'Work Programme', component: WorkProgrammePanel },
     { id: 'registers', label: 'Delay Notices & Tests', component: RegistersPanel },
     { id: 'categories', label: 'Site-Log Categories', component: ResourceCategoriesPanel },
     { id: 'images', label: 'Report Images', component: ReportImagesPanel },
