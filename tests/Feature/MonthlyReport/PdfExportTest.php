@@ -3,6 +3,7 @@
 namespace Tests\Feature\MonthlyReport;
 
 use App\Models\MonthlyReport;
+use App\Models\MonthlyReportAsset;
 use App\Models\Project;
 use App\Models\ProjectContract;
 use App\Models\ProjectParty;
@@ -10,9 +11,12 @@ use App\Models\ProjectProgressPeriod;
 use App\Models\ProjectScheduleBaseline;
 use App\Models\SiteLog;
 use App\Models\User;
+use App\Services\MonthlyReport\Export\OrientationPlanner;
 use App\Services\MonthlyReport\Export\PdfExporter;
+use App\Services\MonthlyReport\Export\PdfMerger;
 use App\Services\MonthlyReport\MonthlyReportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -126,7 +130,32 @@ class PdfExportTest extends TestCase
         $this->assertStringStartsWith('%PDF', $bytes);
         $this->assertMatchesRegularExpression('/MediaBox \[0 0 841\.\d+ 595\.\d+\]/', $bytes); // at least one landscape page
         $this->assertMatchesRegularExpression('/MediaBox \[0 0 595\.\d+ 841\.\d+\]/', $bytes); // and a portrait one
-        $this->assertStringContainsString('Page 1 of ', $bytes);
+        $this->assertStringContainsString('Page 1 of ', $this->decodeFooterText($bytes));
+    }
+
+    /**
+     * PdfMerger's content streams are FlateDecode-compressed by default, so footer text is
+     * not directly greppable in the raw PDF bytes. Inflate every stream and pull the Tj
+     * operator's text out of the decompressed content.
+     */
+    private function decodeFooterText(string $pdf): string
+    {
+        preg_match_all('/\/Filter\s*\/FlateDecode.*?stream\r?\n(.*?)\r?\nendstream/s', $pdf, $streams, PREG_SET_ORDER);
+
+        $text = '';
+        foreach ($streams as $stream) {
+            $decoded = @gzuncompress($stream[1]);
+            if ($decoded === false) {
+                continue;
+            }
+
+            preg_match_all('/\((.*?)\)\s*Tj/s', $decoded, $ms, PREG_SET_ORDER);
+            foreach ($ms as $m) {
+                $text .= $m[1].' ';
+            }
+        }
+
+        return $text;
     }
 
     public function test_render_throws_a_validation_exception_when_no_sections_are_included(): void
@@ -137,5 +166,45 @@ class PdfExportTest extends TestCase
         $this->expectException(ValidationException::class);
 
         app(PdfExporter::class)->render($report->fresh(['sections', 'project', 'period']));
+    }
+
+    public function test_gantt_pages_are_inserted_immediately_after_the_chunk_containing_2_5(): void
+    {
+        Storage::fake('local');
+        $report = $this->makeReport();
+        $report->sections()->where('key', '2.5')->update(['include' => true]);
+
+        $path = "monthly-reports/{$report->id}/assets/gantt.pdf";
+        Storage::disk('local')->put($path, \Barryvdh\DomPDF\Facade\Pdf::loadHTML('<p>GANTT-PAGE</p>')->output());
+        MonthlyReportAsset::create([
+            'report_id' => $report->id, 'kind' => 'gantt_page', 'file_path' => $path,
+            'file_name' => 'gantt.pdf', 'extension' => 'pdf', 'sort_order' => 1,
+        ]);
+
+        $recorder = new class extends PdfMerger
+        {
+            /** @var array<int, array{pdf?: string, file?: string, label?: string}> */
+            public array $recordedParts = [];
+
+            public function merge(array $parts, string $footerLeft): string
+            {
+                $this->recordedParts = $parts;
+
+                return '%PDF-FAKE';
+            }
+        };
+        $this->app->instance(PdfMerger::class, $recorder);
+
+        $report = $report->fresh(['sections', 'project', 'period']);
+        app(PdfExporter::class)->render($report);
+
+        $includedKeys = $report->sections->where('include', true)->sortBy('sort_order')->pluck('key')->values()->all();
+        $chunks = OrientationPlanner::plan($includedKeys, $report->options['landscape_sections'] ?? null);
+        $chunkIndexWith25 = collect($chunks)->search(fn ($chunk) => in_array('2.5', $chunk['keys'], true));
+
+        $this->assertNotFalse($chunkIndexWith25, 'Expected a chunk containing section 2.5.');
+        $this->assertArrayNotHasKey('label', $recorder->recordedParts[$chunkIndexWith25], 'The 2.5 chunk itself is a rendered PDF part, not a labelled asset part.');
+        $this->assertArrayHasKey('label', $recorder->recordedParts[$chunkIndexWith25 + 1], 'The Gantt asset must immediately follow the chunk containing 2.5.');
+        $this->assertSame('gantt.pdf', $recorder->recordedParts[$chunkIndexWith25 + 1]['label']);
     }
 }

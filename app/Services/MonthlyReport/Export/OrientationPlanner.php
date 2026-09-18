@@ -33,6 +33,13 @@ final class OrientationPlanner
                 }
                 $current = ['orientation' => $orientation, 'keys' => [$key]];
             }
+
+            // Uploaded Gantt pages are appended right after section 2.5, so force a chunk
+            // boundary here even when the following section shares the same orientation.
+            if ($key === '2.5') {
+                $chunks[] = $current;
+                $current = null;
+            }
         }
 
         if ($current !== null) {

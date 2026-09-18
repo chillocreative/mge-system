@@ -351,6 +351,19 @@ class MonthlyReportApiTest extends TestCase
         $this->assertStringContainsString('No data', $res->getContent());
     }
 
+    public function test_chart_endpoint_degrades_to_no_data_svg_on_malformed_series_override(): void
+    {
+        [$project, $period] = $this->seedProject();
+        $reportId = $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", ['period_id' => $period->id])->json('data.id');
+
+        // Bypass validation entirely: store a malformed override directly on the section
+        // model (the API's own validation would reject a non-array 'series' value).
+        MonthlyReport::find($reportId)->sections()->where('key', '2.2')->update(['overrides' => ['series' => 'x']]);
+
+        $res = $this->actingAs($this->manager)->get("/api/monthly-reports/{$reportId}/charts/2.2")->assertOk();
+        $this->assertStringContainsString('No data', $res->getContent());
+    }
+
     public function test_chart_endpoint_allows_reports_view_only_user(): void
     {
         [$project, $period] = $this->seedProject();

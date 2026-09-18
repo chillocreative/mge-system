@@ -10,6 +10,7 @@ use App\Services\MonthlyReport\MonthlyReportService;
 use App\Services\MonthlyReport\SectionRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class MonthlyReportController extends Controller
@@ -144,7 +145,12 @@ class MonthlyReportController extends Controller
 
         $series = $section->merged['series'] ?? [];
 
-        $svg = (new SCurveSvg)->render($series, $options);
+        try {
+            $svg = (new SCurveSvg)->render($series, $options);
+        } catch (\Throwable $e) {
+            Log::warning("Monthly report chart {$key} could not be rendered: {$e->getMessage()}", ['report_id' => $report->id]);
+            $svg = (new SCurveSvg)->render(['months' => [], 'scheduled' => [], 'actual' => []], $options);
+        }
 
         return response($svg, 200, [
             'Content-Type' => 'image/svg+xml',

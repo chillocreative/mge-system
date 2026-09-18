@@ -95,6 +95,9 @@ class AssetApiTest extends TestCase
         $this->actingAs($manager)->postJson("/api/monthly-reports/{$report->id}/assets", [
             'file' => UploadedFile::fake()->createWithContent('bad.pdf', 'not a pdf'),
         ])->assertStatus(422)->assertJsonFragment(['message' => 'This PDF uses a compression the report merger cannot read. Re-save it as PDF 1.4 (Print to PDF) or upload PNG/JPG pages instead.']);
+
+        // The temp upload must not be left behind on disk after the rejection.
+        $this->assertEmpty(Storage::disk('local')->allFiles("monthly-reports/{$report->id}/assets"));
     }
 
     public function test_asset_from_another_report_is_404_and_finalised_report_rejects_writes(): void
@@ -110,6 +113,31 @@ class AssetApiTest extends TestCase
         $this->actingAs($manager)->postJson("/api/monthly-reports/{$report->id}/assets", [
             'file' => UploadedFile::fake()->create('g.png', 10, 'image/png'),
         ])->assertStatus(422);
+    }
+
+    public function test_export_skips_gantt_pdf_asset_whose_file_was_deleted_from_disk(): void
+    {
+        Storage::fake('local');
+        [$manager, $report] = $this->managerAndReport();
+
+        // Baseline: page count with no Gantt asset at all.
+        $withoutAssetCount = preg_match_all('/\/Type\s*\/Page[^s]/', app(\App\Services\MonthlyReport\Export\PdfExporter::class)->render($report->fresh(['sections', 'project', 'period'])));
+
+        // A Gantt asset row whose file was never actually written to (or was later deleted from) disk.
+        MonthlyReportAsset::create([
+            'report_id' => $report->id, 'kind' => 'gantt_page', 'file_path' => "monthly-reports/{$report->id}/assets/missing.pdf",
+            'file_name' => 'missing.pdf', 'extension' => 'pdf', 'sort_order' => 1,
+        ]);
+        Storage::disk('local')->assertMissing("monthly-reports/{$report->id}/assets/missing.pdf");
+
+        $bytes = app(\App\Services\MonthlyReport\Export\PdfExporter::class)->render($report->fresh(['sections', 'project', 'period']));
+        $this->assertStringStartsWith('%PDF', $bytes);
+
+        // A missing Gantt asset file is skipped entirely by PdfExporter::ganttParts() (no
+        // placeholder page inserted) — the export still succeeds and the page count matches
+        // the without-asset baseline exactly.
+        $afterMissing = preg_match_all('/\/Type\s*\/Page[^s]/', $bytes);
+        $this->assertSame($withoutAssetCount, $afterMissing);
     }
 
     public function test_viewer_cannot_upload_but_can_list(): void

@@ -1,7 +1,9 @@
+@if(!empty($data['gantt_pages']))
+    <p>The work programme (Gantt chart) is attached on the following {{ $data['gantt_pages'] }} page(s).</p>
+@endif
+
 @if(empty($data['rows']))
-    @if(!empty($data['gantt_pages']))
-        <p>The work programme (Gantt chart) is attached on the following {{ $data['gantt_pages'] }} page(s).</p>
-    @else
+    @if(empty($data['gantt_pages']))
         <p class="placeholder">No data.</p>
     @endif
 @else

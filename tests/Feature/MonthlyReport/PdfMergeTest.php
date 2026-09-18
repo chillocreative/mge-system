@@ -31,12 +31,28 @@ class PdfMergeTest extends TestCase
         app(PdfMerger::class)->probe($path);
     }
 
-    /** FPDF writes text uncompressed in a Tj operator; decode by stripping the stream to visible text. */
+    /**
+     * FPDF (via FPDI) compresses content streams by default, so the footer text is not
+     * directly greppable in the raw PDF bytes. Inflate every FlateDecode stream and pull
+     * the Tj operator's text out of the decompressed content.
+     */
     private function decodeText(string $pdf): string
     {
-        return implode(' ', array_map(fn ($m) => $m[1], iterator_to_array((function () use ($pdf) {
-            preg_match_all('/\((.*?)\)\s*Tj/s', $pdf, $ms, PREG_SET_ORDER);
-            yield from $ms;
-        })())));
+        preg_match_all('/(\/Filter\s*\/FlateDecode.*?)stream\r?\n(.*?)\r?\nendstream/s', $pdf, $streams, PREG_SET_ORDER);
+
+        $text = '';
+        foreach ($streams as $stream) {
+            $decoded = @gzuncompress($stream[2]);
+            if ($decoded === false) {
+                continue;
+            }
+
+            preg_match_all('/\((.*?)\)\s*Tj/s', $decoded, $ms, PREG_SET_ORDER);
+            foreach ($ms as $m) {
+                $text .= $m[1].' ';
+            }
+        }
+
+        return $text;
     }
 }

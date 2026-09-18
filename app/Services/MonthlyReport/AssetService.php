@@ -6,6 +6,7 @@ use App\Models\MonthlyReport;
 use App\Models\MonthlyReportAsset;
 use App\Services\MonthlyReport\Export\PdfMerger;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -31,24 +32,31 @@ final class AssetService
             }
         }
 
-        $nextSortOrder = (int) MonthlyReportAsset::where('report_id', $report->id)->max('sort_order') + 1;
+        try {
+            return DB::transaction(function () use ($report, $kind, $path, $file, $ext, $pages) {
+                $nextSortOrder = (int) MonthlyReportAsset::where('report_id', $report->id)->max('sort_order') + 1;
 
-        // Gantt pages are appended right after section 2.5, so make sure that
-        // section is part of the export instead of falling to the end of the PDF.
-        if ($kind === 'gantt_page') {
-            $report->sections()->where('key', '2.5')->update(['include' => true]);
+                // Gantt pages are appended right after section 2.5, so make sure that
+                // section is part of the export instead of falling to the end of the PDF.
+                if ($kind === 'gantt_page') {
+                    $report->sections()->where('key', '2.5')->update(['include' => true]);
+                }
+
+                return MonthlyReportAsset::create([
+                    'report_id' => $report->id,
+                    'kind' => $kind,
+                    'file_path' => $path,
+                    'file_name' => Str::limit($file->getClientOriginalName(), 255, ''),
+                    'extension' => $ext,
+                    'size' => $file->getSize(),
+                    'pages' => $pages,
+                    'sort_order' => $nextSortOrder,
+                ]);
+            });
+        } catch (\Throwable $e) {
+            Storage::disk('local')->delete($path);
+            throw $e;
         }
-
-        return MonthlyReportAsset::create([
-            'report_id' => $report->id,
-            'kind' => $kind,
-            'file_path' => $path,
-            'file_name' => $file->getClientOriginalName(),
-            'extension' => $ext,
-            'size' => $file->getSize(),
-            'pages' => $pages,
-            'sort_order' => $nextSortOrder,
-        ]);
     }
 
     public function reorder(MonthlyReportAsset $asset, int $sortOrder): MonthlyReportAsset

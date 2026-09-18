@@ -79,12 +79,16 @@
 @php
     $orderedKeys = $orderedKeys ?? array_keys(array_diff_key($sections, ['cover' => true]));
     $showCover = $showCover ?? true;
+    $isFirstChunk = $isFirstChunk ?? true;
 @endphp
 
 @if($showCover)
     @include('pdf.monthly-report.cover', ['data' => $sections['cover'] ?? ['schema' => 1, 'placeholder' => true]])
 
     <div class="page-break"></div>
+@endif
+
+@if($isFirstChunk)
     <div class="section-title">Table of Contents</div>
     <table class="grid avoid">
         <tr><th>Section</th><th>Title</th></tr>
@@ -97,7 +101,7 @@
 
 @foreach($orderedKeys as $key)
     @continue(! isset($sections[$key]))
-    @unless($loop->first && ! $showCover)
+    @unless($loop->first && ! $showCover && ! $isFirstChunk)
         <div class="page-break"></div>
     @endunless
     @include('pdf.monthly-report.section', ['key' => $key, 'title' => $titles[$key] ?? $key, 'data' => $sections[$key], 'note' => $notes[$key] ?? null, 'orientation' => $orientation ?? 'portrait'])
