@@ -90,8 +90,10 @@ function isSectionEmpty(key, merged) {
         case '3.2':
             return !(merged.groups && merged.groups.length > 0);
         case '4.1':
+            // `days` is just the calendar; the content is the grouped category rows.
+            return !(merged.groups?.some((g) => g.rows?.length > 0));
         case '4.2':
-            return !(merged.days && merged.days.length > 0);
+            return !(merged.rows && merged.rows.length > 0);
         case '4.3':
             return !(merged.days && merged.days.length > 0);
         case '5.0':
