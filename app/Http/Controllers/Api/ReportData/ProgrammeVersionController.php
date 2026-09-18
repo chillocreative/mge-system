@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class ProgrammeVersionController extends Controller
 {
@@ -28,6 +29,8 @@ class ProgrammeVersionController extends Controller
 
     public function index(int $projectId): JsonResponse
     {
+        Project::findOrFail($projectId);
+
         $versions = ProjectProgrammeVersion::where('project_id', $projectId)
             ->with('importer')
             ->orderByDesc('status_date')
@@ -52,6 +55,8 @@ class ProgrammeVersionController extends Controller
     {
         Project::findOrFail($projectId);
 
+        $this->sweepStaleTmpFiles($projectId);
+
         $validated = $request->validate([
             'file' => ['required', 'file', 'max:10240', 'extensions:xlsx,xls,csv'],
         ]);
@@ -59,13 +64,68 @@ class ProgrammeVersionController extends Controller
         $file = $validated['file'];
         $ext = strtolower($file->getClientOriginalExtension());
         $relativePath = $file->storeAs($this->dir($projectId), 'tmp-'.Str::uuid().'.'.$ext, 'local');
+        $fileName = $file->getClientOriginalName();
 
         $preview = (new ProgrammeXlsxImporter)->preview(Storage::disk('local')->path($relativePath));
 
         return $this->success($preview + [
-            'token' => Crypt::encryptString($relativePath),
-            'file_name' => $file->getClientOriginalName(),
+            'token' => Crypt::encryptString(json_encode([
+                'path' => $relativePath,
+                'file_name' => $fileName,
+                'issued_at' => now()->timestamp,
+            ])),
+            'file_name' => $fileName,
         ]);
+    }
+
+    /** Delete tmp-* uploads older than 24h in the project's programme directory. */
+    private function sweepStaleTmpFiles(int $projectId): void
+    {
+        $dir = $this->dir($projectId);
+        $cutoff = now()->subDay()->timestamp;
+
+        foreach (Storage::disk('local')->files($dir) as $path) {
+            if (! str_starts_with(basename($path), 'tmp-')) {
+                continue;
+            }
+
+            if (Storage::disk('local')->lastModified($path) < $cutoff) {
+                Storage::disk('local')->delete($path);
+            }
+        }
+    }
+
+    /**
+     * Decrypt and validate a preview token, returning the tmp file's relative path.
+     *
+     * @return array{path: string, file_name: ?string}|JsonResponse
+     */
+    private function decodeToken(string $token, int $projectId): array|JsonResponse
+    {
+        $invalid = fn () => $this->error('The upload token is invalid or has expired. Please re-upload the file.', 422);
+
+        try {
+            $payload = json_decode(Crypt::decryptString($token), true);
+        } catch (DecryptException) {
+            return $invalid();
+        }
+
+        if (! is_array($payload) || ! isset($payload['path'], $payload['issued_at'])) {
+            return $invalid();
+        }
+
+        if ($payload['issued_at'] < now()->subDay()->timestamp) {
+            return $this->error('The preview has expired — upload the file again.', 422);
+        }
+
+        $relativePath = $payload['path'];
+
+        if (! str_starts_with($relativePath, $this->dir($projectId).'/tmp-')
+            || ! Storage::disk('local')->exists($relativePath)) {
+            return $invalid();
+        }
+
+        return ['path' => $relativePath, 'file_name' => $payload['file_name'] ?? null];
     }
 
     public function import(int $projectId, Request $request): JsonResponse
@@ -88,16 +148,14 @@ class ProgrammeVersionController extends Controller
             'file_name' => ['nullable', 'string', 'max:255'],
         ]);
 
-        try {
-            $relativePath = Crypt::decryptString($validated['token']);
-        } catch (DecryptException) {
-            return $this->error('The upload token is invalid or has expired. Please re-upload the file.', 422);
+        $decoded = $this->decodeToken($validated['token'], $projectId);
+
+        if ($decoded instanceof JsonResponse) {
+            return $decoded;
         }
 
-        if (! str_starts_with($relativePath, $this->dir($projectId).'/tmp-')
-            || ! Storage::disk('local')->exists($relativePath)) {
-            return $this->error('The upload token is invalid or has expired. Please re-upload the file.', 422);
-        }
+        $relativePath = $decoded['path'];
+        $tokenFileName = $decoded['file_name'];
 
         try {
             $activities = (new ProgrammeXlsxImporter)->import(Storage::disk('local')->path($relativePath), $validated['mapping']);
@@ -109,21 +167,24 @@ class ProgrammeVersionController extends Controller
         $ext = pathinfo($relativePath, PATHINFO_EXTENSION);
         $newPath = $this->dir($projectId).'/'.Str::uuid().'.'.$ext;
 
+        // Move the upload to its permanent path first so createVersion() never has to
+        // reach back into a tmp-* file; on any failure we clean up whatever landed on disk.
+        Storage::disk('local')->move($relativePath, $newPath);
+
         try {
             $version = $this->programmeService->createVersion($projectId, [
                 'label' => $validated['label'],
                 'status_date' => $validated['status_date'] ?? null,
                 'source_type' => 'xlsx',
                 'source_file_path' => $newPath,
-                'source_file_name' => $validated['file_name'] ?? basename($relativePath),
+                'source_file_name' => $validated['file_name'] ?? $tokenFileName ?? basename($relativePath),
                 'set_current' => $validated['set_current'] ?? true,
             ], $activities, $request->user()->id);
-        } catch (ValidationException $e) {
+        } catch (Throwable $e) {
+            Storage::disk('local')->delete($newPath);
             Storage::disk('local')->delete($relativePath);
             throw $e;
         }
-
-        Storage::disk('local')->move($relativePath, $newPath);
 
         return $this->created($version, 'Programme imported.');
     }
@@ -152,6 +213,10 @@ class ProgrammeVersionController extends Controller
 
         $newPath = $this->dir($projectId).'/'.$uuid.'.xml';
 
+        // Move the upload to its permanent path first; on any failure we clean up
+        // whatever landed on disk (mirrors import()).
+        Storage::disk('local')->move($tmpPath, $newPath);
+
         try {
             $version = $this->programmeService->createVersion($projectId, [
                 'label' => $validated['label'],
@@ -161,13 +226,11 @@ class ProgrammeVersionController extends Controller
                 'source_file_name' => $file->getClientOriginalName(),
                 'set_current' => $validated['set_current'] ?? true,
             ], $activities, $request->user()->id);
-        } catch (ValidationException $e) {
+        } catch (Throwable $e) {
+            Storage::disk('local')->delete($newPath);
             Storage::disk('local')->delete($tmpPath);
             throw $e;
         }
-
-        // Keep the upload only once the version exists (mirrors import()).
-        Storage::disk('local')->move($tmpPath, $newPath);
 
         return $this->created($version, 'Programme imported.');
     }
@@ -202,6 +265,8 @@ class ProgrammeVersionController extends Controller
 
     public function activities(int $projectId, int $versionId, Request $request): JsonResponse
     {
+        Project::findOrFail($projectId);
+
         $version = ProjectProgrammeVersion::where('project_id', $projectId)->findOrFail($versionId);
 
         $perPage = min(500, max(1, (int) $request->integer('per_page', 100)));

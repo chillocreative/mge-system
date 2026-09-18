@@ -11,6 +11,7 @@ use App\Services\MonthlyReport\Export\PdfExporter;
 use App\Services\MonthlyReport\MonthlyReportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Csv;
@@ -430,5 +431,59 @@ class ProgrammeApiTest extends TestCase
 
         $html = app(PdfExporter::class)->html($report->fresh(['sections', 'project', 'period']), ['2.5']);
         $this->assertStringContainsString('Earthworks', $html);
+    }
+
+    public function test_import_with_expired_token_returns_422_and_expired_message(): void
+    {
+        $project = $this->project();
+
+        $expiredToken = Crypt::encryptString(json_encode([
+            'path' => $this->dir($project->id).'/tmp-expired.xlsx',
+            'file_name' => 'programme.xlsx',
+            'issued_at' => now()->subDays(2)->timestamp,
+        ]));
+
+        $res = $this->actingAs($this->editor)
+            ->postJson("/api/projects/{$project->id}/programme-versions/import", [
+                'token' => $expiredToken,
+                'mapping' => ['name' => 0],
+                'label' => 'Expired',
+            ])
+            ->assertStatus(422);
+
+        $this->assertSame('The preview has expired — upload the file again.', $res->json('message'));
+    }
+
+    public function test_preview_sweeps_stale_tmp_files_older_than_24_hours(): void
+    {
+        $project = $this->project();
+        $dir = $this->dir($project->id);
+
+        $stalePath = $dir.'/tmp-stale.xlsx';
+        Storage::disk('local')->put($stalePath, 'stale content');
+        touch(Storage::disk('local')->path($stalePath), time() - 90000);
+
+        $freshPath = $dir.'/tmp-fresh.xlsx';
+        Storage::disk('local')->put($freshPath, 'fresh content');
+
+        $this->actingAs($this->editor)
+            ->post("/api/projects/{$project->id}/programme-versions/preview", [
+                'file' => $this->xlsxUploadedFile(),
+            ])
+            ->assertOk();
+
+        Storage::disk('local')->assertMissing($stalePath);
+        Storage::disk('local')->assertExists($freshPath);
+    }
+
+    public function test_index_and_activities_return_404_for_unknown_project(): void
+    {
+        $this->actingAs($this->editor)
+            ->getJson('/api/projects/999999/programme-versions')
+            ->assertStatus(404);
+
+        $this->actingAs($this->editor)
+            ->getJson('/api/projects/999999/programme-versions/1/activities')
+            ->assertStatus(404);
     }
 }

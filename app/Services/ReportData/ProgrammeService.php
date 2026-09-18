@@ -30,7 +30,11 @@ class ProgrammeService
 
         return DB::transaction(function () use ($projectId, $meta, $activities, $userId, $count, $setCurrent) {
             if ($setCurrent) {
-                ProjectProgrammeVersion::where('project_id', $projectId)->update(['is_current' => false]);
+                $siblingIds = ProjectProgrammeVersion::where('project_id', $projectId)
+                    ->lockForUpdate()
+                    ->pluck('id');
+
+                ProjectProgrammeVersion::whereIn('id', $siblingIds)->update(['is_current' => false]);
             }
 
             $version = ProjectProgrammeVersion::create([
@@ -72,7 +76,11 @@ class ProgrammeService
     public function setCurrent(ProjectProgrammeVersion $version): void
     {
         DB::transaction(function () use ($version) {
-            ProjectProgrammeVersion::where('project_id', $version->project_id)->update(['is_current' => false]);
+            $siblingIds = ProjectProgrammeVersion::where('project_id', $version->project_id)
+                ->lockForUpdate()
+                ->pluck('id');
+
+            ProjectProgrammeVersion::whereIn('id', $siblingIds)->update(['is_current' => false]);
             $version->update(['is_current' => true]);
         });
     }
