@@ -63,16 +63,24 @@ export default function GanttAssetsPanel({ reportId, canEdit, onUploaded }) {
         const other = idx + dir;
         if (other < 0 || other >= assets.length) return;
         const a = assets[idx];
-        const b = assets[other];
         const next = [...assets];
         [next[idx], next[other]] = [next[other], next[idx]];
         setAssets(next);
         setBusyId(a.id);
         try {
-            await Promise.all([
-                monthlyReportService.updateAsset(reportId, a.id, { sort_order: b.sort_order }),
-                monthlyReportService.updateAsset(reportId, b.id, { sort_order: a.sort_order }),
-            ]);
+            // Renumber the whole visible list sequentially (1-based) rather
+            // than swapping two `sort_order` values — assets can share an
+            // equal sort_order (e.g. both default to the same value on
+            // upload), in which case a plain swap is a no-op. Only PUT the
+            // assets whose order actually changed.
+            for (let i = 0; i < next.length; i += 1) {
+                const asset = next[i];
+                const newOrder = i + 1;
+                if (asset.sort_order !== newOrder) {
+                    // eslint-disable-next-line no-await-in-loop
+                    await monthlyReportService.updateAsset(reportId, asset.id, { sort_order: newOrder });
+                }
+            }
             await load();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to reorder');

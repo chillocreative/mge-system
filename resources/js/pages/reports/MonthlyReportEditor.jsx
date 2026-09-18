@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useConfirm } from '@/context/ConfirmContext';
 import usePermission from '@/hooks/usePermission';
@@ -67,11 +67,44 @@ export default function MonthlyReportEditor() {
     const [statusBusy, setStatusBusy] = useState(false);
     const [chartVersion, setChartVersion] = useState(0);
     const [showOptions, setShowOptions] = useState(false);
+    const reportRef = useRef(null);
+    useEffect(() => {
+        reportRef.current = report;
+    }, [report]);
 
     const applyReport = useCallback((data) => {
         setReport(data);
         setSectionDrafts(buildSectionDrafts(data.sections));
         setReportDraft(buildReportDraft(data));
+        setActiveKey((prev) => (data.sections?.some((s) => s.key === prev) ? prev : data.sections?.[0]?.key));
+    }, []);
+
+    // Like `applyReport`, but for callers that must not discard unsaved edits
+    // sitting in `sectionDrafts` for *other* sections (a silent Gantt-upload
+    // refetch, or the Layout dialog's onSaved) — updates `report` from the
+    // server response (status/options/sections' include, data, overrides,
+    // notes, regenerated_at) while keeping the local draft for any section
+    // that is currently dirty, and taking the server value for clean ones
+    // (which is how a server-side auto `include=true`, e.g. section 2.5 after
+    // a Gantt page upload, still reaches the left nav).
+    const applyReportKeepingDrafts = useCallback((data) => {
+        const prevReport = reportRef.current;
+        setReport(data);
+        setSectionDrafts((prevDrafts) => {
+            const next = buildSectionDrafts(data.sections);
+            (data.sections || []).forEach((s) => {
+                const draft = prevDrafts[s.key];
+                if (!draft) return;
+                const oldServerSection = prevReport?.sections?.find((ps) => ps.key === s.key);
+                const dirty = oldServerSection
+                    ? JSON.stringify(draft.overrides || {}) !== JSON.stringify(oldServerSection.overrides || {}) ||
+                      (draft.notes || '') !== (oldServerSection.notes || '') ||
+                      draft.include !== oldServerSection.include
+                    : true;
+                if (dirty) next[s.key] = draft;
+            });
+            return next;
+        });
         setActiveKey((prev) => (data.sections?.some((s) => s.key === prev) ? prev : data.sections?.[0]?.key));
     }, []);
 
@@ -97,11 +130,11 @@ export default function MonthlyReportEditor() {
     const refetchQuiet = useCallback(async () => {
         try {
             const res = await monthlyReportService.get(id);
-            applyReport(res.data);
+            applyReportKeepingDrafts(res.data);
         } catch {
             toast.error('Failed to refresh report');
         }
-    }, [id, applyReport]);
+    }, [id, applyReportKeepingDrafts]);
 
     const isFinal = report?.status === 'final';
     const canEdit = canManage && !isFinal;
@@ -505,7 +538,7 @@ export default function MonthlyReportEditor() {
                     report={report}
                     onClose={() => setShowOptions(false)}
                     onSaved={(data) => {
-                        applyReport(data);
+                        applyReportKeepingDrafts(data);
                         setShowOptions(false);
                     }}
                 />
