@@ -40,13 +40,14 @@ export default function WorkProgrammePanel({ project, canEdit }) {
         setImportMode(null);
         if (version?.id) setViewingId(version.id);
         load();
+        toast.success('Programme imported — click Regenerate on section 2.5 in open monthly reports to pick up the new programme', { duration: 6000 });
     };
 
     const setCurrent = async (version) => {
         setBusyId(version.id);
         try {
             await reportDataService.updateProgrammeVersion(project.id, version.id, { is_current: true });
-            toast.success('Set as current programme');
+            toast.success('Current programme changed — click Regenerate on section 2.5 in open monthly reports to pick up the new programme', { duration: 6000 });
             load();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to set current programme');
@@ -83,7 +84,7 @@ export default function WorkProgrammePanel({ project, canEdit }) {
             await reportDataService.deleteProgrammeVersion(project.id, version.id);
             toast.success('Programme version deleted');
             if (viewingId === version.id) setViewingId(null);
-            setVersions((rows) => rows.filter((v) => v.id !== version.id));
+            load();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to delete programme version');
         } finally {

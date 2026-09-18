@@ -108,7 +108,9 @@ export default function ImportWizard({ projectId, mode, onClose, onImported }) {
             const respErrors = err.response?.data?.errors;
             if (respErrors) {
                 setErrors(respErrors);
-                const first = respErrors.file?.[0] || Object.values(respErrors.mapping || {})[0]?.[0];
+                const dottedMappingFirst = Object.entries(respErrors)
+                    .find(([k]) => k.startsWith('mapping.'))?.[1]?.[0];
+                const first = respErrors.file?.[0] || dottedMappingFirst || Object.values(respErrors.mapping || {})[0]?.[0];
                 toast.error(first || err.response?.data?.message || 'Failed to import programme');
             } else {
                 toast.error(err.response?.data?.message || 'Failed to import programme');
@@ -216,7 +218,9 @@ export default function ImportWizard({ projectId, mode, onClose, onImported }) {
                                             <option key={i} value={i}>{h || `Column ${i + 1}`}</option>
                                         ))}
                                     </select>
-                                    {errors.mapping?.[key] && <p className="mt-1 text-xs text-red-600">{errors.mapping[key][0]}</p>}
+                                    {(errors[`mapping.${key}`] || errors.mapping?.[key]) && (
+                                        <p className="mt-1 text-xs text-red-600">{(errors[`mapping.${key}`] || errors.mapping[key])[0]}</p>
+                                    )}
                                 </div>
                             ))}
                         </div>

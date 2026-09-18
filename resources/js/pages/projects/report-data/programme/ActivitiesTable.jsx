@@ -18,6 +18,10 @@ export default function ActivitiesTable({ projectId, version }) {
     const [search, setSearch] = useState('');
 
     useEffect(() => {
+        setPage(1);
+    }, [version.id]);
+
+    useEffect(() => {
         setLoading(true);
         setLoadError(false);
         reportDataService.listProgrammeActivities(projectId, version.id, { page, per_page: 100 })
