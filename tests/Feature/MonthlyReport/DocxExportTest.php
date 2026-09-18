@@ -3,14 +3,19 @@
 namespace Tests\Feature\MonthlyReport;
 
 use App\Models\MonthlyReport;
+use App\Models\MonthlyReportAsset;
 use App\Models\Project;
 use App\Models\ProjectContract;
 use App\Models\ProjectParty;
 use App\Models\ProjectProgressPeriod;
+use App\Models\ProjectResourceCategory;
+use App\Models\ProjectScheduleBaseline;
+use App\Models\SiteLog;
 use App\Models\User;
 use App\Services\MonthlyReport\Export\Docx\DocxExporter;
 use App\Services\MonthlyReport\MonthlyReportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -60,6 +65,78 @@ class DocxExportTest extends TestCase
 
         $footerXml = $this->anyPartXmlMatching($bytes, '#^word/footer\d+\.xml$#');
         $this->assertStringContainsString('NUMPAGES', $footerXml);
+    }
+
+    public function test_docx_export_renders_special_sections(): void
+    {
+        Storage::fake('local');
+
+        $project = Project::create(['name' => 'Special Sections Test', 'code' => 'SST-'.uniqid(), 'status' => 'in_progress']);
+
+        ProjectScheduleBaseline::create(['project_id' => $project->id, 'month' => '2025-12-01', 'scheduled_physical_pct' => 1, 'scheduled_financial_amount' => 100000, 'scheduled_financial_pct' => 1]);
+        ProjectScheduleBaseline::create(['project_id' => $project->id, 'month' => '2026-01-01', 'scheduled_physical_pct' => 2, 'scheduled_financial_amount' => 200000, 'scheduled_financial_pct' => 2]);
+
+        $previousPeriod = ProjectProgressPeriod::create(['project_id' => $project->id, 'period_no' => 1, 'period_start' => '2025-11-16', 'period_end' => '2025-12-15', 'physical_scheduled_pct' => 1, 'physical_actual_pct' => 1, 'financial_scheduled_pct' => 1, 'financial_actual_pct' => 1]);
+        $period = ProjectProgressPeriod::create(['project_id' => $project->id, 'period_no' => 2, 'period_start' => '2025-12-16', 'period_end' => '2025-12-18', 'planning_days_completion' => 100, 'physical_scheduled_pct' => 2, 'physical_actual_pct' => 4, 'financial_scheduled_pct' => 2, 'financial_actual_pct' => 4, 'financial_actual_amount' => 200000]);
+
+        ProjectResourceCategory::create(['project_id' => $project->id, 'kind' => 'worker', 'group' => 'Tradesman', 'name' => 'General Worker', 'sort_order' => 0, 'active' => true]);
+
+        $user = User::create(['first_name' => 'Site', 'last_name' => 'Logger', 'email' => 'site-'.uniqid().'@mge-eng.com', 'password' => bcrypt('x'), 'status' => 'active']);
+
+        $log = SiteLog::create(['project_id' => $project->id, 'log_date' => '2025-12-16', 'title' => 'Day 1', 'logged_by' => $user->id]);
+        $log->workers()->create(['worker_type' => 'General Worker', 'count' => 20]);
+        $log->weatherEvents()->createMany([
+            ['condition' => 'rain_start', 'event_time' => '09:00'],
+            ['condition' => 'rain_stop', 'event_time' => '10:30'],
+        ]);
+
+        /** @var MonthlyReportService $service */
+        $service = app(MonthlyReportService::class);
+        $report = $service->create($project->id, ['period_id' => $period->id], $user->id);
+
+        $png = $this->tinyPng();
+        $chartPath = "monthly-reports/{$report->id}/assets/chart.png";
+        Storage::disk('local')->put($chartPath, $png);
+        MonthlyReportAsset::create([
+            'report_id' => $report->id,
+            'kind' => 'chart_physical_scurve',
+            'file_path' => $chartPath,
+            'file_name' => 'chart.png',
+            'extension' => 'png',
+            'size' => strlen($png),
+            'pages' => 1,
+            'sort_order' => 0,
+        ]);
+
+        $report = $report->fresh(['sections', 'project', 'period']);
+
+        $bytes = app(DocxExporter::class)->render($report);
+        $xml = $this->documentXml($bytes);
+
+        $this->assertStringContainsString('2.1', $xml);
+        $this->assertStringContainsString('Previous', $xml);
+        $this->assertStringContainsString('Current', $xml);
+        $this->assertStringContainsString('Dec-25', $xml); // 2.2 month label
+        $this->assertStringContainsString('w:fill="60A5FA"', $xml);
+        $this->assertStringContainsString('General Worker', $xml);
+        $this->assertStringContainsString('<w:pict>', $xml); // 2.2 chart asset embedded (PHPWord renders images as VML, not <w:drawing>)
+        $this->assertStringContainsString('Chart not captured', $xml); // 2.4 has no chart asset
+    }
+
+    private function tinyPng(): string
+    {
+        if (function_exists('imagecreatetruecolor')) {
+            $img = imagecreatetruecolor(1, 1);
+            ob_start();
+            imagepng($img);
+            $bytes = ob_get_clean();
+            imagedestroy($img);
+
+            return $bytes;
+        }
+
+        // Minimal valid 1x1 transparent PNG.
+        return base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
     }
 
     public function test_export_docx_endpoint_returns_a_docx(): void

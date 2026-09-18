@@ -3,11 +3,20 @@
 namespace App\Services\MonthlyReport\Export\Docx;
 
 use App\Models\MonthlyReport;
+use App\Services\MonthlyReport\Export\Docx\Writers\ChartWriter;
 use App\Services\MonthlyReport\Export\Docx\Writers\CoverWriter;
+use App\Services\MonthlyReport\Export\Docx\Writers\GanttWriter;
+use App\Services\MonthlyReport\Export\Docx\Writers\GroupsNumbersWriter;
+use App\Services\MonthlyReport\Export\Docx\Writers\GroupsRowsWriter;
+use App\Services\MonthlyReport\Export\Docx\Writers\ImagesWriter;
 use App\Services\MonthlyReport\Export\Docx\Writers\KeyValueWriter;
+use App\Services\MonthlyReport\Export\Docx\Writers\MatrixWriter;
+use App\Services\MonthlyReport\Export\Docx\Writers\OrgChartWriter;
+use App\Services\MonthlyReport\Export\Docx\Writers\ProgressWriter;
 use App\Services\MonthlyReport\Export\Docx\Writers\RowsWriter;
 use App\Services\MonthlyReport\Export\Docx\Writers\SectionWriter;
 use App\Services\MonthlyReport\Export\Docx\Writers\TextWriter;
+use App\Services\MonthlyReport\Export\Docx\Writers\WeatherWriter;
 use App\Services\MonthlyReport\Export\OrientationPlanner;
 use App\Services\MonthlyReport\Export\ReportViewData;
 use App\Services\MonthlyReport\SectionRegistry;
@@ -25,13 +34,24 @@ final class DocxExporter
         'cover' => CoverWriter::class,
         '1.1' => KeyValueWriter::class,
         '1.2' => RowsWriter::class,
+        '1.3' => ImagesWriter::class,
+        '1.4' => OrgChartWriter::class,
         '1.5' => RowsWriter::class,
+        '2.1' => ProgressWriter::class,
+        '2.2' => ChartWriter::class,
         '2.3' => RowsWriter::class,
-        '2.5' => RowsWriter::class,
+        '2.4' => ChartWriter::class,
+        '2.5' => GanttWriter::class,
         '2.6' => RowsWriter::class,
+        '3.1' => GroupsNumbersWriter::class,
+        '3.2' => GroupsRowsWriter::class,
         '3.4' => RowsWriter::class,
         '3.6' => RowsWriter::class,
         '3.7' => RowsWriter::class,
+        '4.1' => MatrixWriter::class,
+        '4.2' => MatrixWriter::class,
+        '4.3' => WeatherWriter::class,
+        '5.0' => ImagesWriter::class,
     ];
 
     public function render(MonthlyReport $report): string
@@ -53,10 +73,12 @@ final class DocxExporter
             'logos' => $data['logos'],
             'mgeLogo' => $data['mgeLogo'],
             'ctx' => $data['ctx'],
+            'report' => $report,
         ];
 
         foreach ($chunks as $index => $chunk) {
             $doc->newSection($chunk['orientation']);
+            $writerCtx['orientation'] = $chunk['orientation'];
 
             $chunkKeys = $chunk['keys'];
 

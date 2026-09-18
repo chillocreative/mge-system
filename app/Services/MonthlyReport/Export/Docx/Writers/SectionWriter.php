@@ -16,7 +16,9 @@ interface SectionWriter
      * @param  string|null  $note  The section's report-author note (informational; DocxExporter
      *                             writes it separately after write() returns).
      * @param  array  $ctx  Shared context: ['logos' => [...data URIs...], 'mgeLogo' => ?string,
-     *                      'ctx' => \App\Services\MonthlyReport\ReportContext].
+     *                      'ctx' => \App\Services\MonthlyReport\ReportContext,
+     *                      'report' => \App\Models\MonthlyReport,
+     *                      'orientation' => 'portrait'|'landscape' (of the current chunk)].
      */
     public function write(DocxDocument $doc, string $key, array $data, ?string $note, array $ctx): void;
 }

@@ -89,9 +89,23 @@ final class DocxDocument
         $this->requireSection()->addTitle($text, $level);
     }
 
-    public function paragraph(string $text, array $style = []): void
+    public function paragraph(string $text, array $style = [], array $paragraphStyle = []): void
     {
-        $this->requireSection()->addText($text, array_merge(['size' => 9], $style));
+        $this->requireSection()->addText($text, array_merge(['size' => 9], $style), $paragraphStyle);
+    }
+
+    /**
+     * Writes one paragraph made of several differently-styled runs on the same line, e.g. a
+     * bold name followed by a plain designation (used by OrgChartWriter).
+     *
+     * @param  array<int, array{text: string, style?: array}>  $runs
+     */
+    public function paragraphRuns(array $runs, array $paragraphStyle = []): void
+    {
+        $run = $this->requireSection()->addTextRun($paragraphStyle);
+        foreach ($runs as $r) {
+            $run->addText((string) ($r['text'] ?? ''), array_merge(['size' => 9], $r['style'] ?? []));
+        }
     }
 
     public function note(?string $text): void
@@ -188,18 +202,83 @@ final class DocxDocument
 
     public function image(string $binary, array $opts = []): void
     {
-        $tmp = tempnam(sys_get_temp_dir(), 'docximg');
-        file_put_contents($tmp, $binary);
-        $this->tempFiles[] = $tmp;
+        $tmp = $this->tempImageFile($binary);
 
         $imageOpts = ['alignment' => $opts['align'] ?? Jc::CENTER];
 
         $widthMm = $opts['width'] ?? null;
-        $widthTwips = $widthMm !== null ? Converter::cmToTwip($widthMm / 10) : $this->contentWidthTwips;
-        // 1 twip = 1/20 point; Converter has no twip->cm helper, so go via points.
-        $imageOpts['width'] = Converter::pointToPixel($widthTwips / 20);
+        $widthTwips = $widthMm !== null ? (int) round(Converter::cmToTwip($widthMm / 10)) : $this->contentWidthTwips;
+        $imageOpts['width'] = $this->pixelsFromTwips($widthTwips);
 
         $this->requireSection()->addImage($tmp, $imageOpts);
+    }
+
+    /**
+     * Lays out images (with optional captions) in an evenly-spaced grid table, N per row.
+     *
+     * @param  array<int, array{image: ?string, caption?: ?string}>  $items  raw binary or null
+     */
+    public function imageGrid(array $items, array $opts = []): void
+    {
+        if ($items === []) {
+            return;
+        }
+
+        $columns = max(1, (int) ($opts['columns'] ?? 2));
+        $widthMm = (float) ($opts['widthMm'] ?? 80);
+        $colWidth = (int) round($this->contentWidthTwips / $columns);
+
+        $table = $this->requireSection()->addTable(self::TABLE_STYLE);
+
+        foreach (array_chunk($items, $columns) as $rowItems) {
+            $table->addRow();
+            foreach ($rowItems as $item) {
+                $cell = $table->addCell($colWidth);
+                $this->addImageToCell($cell, $item['image'] ?? null, $widthMm);
+                $cell->addText((string) ($item['caption'] ?? ''), ['size' => 8], ['alignment' => Jc::CENTER]);
+            }
+            for ($i = count($rowItems); $i < $columns; $i++) {
+                $table->addCell($colWidth);
+            }
+        }
+    }
+
+    /**
+     * Renders a Previous | Current comparison table, one row per pair (used by 5.0).
+     *
+     * @param  array<int, array{label: string, previous: ?array{image: ?string, caption?: ?string}, current: ?array{image: ?string, caption?: ?string}}>  $pairs
+     */
+    public function imagePairs(array $pairs, array $opts = []): void
+    {
+        if ($pairs === []) {
+            return;
+        }
+
+        $widthMm = (float) ($opts['widthMm'] ?? 75);
+        $half = (int) round($this->contentWidthTwips / 2);
+
+        $table = $this->requireSection()->addTable(self::TABLE_STYLE);
+
+        $table->addRow(null, ['tblHeader' => true]);
+        foreach (['Previous', 'Current'] as $head) {
+            $table->addCell($half, ['bgColor' => self::HEADER_FILL])->addText($head, ['bold' => true, 'size' => 8]);
+        }
+
+        foreach ($pairs as $pair) {
+            $table->addRow();
+            foreach (['previous', 'current'] as $slot) {
+                $cell = $table->addCell($half);
+                $cell->addText((string) ($pair['label'] ?? ''), ['bold' => true, 'size' => 8]);
+
+                $side = $pair[$slot] ?? null;
+                if ($side && ! empty($side['image'])) {
+                    $this->addImageToCell($cell, $side['image'], $widthMm);
+                    $cell->addText((string) ($side['caption'] ?? ''), ['size' => 8]);
+                } else {
+                    $cell->addText('No image.', ['italic' => true, 'size' => 8, 'color' => '555555']);
+                }
+            }
+        }
     }
 
     /** Decodes a `data:<mime>;base64,<data>` URI (as produced by ReportViewData) to raw binary, or null. */
@@ -250,6 +329,33 @@ final class DocxDocument
 
         $footer = $section->addFooter();
         $footer->addPreserveText('Page {PAGE} of {NUMPAGES}', ['size' => 8], ['alignment' => Jc::CENTER]);
+    }
+
+    private function tempImageFile(string $binary): string
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'docximg');
+        file_put_contents($tmp, $binary);
+        $this->tempFiles[] = $tmp;
+
+        return $tmp;
+    }
+
+    // 1 twip = 1/20 point; Converter has no twip->pixel helper, so go via points.
+    private function pixelsFromTwips(int $twips): float
+    {
+        return Converter::pointToPixel($twips / 20);
+    }
+
+    private function addImageToCell(Cell $cell, ?string $binary, float $widthMm): void
+    {
+        if ($binary === null) {
+            return;
+        }
+
+        $tmp = $this->tempImageFile($binary);
+        $widthTwips = (int) round(Converter::cmToTwip($widthMm / 10));
+
+        $cell->addImage($tmp, ['width' => $this->pixelsFromTwips($widthTwips), 'alignment' => Jc::CENTER]);
     }
 
     private function requireSection(): Section
