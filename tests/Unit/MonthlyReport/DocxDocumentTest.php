@@ -53,6 +53,26 @@ class DocxDocumentTest extends TestCase
         $this->assertTrue($dom->loadXML($xml), 'document.xml must be well-formed');
     }
 
+    public function test_table_and_key_value_cells_render_multiple_lines_without_raw_newlines(): void
+    {
+        $doc = new DocxDocument(['title' => 'R', 'project_title' => 'P', 'contract_no' => 'C']);
+        $doc->newSection();
+        $doc->table(['Contacts'], [
+            [['Alice — Engineer', 'Bob — Manager']],
+        ]);
+        $doc->keyValue(['Note' => "Line one\nLine two"]);
+
+        $bytes = $doc->save();
+        $xml = $this->documentXml($bytes);
+
+        preg_match_all('#<w:t(?:\s[^>]*)?>(.*?)</w:t>#s', $xml, $matches);
+        $this->assertContains('Alice — Engineer', $matches[1], 'Each contact line must be its own <w:t> run');
+        $this->assertContains('Bob — Manager', $matches[1], 'Each contact line must be its own <w:t> run');
+        $this->assertContains('Line one', $matches[1], 'Each split line must be its own <w:t> run');
+        $this->assertContains('Line two', $matches[1], 'Each split line must be its own <w:t> run');
+        $this->assertStringNotContainsString('\n', $xml, 'A literal backslash-n must never leak into document.xml');
+    }
+
     private function documentXml(string $bytes): string
     {
         return $this->partXml($bytes, 'word/document.xml');

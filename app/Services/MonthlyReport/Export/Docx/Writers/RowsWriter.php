@@ -39,8 +39,12 @@ final class RowsWriter implements SectionWriter
         $doc->table($headers, $tableRows, ['fontSize' => 8]);
     }
 
-    /** @param  array<int, array{key: string, label: string, type?: string, default?: mixed}>  $columns */
-    private function cellValue(array $row, array $column): string
+    /**
+     * @param  array<int, array{key: string, label: string, type?: string, default?: mixed}>  $columns
+     * @return string|array<int, string> a plain value, or one array item per line for
+     *                                   DocxDocument::table()'s multi-line cell support
+     */
+    private function cellValue(array $row, array $column): string|array
     {
         $type = $column['type'] ?? 'text';
         $key = $column['key'];
@@ -61,7 +65,7 @@ final class RowsWriter implements SectionWriter
                 ]);
             }
 
-            return implode("\n", $lines);
+            return $lines;
         }
 
         $value = $row[$key] ?? null;

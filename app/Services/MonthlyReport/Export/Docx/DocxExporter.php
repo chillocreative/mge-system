@@ -103,22 +103,8 @@ final class DocxExporter
             'title' => "Monthly Progress Report No.{$ctx->reportNo}",
             'project_title' => $ctx->project->name,
             'contract_no' => $ctx->contract?->contract_no ?? $ctx->project->code,
-            'client_logo' => $this->decode($data['logos']['owner'] ?? null),
-            'mge_logo' => $this->decode($data['mgeLogo'] ?? null),
+            'client_logo' => DocxDocument::binaryFromDataUri($data['logos']['owner'] ?? null),
+            'mge_logo' => DocxDocument::binaryFromDataUri($data['mgeLogo'] ?? null),
         ];
-    }
-
-    private function decode(?string $dataUri): ?string
-    {
-        if ($dataUri === null) {
-            return null;
-        }
-
-        $comma = strpos($dataUri, ',');
-        if ($comma === false) {
-            return null;
-        }
-
-        return base64_decode(substr($dataUri, $comma + 1)) ?: null;
     }
 }

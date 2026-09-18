@@ -2,6 +2,7 @@
 
 namespace App\Services\MonthlyReport\Export\Docx;
 
+use PhpOffice\PhpWord\Element\Cell;
 use PhpOffice\PhpWord\Element\Section;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
@@ -162,8 +163,9 @@ final class DocxDocument
                 }
 
                 $cell = $table->addCell($this->cellWidth($widths[$c] ?? null), $cellStyle);
-                $cell->addText(
-                    $this->cellText($value),
+                $this->addCellLines(
+                    $cell,
+                    $value,
                     ['bold' => in_array($r, $boldRows, true), 'size' => $fontSize],
                     ['alignment' => $this->alignmentFor($align[$c] ?? null)]
                 );
@@ -180,7 +182,7 @@ final class DocxDocument
         foreach ($pairs as $label => $value) {
             $table->addRow();
             $table->addCell((int) round($this->contentWidthTwips * 0.35))->addText((string) $label, ['bold' => true, 'size' => 9]);
-            $table->addCell((int) round($this->contentWidthTwips * 0.65))->addText($this->cellText($value), ['size' => 9]);
+            $this->addCellLines($table->addCell((int) round($this->contentWidthTwips * 0.65)), $value, ['size' => 9]);
         }
     }
 
@@ -198,6 +200,21 @@ final class DocxDocument
         $imageOpts['width'] = Converter::pointToPixel($widthTwips / 20);
 
         $this->requireSection()->addImage($tmp, $imageOpts);
+    }
+
+    /** Decodes a `data:<mime>;base64,<data>` URI (as produced by ReportViewData) to raw binary, or null. */
+    public static function binaryFromDataUri(?string $dataUri): ?string
+    {
+        if ($dataUri === null) {
+            return null;
+        }
+
+        $comma = strpos($dataUri, ',');
+        if ($comma === false) {
+            return null;
+        }
+
+        return base64_decode(substr($dataUri, $comma + 1)) ?: null;
     }
 
     public function save(): string
@@ -244,13 +261,35 @@ final class DocxDocument
         return $this->section;
     }
 
-    private function cellText(mixed $value): string
+    /**
+     * Writes $value into $cell as one or more paragraphs: an array of strings becomes one
+     * paragraph per item, and any item (or a plain string) containing "\n" is split into one
+     * paragraph per line — so newlines never leak into document.xml as a raw literal "\n".
+     */
+    private function addCellLines(Cell $cell, mixed $value, array $fontStyle, array $paragraphStyle = []): void
     {
-        if ($value === null || $value === '') {
-            return '-';
+        foreach ($this->cellLines($value) as $line) {
+            $cell->addText($line, $fontStyle, $paragraphStyle);
+        }
+    }
+
+    /** @return string[] non-empty list of plain-text lines */
+    private function cellLines(mixed $value): array
+    {
+        if ($value === null || $value === '' || $value === []) {
+            return ['-'];
         }
 
-        return (string) $value;
+        $items = is_array($value) ? $value : [$value];
+
+        $lines = [];
+        foreach ($items as $item) {
+            foreach (explode("\n", (string) $item) as $line) {
+                $lines[] = $line;
+            }
+        }
+
+        return $lines === [] ? ['-'] : $lines;
     }
 
     private function cellWidth(int|string|null $width): ?int

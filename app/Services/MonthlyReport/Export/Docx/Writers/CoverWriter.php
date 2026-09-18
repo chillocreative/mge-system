@@ -52,7 +52,7 @@ final class CoverWriter implements SectionWriter
         $logos = $ctx['logos'] ?? [];
         foreach (self::PARTY_SLOTS as $slot => $meta) {
             $uri = $logos[$meta['logoRole']] ?? null;
-            $binary = $this->decode($uri);
+            $binary = DocxDocument::binaryFromDataUri($uri);
             if ($binary !== null) {
                 $doc->paragraph($meta['label'].' logo:', ['bold' => true, 'size' => 8]);
                 $doc->image($binary, ['width' => 30]);
@@ -63,27 +63,12 @@ final class CoverWriter implements SectionWriter
         $row = [];
         foreach (['prepared', 'verified', 'accepted'] as $slot) {
             $sig = $signatories->firstWhere('slot', $slot) ?? [];
-            $row[] = sprintf(
-                "Name: %s\nDesignation: %s\nCompany: %s",
-                $sig['name'] ?? '',
-                $sig['designation'] ?? '',
-                $sig['company'] ?? ''
-            );
+            $row[] = [
+                'Name: '.($sig['name'] ?? ''),
+                'Designation: '.($sig['designation'] ?? ''),
+                'Company: '.($sig['company'] ?? ''),
+            ];
         }
         $doc->table(['Prepared By', 'Verified By', 'Accepted By'], [$row]);
-    }
-
-    private function decode(?string $dataUri): ?string
-    {
-        if ($dataUri === null) {
-            return null;
-        }
-
-        $comma = strpos($dataUri, ',');
-        if ($comma === false) {
-            return null;
-        }
-
-        return base64_decode(substr($dataUri, $comma + 1)) ?: null;
     }
 }
