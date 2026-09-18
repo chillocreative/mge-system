@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import projectService from '@/services/projectService';
 import projectSiteService from '@/services/projectSiteService';
 import assetService from '@/services/assetService';
@@ -74,7 +74,24 @@ export default function ProjectDetail() {
     const { can } = useAuth();
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('overview');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const tabParam = searchParams.get('tab');
+    const [activeTab, setActiveTab] = useState(
+        tabs.some((t) => t.id === tabParam) ? tabParam : 'overview'
+    );
+
+    const handleTabClick = (tabId) => {
+        setActiveTab(tabId);
+        setSearchParams(
+            (prev) => {
+                const next = new URLSearchParams(prev);
+                next.set('tab', tabId);
+                if (tabId !== 'report-data') next.delete('panel');
+                return next;
+            },
+            { replace: true }
+        );
+    };
 
     const canEdit = can('projects.edit');
 
@@ -137,7 +154,7 @@ export default function ProjectDetail() {
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
+                            onClick={() => handleTabClick(tab.id)}
                             className={`flex items-center gap-1.5 whitespace-nowrap border-b-2 py-3 text-sm font-medium transition-colors ${
                                 activeTab === tab.id
                                     ? 'border-primary-500 text-primary-600'
@@ -161,7 +178,24 @@ export default function ProjectDetail() {
             {activeTab === 'documents' && <DocumentsTab project={project} canEdit={canEdit} onRefresh={fetchProject} />}
             {activeTab === 'calendar' && <CalendarTab project={project} canEdit={canEdit} onRefresh={fetchProject} />}
             {activeTab === 'discussions' && <ProjectDiscussions projectId={project.id} />}
-            {activeTab === 'report-data' && <ReportDataTab project={project} canEdit={canEdit} />}
+            {activeTab === 'report-data' && (
+                <ReportDataTab
+                    project={project}
+                    canEdit={canEdit}
+                    initialPanel={searchParams.get('panel')}
+                    onPanelChange={(panelId) => {
+                        setSearchParams(
+                            (prev) => {
+                                const next = new URLSearchParams(prev);
+                                next.set('tab', 'report-data');
+                                next.set('panel', panelId);
+                                return next;
+                            },
+                            { replace: true }
+                        );
+                    }}
+                />
+            )}
         </div>
     );
 }

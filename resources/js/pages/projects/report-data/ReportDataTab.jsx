@@ -19,9 +19,16 @@ const PANELS = [
     { id: 'images', label: 'Report Images', component: ReportImagesPanel },
 ];
 
-export default function ReportDataTab({ project, canEdit }) {
-    const [active, setActive] = useState(PANELS[0].id);
+export default function ReportDataTab({ project, canEdit, initialPanel, onPanelChange }) {
+    const [active, setActive] = useState(
+        PANELS.some((p) => p.id === initialPanel) ? initialPanel : PANELS[0].id
+    );
     const Panel = PANELS.find((p) => p.id === active)?.component;
+
+    const handlePanelClick = (panelId) => {
+        setActive(panelId);
+        onPanelChange?.(panelId);
+    };
 
     return (
         <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
@@ -31,7 +38,7 @@ export default function ReportDataTab({ project, canEdit }) {
                     <button
                         key={p.id}
                         type="button"
-                        onClick={() => setActive(p.id)}
+                        onClick={() => handlePanelClick(p.id)}
                         className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${active === p.id ? 'bg-primary-50 font-medium text-primary-700' : 'text-gray-700 hover:bg-gray-50'}`}
                     >
                         {p.label}
