@@ -198,7 +198,8 @@ final class MonthlyReportService
             }
             $to->sections()->where('key', $key)->update([
                 'overrides' => $source->overrides,
-                'overrides_at' => $source->overrides_at,
+                // Stamp the copy time: "stale" should only mean regenerated after the copy.
+                'overrides_at' => $source->overrides ? now() : null,
                 'notes' => $source->notes,
             ]);
         }
