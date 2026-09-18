@@ -151,16 +151,23 @@ class ProgrammeVersionController extends Controller
         }
 
         $newPath = $this->dir($projectId).'/'.$uuid.'.xml';
-        Storage::disk('local')->move($tmpPath, $newPath);
 
-        $version = $this->programmeService->createVersion($projectId, [
-            'label' => $validated['label'],
-            'status_date' => $validated['status_date'] ?? null,
-            'source_type' => 'mspdi',
-            'source_file_path' => $newPath,
-            'source_file_name' => $file->getClientOriginalName(),
-            'set_current' => $validated['set_current'] ?? true,
-        ], $activities, $request->user()->id);
+        try {
+            $version = $this->programmeService->createVersion($projectId, [
+                'label' => $validated['label'],
+                'status_date' => $validated['status_date'] ?? null,
+                'source_type' => 'mspdi',
+                'source_file_path' => $newPath,
+                'source_file_name' => $file->getClientOriginalName(),
+                'set_current' => $validated['set_current'] ?? true,
+            ], $activities, $request->user()->id);
+        } catch (ValidationException $e) {
+            Storage::disk('local')->delete($tmpPath);
+            throw $e;
+        }
+
+        // Keep the upload only once the version exists (mirrors import()).
+        Storage::disk('local')->move($tmpPath, $newPath);
 
         return $this->created($version, 'Programme imported.');
     }
