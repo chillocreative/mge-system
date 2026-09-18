@@ -303,7 +303,12 @@ export default function MonthlyReportEditor() {
     const openDocx = () => {
         const anchor = docxAnchorRef.current;
         if (!anchor || !report) return;
+        // Same-origin download: the API answers with Content-Disposition: attachment, so a
+        // plain `download` anchor works even after the awaited snapshot uploads have used up
+        // the browser's transient user-activation window (a target="_blank" click would be
+        // blocked as a pop-up).
         anchor.href = monthlyReportService.getDocxUrl(report.id);
+        anchor.setAttribute('download', '');
         anchor.click();
     };
 
@@ -480,7 +485,7 @@ export default function MonthlyReportEditor() {
                     >
                         <HiOutlineDownload className="h-4 w-4" /> Export PDF
                     </a>
-                    <a ref={docxAnchorRef} target="_blank" rel="noopener" className="hidden" aria-hidden="true" />
+                    <a ref={docxAnchorRef} download className="hidden" aria-hidden="true" />
                     <button
                         type="button"
                         onClick={exportWord}
