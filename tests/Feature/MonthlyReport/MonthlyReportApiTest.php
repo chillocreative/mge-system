@@ -72,6 +72,23 @@ class MonthlyReportApiTest extends TestCase
         $this->assertSame('January 2026', $res->json('data.month_label'));
     }
 
+    public function test_create_works_for_a_project_without_baseline_contract_or_periods(): void
+    {
+        $project = $this->project(); // no contract, no baseline, no periods, no parties
+
+        $res = $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", [
+            'period_end' => '2028-04-15',
+            'report_no' => 123,
+            'month_label' => 'April 2028 test',
+        ])->assertCreated();
+
+        $this->assertCount(21, $res->json('data.sections'));
+        $period = ProjectProgressPeriod::where('project_id', $project->id)->first();
+        $this->assertNotNull($period);
+        $this->assertSame('2028-04-15', $period->period_end->toDateString());
+        $this->assertEquals(0, $period->physical_scheduled_pct);
+    }
+
     public function test_save_section_override_merges_without_touching_stored_data(): void
     {
         [$project, $period] = $this->seedProject();

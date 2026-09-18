@@ -240,8 +240,9 @@ final class MonthlyReportService
             'period_no' => (int) $lastNo + 1,
             'period_start' => $bounds['start']->toDateString(),
             'period_end' => $bounds['end']->toDateString(),
-            'physical_scheduled_pct' => $baseline?->scheduled_physical_pct !== null ? (float) $baseline->scheduled_physical_pct : null,
-            'financial_scheduled_pct' => $baseline?->scheduled_financial_pct !== null ? (float) $baseline->scheduled_financial_pct : null,
+            // The columns are NOT NULL (default 0); a project without a baseline yet gets 0.
+            'physical_scheduled_pct' => $baseline?->scheduled_physical_pct !== null ? (float) $baseline->scheduled_physical_pct : 0.0,
+            'financial_scheduled_pct' => $baseline?->scheduled_financial_pct !== null ? (float) $baseline->scheduled_financial_pct : 0.0,
             'financial_actual_amount' => $fin['amount'],
             'financial_actual_pct' => $fin['pct'],
             'planning_days_completion' => $contract?->possession_date && $contract?->completion_date
