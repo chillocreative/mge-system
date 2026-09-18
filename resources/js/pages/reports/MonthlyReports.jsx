@@ -286,6 +286,15 @@ export default function MonthlyReports() {
                                                 >
                                                     <HiOutlineDownload className="h-4 w-4" />
                                                 </a>
+                                                <a
+                                                    href={monthlyReportService.getDocxUrl(r.id)}
+                                                    target="_blank"
+                                                    rel="noopener"
+                                                    className="rounded px-1.5 py-1.5 text-xs font-semibold text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                                                    title="Download Word"
+                                                >
+                                                    Word
+                                                </a>
                                                 {canManage && r.status === 'draft' && (
                                                     <button
                                                         onClick={() => handleDelete(r.id)}
