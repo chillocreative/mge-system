@@ -197,9 +197,11 @@ class MonthlyReportController extends Controller
                 'include' => $s->include,
                 'data' => $s->data,
                 'overrides' => $s->overrides,
+                'overrides_at' => $s->overrides_at,
                 'notes' => $s->notes,
                 'merged' => $s->merged,
                 'regenerated_at' => $s->regenerated_at,
+                'stale' => (bool) ($s->overrides && $s->overrides_at && $s->regenerated_at && $s->regenerated_at->gt($s->overrides_at)),
             ]),
         ];
     }

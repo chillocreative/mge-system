@@ -144,6 +144,7 @@ final class MonthlyReportService
                 throw ValidationException::withMessages(['overrides' => ['Unknown or invalid override key(s): '.implode(', ', $invalid)]]);
             }
             $update['overrides'] = $overrides ?: null;
+            $update['overrides_at'] = $overrides ? now() : null;
         }
 
         if (array_key_exists('notes', $payload)) {
@@ -197,6 +198,7 @@ final class MonthlyReportService
             }
             $to->sections()->where('key', $key)->update([
                 'overrides' => $source->overrides,
+                'overrides_at' => $source->overrides_at,
                 'notes' => $source->notes,
             ]);
         }

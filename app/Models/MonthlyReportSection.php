@@ -8,13 +8,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MonthlyReportSection extends Model
 {
-    protected $fillable = ['report_id', 'key', 'title', 'sort_order', 'include', 'data', 'overrides', 'notes', 'regenerated_at'];
+    protected $fillable = ['report_id', 'key', 'title', 'sort_order', 'include', 'data', 'overrides', 'overrides_at', 'notes', 'regenerated_at'];
 
     protected $appends = ['merged'];
 
     protected function casts(): array
     {
-        return ['include' => 'boolean', 'data' => 'array', 'overrides' => 'array', 'regenerated_at' => 'datetime'];
+        return ['include' => 'boolean', 'data' => 'array', 'overrides' => 'array', 'overrides_at' => 'datetime', 'regenerated_at' => 'datetime'];
     }
 
     public function report(): BelongsTo

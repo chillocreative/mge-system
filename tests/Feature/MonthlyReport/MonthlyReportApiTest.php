@@ -372,6 +372,50 @@ class MonthlyReportApiTest extends TestCase
         $this->actingAs($this->viewer)->get("/api/monthly-reports/{$reportId}/charts/2.2")->assertOk();
     }
 
+    public function test_save_section_tracks_overrides_at_and_flags_stale_after_regenerate(): void
+    {
+        [$project, $period] = $this->seedProject();
+        $reportId = $this->actingAs($this->manager)->postJson("/api/projects/{$project->id}/monthly-reports", ['period_id' => $period->id])->json('data.id');
+
+        // A section without overrides is never stale.
+        $created = collect($this->actingAs($this->manager)->getJson("/api/monthly-reports/{$reportId}")->json('data.sections'))
+            ->firstWhere('key', '1.1');
+        $this->assertNull($created['overrides_at']);
+        $this->assertFalse($created['stale']);
+
+        // Saving overrides sets overrides_at and stale=false.
+        $res = $this->actingAs($this->manager)->putJson("/api/monthly-reports/{$reportId}/sections/1.1", [
+            'overrides' => ['_rows' => [['label' => 'Custom', 'value' => 'X']]],
+        ])->assertOk();
+        $this->assertNotNull($res->json('data.overrides_at'));
+
+        $saved = collect($this->actingAs($this->manager)->getJson("/api/monthly-reports/{$reportId}")->json('data.sections'))->firstWhere('key', '1.1');
+        $this->assertFalse($saved['stale']);
+
+        // Regenerating that section makes it stale. Travel forward so `regenerated_at` lands in a
+        // later second than `overrides_at` — the DB timestamp columns are second-precision, so an
+        // immediate regenerate could otherwise land in the same second and produce a false negative.
+        $this->travel(1)->seconds();
+        $this->actingAs($this->manager)->postJson("/api/monthly-reports/{$reportId}/regenerate?key=1.1")->assertOk();
+        $after = collect($this->actingAs($this->manager)->getJson("/api/monthly-reports/{$reportId}")->json('data.sections'))->firstWhere('key', '1.1');
+        $this->assertTrue($after['stale']);
+
+        // Re-saving the same overrides clears stale.
+        $this->actingAs($this->manager)->putJson("/api/monthly-reports/{$reportId}/sections/1.1", [
+            'overrides' => ['_rows' => [['label' => 'Custom', 'value' => 'X']]],
+        ])->assertOk();
+        $resaved = collect($this->actingAs($this->manager)->getJson("/api/monthly-reports/{$reportId}")->json('data.sections'))->firstWhere('key', '1.1');
+        $this->assertFalse($resaved['stale']);
+
+        // Resetting overrides to empty clears overrides_at and stale.
+        $this->actingAs($this->manager)->putJson("/api/monthly-reports/{$reportId}/sections/1.1", [
+            'overrides' => [],
+        ])->assertOk();
+        $reset = collect($this->actingAs($this->manager)->getJson("/api/monthly-reports/{$reportId}")->json('data.sections'))->firstWhere('key', '1.1');
+        $this->assertNull($reset['overrides_at']);
+        $this->assertFalse($reset['stale']);
+    }
+
     public function test_chart_endpoint_requires_authentication(): void
     {
         [$project, $period] = $this->seedProject();
