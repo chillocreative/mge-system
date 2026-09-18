@@ -1,0 +1,297 @@
+<?php
+
+namespace Tests\Feature\ReportData;
+
+use App\Models\Project;
+use App\Models\ProjectProgrammeVersion;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Spatie\Permission\Models\Permission;
+use Tests\TestCase;
+
+class ProgrammeApiTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $editor;
+
+    private User $viewer;
+
+    private array $tempFiles = [];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Storage::fake('local');
+        foreach (['projects.view', 'projects.edit'] as $p) {
+            Permission::findOrCreate($p, 'web');
+        }
+        $this->editor = User::create(['first_name' => 'Ed', 'last_name' => 'Itor', 'email' => 'ed-'.uniqid().'@mge-eng.com', 'password' => bcrypt('x'), 'status' => 'active']);
+        $this->editor->givePermissionTo(['projects.view', 'projects.edit']);
+
+        $this->viewer = User::create(['first_name' => 'Vi', 'last_name' => 'Ewer', 'email' => 'vi-'.uniqid().'@mge-eng.com', 'password' => bcrypt('x'), 'status' => 'active']);
+        $this->viewer->givePermissionTo(['projects.view']);
+    }
+
+    protected function tearDown(): void
+    {
+        foreach ($this->tempFiles as $file) {
+            if (is_file($file)) {
+                unlink($file);
+            }
+        }
+        $this->tempFiles = [];
+
+        parent::tearDown();
+    }
+
+    private function project(): Project
+    {
+        return Project::create(['name' => 'P', 'code' => 'P'.random_int(100000, 999999), 'status' => 'in_progress']);
+    }
+
+    private function sampleRows(): array
+    {
+        return [
+            ['Activity Name', 'Duration', 'Start', 'Finish', '% Complete', 'Planned %'],
+            ['Mobilization', '5 days', '01/01/2026', '08/01/2026', '100', '100'],
+            ['Excavation', '10 days', '09/01/2026', '20/01/2026', '80', '90'],
+            ['Foundation', '20 days', '21/01/2026', '20/02/2026', '30', '50'],
+        ];
+    }
+
+    private function xlsxUploadedFile(string $name = 'programme.xlsx'): UploadedFile
+    {
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        foreach ($this->sampleRows() as $r => $row) {
+            foreach ($row as $c => $value) {
+                $sheet->setCellValueByColumnAndRow($c + 1, $r + 1, $value);
+            }
+        }
+
+        $path = sys_get_temp_dir().'/programme-api-test-'.uniqid().'.xlsx';
+        $this->tempFiles[] = $path;
+        (new Xlsx($spreadsheet))->save($path);
+
+        return new UploadedFile($path, $name, null, null, true);
+    }
+
+    private function mspdiUploadedFile(): UploadedFile
+    {
+        return new UploadedFile(base_path('tests/fixtures/programme/sample-mspdi.xml'), 'sample-mspdi.xml', 'text/xml', null, true);
+    }
+
+    private function previewAndGetToken(int $projectId): array
+    {
+        $res = $this->actingAs($this->editor)
+            ->post("/api/projects/{$projectId}/programme-versions/preview", [
+                'file' => $this->xlsxUploadedFile(),
+            ])
+            ->assertOk();
+
+        return $res->json('data');
+    }
+
+    public function test_preview_returns_headers_sample_and_suggested_mapping(): void
+    {
+        $project = $this->project();
+
+        $data = $this->previewAndGetToken($project->id);
+
+        $this->assertSame(
+            ['Activity Name', 'Duration', 'Start', 'Finish', '% Complete', 'Planned %'],
+            $data['headers']
+        );
+        $this->assertSame(3, $data['row_count']);
+        $this->assertSame(0, $data['suggested']['name']);
+        $this->assertNotEmpty($data['token']);
+        $this->assertSame('programme.xlsx', $data['file_name']);
+    }
+
+    public function test_import_with_mapping_creates_version_and_activities_and_marks_current(): void
+    {
+        $project = $this->project();
+        $preview = $this->previewAndGetToken($project->id);
+
+        $res = $this->actingAs($this->editor)
+            ->postJson("/api/projects/{$project->id}/programme-versions/import", [
+                'token' => $preview['token'],
+                'mapping' => [
+                    'name' => $preview['suggested']['name'],
+                    'duration' => $preview['suggested']['duration'],
+                    'start' => $preview['suggested']['start'],
+                    'finish' => $preview['suggested']['finish'],
+                    'actual_pct' => $preview['suggested']['actual_pct'],
+                    'plan_pct' => $preview['suggested']['plan_pct'],
+                ],
+                'label' => 'Baseline Programme',
+                'status_date' => '2026-01-31',
+            ])
+            ->assertCreated();
+
+        $versionId = $res->json('data.id');
+        $version = ProjectProgrammeVersion::findOrFail($versionId);
+
+        $this->assertTrue($version->is_current);
+        $this->assertSame(3, $version->activity_count);
+        $this->assertSame(3, $version->activities()->count());
+        $this->assertSame('xlsx', $version->source_type);
+        Storage::disk('local')->assertExists($version->source_file_path);
+
+        $list = $this->actingAs($this->editor)->getJson("/api/projects/{$project->id}/programme-versions")->assertOk();
+        $this->assertCount(1, $list->json('data'));
+        $this->assertSame('Ed Itor', $list->json('data.0.imported_by_name'));
+        $this->assertTrue($list->json('data.0.is_current'));
+    }
+
+    public function test_import_with_token_from_another_project_is_rejected(): void
+    {
+        $projectA = $this->project();
+        $projectB = $this->project();
+
+        $preview = $this->previewAndGetToken($projectA->id);
+
+        $this->actingAs($this->editor)
+            ->postJson("/api/projects/{$projectB->id}/programme-versions/import", [
+                'token' => $preview['token'],
+                'mapping' => ['name' => $preview['suggested']['name']],
+                'label' => 'Cross project',
+            ])
+            ->assertStatus(422);
+    }
+
+    public function test_import_mspdi_creates_version(): void
+    {
+        $project = $this->project();
+
+        $res = $this->actingAs($this->editor)
+            ->post("/api/projects/{$project->id}/programme-versions/import-mspdi", [
+                'file' => $this->mspdiUploadedFile(),
+                'label' => 'MSPDI Import',
+            ])
+            ->assertCreated();
+
+        $version = ProjectProgrammeVersion::findOrFail($res->json('data.id'));
+        $this->assertSame('mspdi', $version->source_type);
+        $this->assertTrue($version->is_current);
+        $this->assertGreaterThan(0, $version->activity_count);
+        Storage::disk('local')->assertExists($version->source_file_path);
+    }
+
+    public function test_version_of_another_project_returns_404(): void
+    {
+        $projectA = $this->project();
+        $projectB = $this->project();
+
+        $res = $this->actingAs($this->editor)
+            ->post("/api/projects/{$projectA->id}/programme-versions/import-mspdi", [
+                'file' => $this->mspdiUploadedFile(),
+                'label' => 'MSPDI Import',
+            ])
+            ->assertCreated();
+        $versionId = $res->json('data.id');
+
+        $this->actingAs($this->editor)
+            ->putJson("/api/projects/{$projectB->id}/programme-versions/{$versionId}", ['label' => 'New'])
+            ->assertStatus(404);
+
+        $this->actingAs($this->editor)
+            ->getJson("/api/projects/{$projectB->id}/programme-versions/{$versionId}/activities")
+            ->assertStatus(404);
+
+        $this->actingAs($this->editor)
+            ->deleteJson("/api/projects/{$projectB->id}/programme-versions/{$versionId}")
+            ->assertStatus(404);
+    }
+
+    public function test_delete_current_version_promotes_next_latest(): void
+    {
+        $project = $this->project();
+
+        $v1 = $this->actingAs($this->editor)->post("/api/projects/{$project->id}/programme-versions/import-mspdi", [
+            'file' => $this->mspdiUploadedFile(), 'label' => 'V1', 'status_date' => '2026-01-15',
+        ])->assertCreated()->json('data.id');
+
+        $v2 = $this->actingAs($this->editor)->post("/api/projects/{$project->id}/programme-versions/import-mspdi", [
+            'file' => $this->mspdiUploadedFile(), 'label' => 'V2', 'status_date' => '2026-02-15',
+        ])->assertCreated()->json('data.id');
+
+        $this->assertTrue(ProjectProgrammeVersion::findOrFail($v2)->is_current);
+
+        $this->actingAs($this->editor)
+            ->deleteJson("/api/projects/{$project->id}/programme-versions/{$v2}")
+            ->assertOk();
+
+        $this->assertNull(ProjectProgrammeVersion::find($v2));
+        $this->assertTrue(ProjectProgrammeVersion::findOrFail($v1)->is_current);
+    }
+
+    public function test_view_only_user_is_forbidden_on_write_actions(): void
+    {
+        $project = $this->project();
+
+        $this->actingAs($this->viewer)
+            ->post("/api/projects/{$project->id}/programme-versions/preview", [
+                'file' => $this->xlsxUploadedFile(),
+            ])
+            ->assertStatus(403);
+
+        $this->actingAs($this->viewer)
+            ->post("/api/projects/{$project->id}/programme-versions/import-mspdi", [
+                'file' => $this->mspdiUploadedFile(), 'label' => 'V1',
+            ])
+            ->assertStatus(403);
+
+        $version = $this->actingAs($this->editor)->post("/api/projects/{$project->id}/programme-versions/import-mspdi", [
+            'file' => $this->mspdiUploadedFile(), 'label' => 'V1',
+        ])->assertCreated()->json('data.id');
+
+        $this->actingAs($this->viewer)
+            ->putJson("/api/projects/{$project->id}/programme-versions/{$version}", ['label' => 'New'])
+            ->assertStatus(403);
+
+        $this->actingAs($this->viewer)
+            ->deleteJson("/api/projects/{$project->id}/programme-versions/{$version}")
+            ->assertStatus(403);
+
+        // reading remains allowed for view-only users
+        $this->actingAs($this->viewer)
+            ->getJson("/api/projects/{$project->id}/programme-versions")
+            ->assertOk();
+    }
+
+    public function test_activities_endpoint_paginates(): void
+    {
+        $project = $this->project();
+
+        $version = $this->actingAs($this->editor)->post("/api/projects/{$project->id}/programme-versions/import-mspdi", [
+            'file' => $this->mspdiUploadedFile(), 'label' => 'V1',
+        ])->assertCreated()->json('data.id');
+
+        $res = $this->actingAs($this->editor)
+            ->getJson("/api/projects/{$project->id}/programme-versions/{$version}/activities?per_page=2")
+            ->assertOk();
+
+        $this->assertCount(2, $res->json('data.data'));
+        $this->assertSame(2, $res->json('data.per_page'));
+        $this->assertArrayHasKey('seq', $res->json('data.data.0'));
+
+        $resCapped = $this->actingAs($this->editor)
+            ->getJson("/api/projects/{$project->id}/programme-versions/{$version}/activities?per_page=9999")
+            ->assertOk();
+        $this->assertSame(500, $resCapped->json('data.per_page'));
+    }
+
+    public function test_unauthenticated_requests_are_rejected(): void
+    {
+        $project = $this->project();
+
+        $this->getJson("/api/projects/{$project->id}/programme-versions")->assertStatus(401);
+        $this->postJson("/api/projects/{$project->id}/programme-versions/preview", [])->assertStatus(401);
+    }
+}

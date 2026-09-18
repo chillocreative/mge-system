@@ -43,6 +43,7 @@ use App\Http\Controllers\Api\QcController;
 use App\Http\Controllers\Api\ReportData\ContractParticularsController;
 use App\Http\Controllers\Api\ReportData\DelayNoticeController;
 use App\Http\Controllers\Api\ReportData\OrgChartController;
+use App\Http\Controllers\Api\ReportData\ProgrammeVersionController;
 use App\Http\Controllers\Api\ReportData\ProgressPeriodController;
 use App\Http\Controllers\Api\ReportData\ProjectTestController;
 use App\Http\Controllers\Api\ReportData\ReportImageController;
@@ -177,6 +178,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('{project}/schedule-baseline')->middleware('permission:projects.view')->group(function () {
             Route::get('/', [ScheduleBaselineController::class, 'index']);
             Route::put('/', [ScheduleBaselineController::class, 'replace'])->middleware('permission:projects.edit');
+        });
+
+        // Work programme versions — nested under projects; XLSX/MSPDI import with preview + mapping
+        Route::prefix('{project}/programme-versions')->group(function () {
+            Route::get('/', [ProgrammeVersionController::class, 'index'])->middleware('permission:projects.view');
+            Route::post('/preview', [ProgrammeVersionController::class, 'preview'])->middleware('permission:projects.edit');
+            Route::post('/import', [ProgrammeVersionController::class, 'import'])->middleware('permission:projects.edit');
+            Route::post('/import-mspdi', [ProgrammeVersionController::class, 'importMspdi'])->middleware('permission:projects.edit');
+            Route::put('/{version}', [ProgrammeVersionController::class, 'update'])->middleware('permission:projects.edit');
+            Route::delete('/{version}', [ProgrammeVersionController::class, 'destroy'])->middleware('permission:projects.edit');
+            Route::get('/{version}/activities', [ProgrammeVersionController::class, 'activities'])->middleware('permission:projects.view');
         });
 
         // Progress periods — nested under projects; monthly physical/financial actuals with computed variance
