@@ -110,12 +110,25 @@ class SiteFormController extends Controller
     public function downloadAttachment(int $attachment)
     {
         $model = SiteFormAttachment::findOrFail($attachment);
-        $extension = strtolower(pathinfo($model->file_name, PATHINFO_EXTENSION));
+        $disk = Storage::disk('local');
 
-        if (in_array($extension, ['jpg', 'jpeg', 'png'], true)) {
-            return Storage::disk('local')->response($model->file_path, $model->file_name);
+        // Decide from the stored path, not the client-supplied name. Photos are served inline so the
+        // daily site diary can render them; everything else is forced to download. Content-Type is
+        // set explicitly because production PHP lacks the fileinfo extension that MIME guessing needs.
+        $extension = strtolower(pathinfo($model->file_path, PATHINFO_EXTENSION));
+        $inline = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png'];
+
+        if (isset($inline[$extension])) {
+            return response($disk->get($model->file_path), 200, [
+                'Content-Type' => $inline[$extension],
+                'Content-Disposition' => 'inline; filename="'.addslashes($model->file_name).'"',
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
         }
 
-        return Storage::disk('local')->download($model->file_path, $model->file_name);
+        return $disk->download($model->file_path, $model->file_name, [
+            'Content-Type' => 'application/octet-stream',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 }
