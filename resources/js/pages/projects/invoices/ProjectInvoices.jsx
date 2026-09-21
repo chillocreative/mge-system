@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import {
     HiOutlinePlus, HiOutlineSearch, HiOutlineDocumentText, HiOutlinePencil, HiOutlineTrash,
     HiOutlineDownload, HiOutlinePaperClip, HiOutlineTrendingUp, HiOutlineArrowUp, HiOutlineArrowDown,
+    HiOutlineCalendar,
 } from 'react-icons/hi';
 
 const fmt = (v) => 'RM ' + Number(v || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 });
@@ -25,6 +26,7 @@ const typeBadge = {
     subcon: { label: 'Subcon → MGE', cls: 'bg-orange-100 text-orange-700' },
 };
 const today = () => new Date().toISOString().split('T')[0];
+const currentMonth = () => today().slice(0, 7);
 const paymentMethods = [
     { k: 'cash', l: 'Cash' },
     { k: 'online_transfer', l: 'Online Transfer' },
@@ -49,6 +51,8 @@ export default function ProjectInvoices() {
     const [projects, setProjects] = useState([]);
     const [summary, setSummary] = useState({ total_client: 0, total_subcon: 0, profit: 0 });
     const [byProject, setByProject] = useState([]);
+    const [monthFilter, setMonthFilter] = useState(currentMonth());
+    const [monthSummary, setMonthSummary] = useState({ total_client: 0, total_subcon: 0, profit: 0, client_count: 0, subcon_count: 0 });
 
     const [projectFilter, setProjectFilter] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
@@ -99,6 +103,16 @@ export default function ProjectInvoices() {
 
     useEffect(() => { fetchSummary(); }, [fetchSummary]);
 
+    const fetchMonthSummary = useCallback(async () => {
+        try {
+            const params = { ...(projectFilter ? { project_id: projectFilter } : {}), month: monthFilter };
+            const res = await projectInvoiceService.summary(params);
+            setMonthSummary(res.data || { total_client: 0, total_subcon: 0, profit: 0, client_count: 0, subcon_count: 0 });
+        } catch { /* ignore */ }
+    }, [projectFilter, monthFilter]);
+
+    useEffect(() => { fetchMonthSummary(); }, [fetchMonthSummary]);
+
     const fetchByProject = useCallback(async () => {
         try {
             const res = await projectInvoiceService.byProject();
@@ -111,7 +125,7 @@ export default function ProjectInvoices() {
         fetchByProject();
     }, [fetchByProject]);
 
-    const refresh = () => { fetchInvoices(); fetchSummary(); fetchByProject(); };
+    const refresh = () => { fetchInvoices(); fetchSummary(); fetchMonthSummary(); fetchByProject(); };
 
     const openCreate = () => { setEditId(null); setForm({ ...emptyForm, project_id: projectFilter || '' }); setFiles([]); setExistingFiles([]); setErrors({}); setPayments([]); setPaymentForm(emptyPaymentForm); setShowForm(true); };
     const openEdit = (inv) => {
@@ -226,7 +240,7 @@ export default function ProjectInvoices() {
             </div>
 
             {/* Summary / profit cards */}
-            <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
                     <div className="flex items-center justify-between">
                         <p className="text-sm font-medium text-gray-500">Invoiced to Client</p>
@@ -250,6 +264,31 @@ export default function ProjectInvoices() {
                     </div>
                     <p className="mt-2 text-2xl font-bold text-white">{fmt(summary.profit)}</p>
                     <p className="text-xs text-white/70">Client invoiced − Subcon cost{projectFilter ? ' (this project)' : ' (all projects)'}</p>
+                </div>
+                <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+                    <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium text-gray-500">Monthly Summary</p>
+                        <div className="flex items-center gap-1">
+                            <HiOutlineCalendar className="h-4 w-4 text-gray-400" />
+                            <input type="month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value || currentMonth())}
+                                className="rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-600 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                        </div>
+                    </div>
+                    <div className="mt-3 space-y-1.5">
+                        <div className="flex justify-between text-xs">
+                            <span className="text-gray-500">Invoiced to Client</span>
+                            <span className="font-semibold text-emerald-700">{fmt(monthSummary.total_client)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                            <span className="text-gray-500">Paid to Subcon</span>
+                            <span className="font-semibold text-orange-700">{fmt(monthSummary.total_subcon)}</span>
+                        </div>
+                        <div className="mt-1 flex justify-between border-t pt-1.5 text-sm">
+                            <span className="font-medium text-gray-700">Net Profit</span>
+                            <span className={`font-bold ${(monthSummary.profit ?? 0) >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{fmt(monthSummary.profit)}</span>
+                        </div>
+                    </div>
+                    <p className="mt-2 text-xs text-gray-400">{(monthSummary.client_count || 0) + (monthSummary.subcon_count || 0)} invoice(s) this month</p>
                 </div>
             </div>
 

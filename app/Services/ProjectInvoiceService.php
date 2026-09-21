@@ -47,6 +47,10 @@ class ProjectInvoiceService
         if (! empty($filters['project_id'])) {
             $base->forProject($filters['project_id']);
         }
+        if (! empty($filters['month'])) {
+            [$year, $month] = explode('-', $filters['month']);
+            $base->whereYear('invoice_date', (int) $year)->whereMonth('invoice_date', (int) $month);
+        }
 
         $client = (float) (clone $base)->byType('client')->sum('amount');
         $subcon = (float) (clone $base)->byType('subcon')->sum('amount');

@@ -24,7 +24,11 @@ class ProjectInvoiceController extends Controller
 
     public function summary(Request $request): JsonResponse
     {
-        return $this->success($this->service->summary($request->only(['project_id'])));
+        $request->validate([
+            'month' => ['nullable', 'date_format:Y-m'],
+        ]);
+
+        return $this->success($this->service->summary($request->only(['project_id', 'month'])));
     }
 
     public function summaryByProject(): JsonResponse
