@@ -187,7 +187,12 @@ export default function CorrespondenceList() {
                                                         {row.reference_no || '-'}
                                                     </Link>
                                                 </td>
-                                                <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.title}</td>
+                                                <td className="px-4 py-3">
+                                                    <p className="text-sm font-medium text-gray-900">{row.title}</p>
+                                                    {(row.from || row.to) && (
+                                                        <p className="text-xs text-gray-500">{row.from || '—'} → {row.to || '—'}</p>
+                                                    )}
+                                                </td>
                                                 <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(row.date_issued)}</td>
                                                 <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(row.date_inspection)}</td>
                                                 <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(row.date_closed)}</td>

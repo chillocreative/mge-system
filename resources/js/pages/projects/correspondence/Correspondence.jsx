@@ -16,6 +16,9 @@ import {
     HiOutlineTrash, HiOutlineDownload, HiOutlinePaperClip, HiOutlineCog, HiOutlineX, HiOutlineClock,
 } from 'react-icons/hi';
 
+const PARTY_TYPES = ['client', 'consultant', 'main_contractor', 'subcontractor', 'supplier', 'authority', 'other'];
+const NEW_PARTY_VALUE = '__new__';
+
 const BADGE_COLORS = {
     gray: 'bg-gray-100 text-gray-700', red: 'bg-red-100 text-red-700', orange: 'bg-orange-100 text-orange-700',
     amber: 'bg-amber-100 text-amber-700', green: 'bg-green-100 text-green-700', teal: 'bg-teal-100 text-teal-700',
@@ -38,7 +41,10 @@ const dayDiff = (from, to) => {
 const baseForm = {
     project_id: '', site_id: '', type: '', reference_no: '', title: '', description: '',
     status: 'open', other_status_text: '', raised_date: new Date().toISOString().split('T')[0], due_date: '', response: '', files: [],
+    from_party_id: '', to_party_id: '',
+    reminded_date: '', consultant_status: '', consultant_closed_date: '', client_status: '', client_closed_date: '',
 };
+const STATUS_SUGGESTIONS = ['Pending', 'Replied', 'Approved', 'Rejected', 'Forwarded'];
 const emptyTypeForm = { name: '', code: '', full_name: '', color: 'gray', sort_order: 0, is_active: true };
 
 export default function Correspondence() {
@@ -63,6 +69,10 @@ export default function Correspondence() {
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState(baseForm);
     const [sites, setSites] = useState([]);
+    const [parties, setParties] = useState([]);
+    const [newPartyField, setNewPartyField] = useState(null); // 'from_party_id' | 'to_party_id' | null
+    const [newParty, setNewParty] = useState({ name: '', type: 'other' });
+    const [addingParty, setAddingParty] = useState(false);
 
     // Manage types modal
     const [showTypes, setShowTypes] = useState(false);
@@ -115,9 +125,42 @@ export default function Correspondence() {
         projectSiteService.list(form.project_id, true).then((r) => setSites(r.data || [])).catch(() => setSites([]));
     }, [form.project_id]);
 
+    useEffect(() => {
+        if (!form.project_id) { setParties([]); return; }
+        correspondenceService.listParties(form.project_id).then((r) => setParties(r.data || [])).catch(() => setParties([]));
+    }, [form.project_id]);
+
+    const addNewParty = async () => {
+        if (!newParty.name.trim() || !newPartyField) return;
+        setAddingParty(true);
+        try {
+            const res = await correspondenceService.createParty({ project_id: form.project_id, name: newParty.name, type: newParty.type || 'other' });
+            const created = res.data;
+            setParties((prev) => [...prev, created]);
+            setForm((p) => ({ ...p, [newPartyField]: created.id }));
+            toast.success('Party added');
+            setNewPartyField(null);
+            setNewParty({ name: '', type: 'other' });
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to add party');
+        } finally {
+            setAddingParty(false);
+        }
+    };
+
+    const handlePartySelect = (field, value) => {
+        if (value === NEW_PARTY_VALUE) {
+            setNewPartyField(field);
+            setNewParty({ name: '', type: 'other' });
+            return;
+        }
+        setForm((p) => ({ ...p, [field]: value }));
+    };
+
     const openCreate = () => {
         setEditingId(null);
         setForm({ ...baseForm, type: activeTypes[0]?.code || '' });
+        setNewPartyField(null);
         setShowForm(true);
     };
 
@@ -129,7 +172,14 @@ export default function Correspondence() {
             raised_date: item.raised_date ? String(item.raised_date).split('T')[0] : '',
             due_date: item.due_date ? String(item.due_date).split('T')[0] : '',
             response: item.response || '', files: [],
+            from_party_id: item.from_party_id || '', to_party_id: item.to_party_id || '',
+            reminded_date: item.reminded_date ? String(item.reminded_date).split('T')[0] : '',
+            consultant_status: item.consultant_status || '',
+            consultant_closed_date: item.consultant_closed_date ? String(item.consultant_closed_date).split('T')[0] : '',
+            client_status: item.client_status || '',
+            client_closed_date: item.client_closed_date ? String(item.client_closed_date).split('T')[0] : '',
         });
+        setNewPartyField(null);
         setShowForm(true);
     };
 
@@ -149,6 +199,13 @@ export default function Correspondence() {
             if (form.description) fd.append('description', form.description);
             if (form.due_date) fd.append('due_date', form.due_date);
             if (form.response) fd.append('response', form.response);
+            if (form.from_party_id) fd.append('from_party_id', form.from_party_id);
+            if (form.to_party_id) fd.append('to_party_id', form.to_party_id);
+            if (form.reminded_date) fd.append('reminded_date', form.reminded_date);
+            if (form.consultant_status) fd.append('consultant_status', form.consultant_status);
+            if (form.consultant_closed_date) fd.append('consultant_closed_date', form.consultant_closed_date);
+            if (form.client_status) fd.append('client_status', form.client_status);
+            if (form.client_closed_date) fd.append('client_closed_date', form.client_closed_date);
             form.files.forEach((f) => fd.append('files[]', f));
 
             if (editingId) { await correspondenceService.update(editingId, fd); toast.success('Correspondence updated'); }
@@ -282,24 +339,36 @@ export default function Correspondence() {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">No</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Ref No</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Type</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Reference No</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Title</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Project</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Raised Date</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Close Date</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Created By</th>
+                                    <th className="min-w-[16rem] px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Title</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">From → To</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Date Issued</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Date Reminded</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status (Consultant)</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Date Approved</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status (Client)</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Date Approved</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {items.map((item) => (
+                                {items.map((item, index) => (
                                     <tr key={item.id} className="hover:bg-gray-50">
+                                        <td className="px-4 py-3 text-sm text-gray-600">{(pagination.from ?? 1) + index}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">
+                                            <p className="whitespace-nowrap">{item.reference_no || '-'}</p>
+                                            <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${statusColors[item.status] || 'bg-gray-100 text-gray-600'}`}>
+                                                {item.status === 'others' && item.other_status_text ? item.other_status_text : item.status}
+                                            </span>
+                                        </td>
                                         <td className="px-4 py-3"><span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${badgeClass(item.type)}`}>{typeLabel(item.type)}</span></td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{item.reference_no || '-'}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="min-w-[16rem] px-4 py-3">
                                             <p className="text-sm font-medium text-gray-900">{item.title}</p>
+                                            {!projectFilter && item.project?.name && (
+                                                <p className="mt-0.5 text-xs text-gray-400">{item.project.name}</p>
+                                            )}
                                             {item.files?.length > 0 && (
                                                 <div className="mt-1 flex flex-wrap gap-2">
                                                     {item.files.map((f) => (
@@ -310,11 +379,13 @@ export default function Correspondence() {
                                                 </div>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{item.project?.name || '-'}</td>
-                                        <td className="px-4 py-3"><span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[item.status] || 'bg-gray-100 text-gray-600'}`}>{item.status === 'others' && item.other_status_text ? item.other_status_text : item.status}</span></td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-600">{item.from_party?.name || '—'} → {item.to_party?.name || '—'}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(item.raised_date)}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(item.due_date)}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{item.creator ? `${item.creator.first_name} ${item.creator.last_name}` : '-'}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{item.reminded_date ? formatDate(item.reminded_date) : '—'}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{item.consultant_status ? item.consultant_status.toUpperCase() : '—'}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{item.consultant_closed_date ? formatDate(item.consultant_closed_date) : '—'}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{item.client_status ? item.client_status.toUpperCase() : '—'}</td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{item.client_closed_date ? formatDate(item.client_closed_date) : '—'}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right">
                                             <div className="flex items-center justify-end gap-1">
                                                 {item.files?.length > 0 && (
@@ -365,7 +436,7 @@ export default function Correspondence() {
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Project *</label>
-                                    <select value={form.project_id} onChange={(e) => setForm((p) => ({ ...p, project_id: e.target.value, site_id: '' }))} required className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                                    <select value={form.project_id} onChange={(e) => { setForm((p) => ({ ...p, project_id: e.target.value, site_id: '', from_party_id: '', to_party_id: '' })); setNewPartyField(null); }} required className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
                                         <option value="">Select project</option>
                                         {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                                     </select>
@@ -383,6 +454,49 @@ export default function Correspondence() {
                                         <option value="">Select type</option>
                                         {activeTypes.map((t) => <option key={t.code} value={t.code}>{t.name}{t.full_name ? ` — ${t.full_name}` : ''}</option>)}
                                     </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">From</label>
+                                    <select value={form.from_party_id} onChange={(e) => handlePartySelect('from_party_id', e.target.value)} disabled={!form.project_id} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-gray-100 disabled:text-gray-400">
+                                        <option value="">{form.project_id ? 'Select party' : 'Select a project first'}</option>
+                                        {parties.map((p) => <option key={p.id} value={p.id}>{p.name}{p.type ? ` — ${p.type}` : ''}</option>)}
+                                        {form.project_id && <option value={NEW_PARTY_VALUE}>+ Add new party…</option>}
+                                    </select>
+                                    {newPartyField === 'from_party_id' && (
+                                        <div className="mt-2 flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 sm:flex-row">
+                                            <input type="text" placeholder="Party name" value={newParty.name} onChange={(e) => setNewParty((p) => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                                            <select value={newParty.type} onChange={(e) => setNewParty((p) => ({ ...p, type: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm sm:w-40">
+                                                {PARTY_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+                                            </select>
+                                            <div className="flex shrink-0 gap-2">
+                                                <button type="button" onClick={addNewParty} disabled={addingParty || !newParty.name.trim()} className="rounded-lg bg-gray-800 px-3 py-2 text-sm text-white disabled:opacity-50">Add</button>
+                                                <button type="button" onClick={() => setNewPartyField(null)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">To</label>
+                                    <select value={form.to_party_id} onChange={(e) => handlePartySelect('to_party_id', e.target.value)} disabled={!form.project_id} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-gray-100 disabled:text-gray-400">
+                                        <option value="">{form.project_id ? 'Select party' : 'Select a project first'}</option>
+                                        {parties.map((p) => <option key={p.id} value={p.id}>{p.name}{p.type ? ` — ${p.type}` : ''}</option>)}
+                                        {form.project_id && <option value={NEW_PARTY_VALUE}>+ Add new party…</option>}
+                                    </select>
+                                    {newPartyField === 'to_party_id' && (
+                                        <div className="mt-2 flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 sm:flex-row">
+                                            <input type="text" placeholder="Party name" value={newParty.name} onChange={(e) => setNewParty((p) => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                                            <select value={newParty.type} onChange={(e) => setNewParty((p) => ({ ...p, type: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm sm:w-40">
+                                                {PARTY_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+                                            </select>
+                                            <div className="flex shrink-0 gap-2">
+                                                <button type="button" onClick={addNewParty} disabled={addingParty || !newParty.name.trim()} className="rounded-lg bg-gray-800 px-3 py-2 text-sm text-white disabled:opacity-50">Add</button>
+                                                <button type="button" onClick={() => setNewPartyField(null)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -420,6 +534,50 @@ export default function Correspondence() {
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Close Date</label>
                                     <input type="date" value={form.due_date} onChange={(e) => setForm((p) => ({ ...p, due_date: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Date Reminded</label>
+                                    <input type="date" value={form.reminded_date} onChange={(e) => setForm((p) => ({ ...p, reminded_date: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                </div>
+                            </div>
+
+                            <datalist id="correspondence-status-suggestions">
+                                {STATUS_SUGGESTIONS.map((s) => <option key={s} value={s} />)}
+                            </datalist>
+
+                            <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                <p className="mb-2 text-xs font-bold uppercase text-gray-500">Consultant</p>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700">Status (Consultant)</label>
+                                        <input type="text" list="correspondence-status-suggestions" value={form.consultant_status}
+                                            onChange={(e) => setForm((p) => ({ ...p, consultant_status: e.target.value }))}
+                                            placeholder="e.g. Pending, Forward to JPRiZ"
+                                            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                    </div>
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700">Date Approved (Consultant)</label>
+                                        <input type="date" value={form.consultant_closed_date} onChange={(e) => setForm((p) => ({ ...p, consultant_closed_date: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                <p className="mb-2 text-xs font-bold uppercase text-gray-500">Client</p>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700">Status (Client)</label>
+                                        <input type="text" list="correspondence-status-suggestions" value={form.client_status}
+                                            onChange={(e) => setForm((p) => ({ ...p, client_status: e.target.value }))}
+                                            placeholder="e.g. Pending, Forward to JPRiZ"
+                                            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                    </div>
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700">Date Approved (Client)</label>
+                                        <input type="date" value={form.client_closed_date} onChange={(e) => setForm((p) => ({ ...p, client_closed_date: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                    </div>
                                 </div>
                             </div>
                             {form.raised_date && (

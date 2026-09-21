@@ -14,6 +14,7 @@ class CorrespondenceRegisterService
         return ProjectCorrespondence::forProject($projectId)
             ->byType($type)
             ->withCount('files')
+            ->with(['fromParty:id,name', 'toParty:id,name'])
             ->orderBy('raised_date')
             ->orderBy('id')
             ->get()
@@ -31,6 +32,8 @@ class CorrespondenceRegisterService
                     'status' => $c->status === 'others' ? $c->other_status_text : $c->status,
                     'remarks' => $c->response,
                     'attachments' => $c->files_count,
+                    'from' => $c->fromParty?->name,
+                    'to' => $c->toParty?->name,
                     'id' => $c->id,
                 ];
             });

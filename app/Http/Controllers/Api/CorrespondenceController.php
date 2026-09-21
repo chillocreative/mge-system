@@ -9,6 +9,7 @@ use App\Services\CorrespondenceService;
 use App\Services\CorrespondenceWorkflowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use RuntimeException;
 
 class CorrespondenceController extends Controller
@@ -40,9 +41,16 @@ class CorrespondenceController extends Controller
             'status' => ['nullable', 'in:open,pending,declined,forwarded,others'],
             'other_status_text' => ['required_if:status,others', 'nullable', 'string', 'max:255'],
             'current_party_id' => ['nullable', 'exists:project_parties,id'],
+            'from_party_id' => ['nullable', $this->partyInProject($request->input('project_id'))],
+            'to_party_id' => ['nullable', $this->partyInProject($request->input('project_id'))],
             'raised_date' => ['required', 'date'],
             'due_date' => ['nullable', 'date'],
             'expected_close_date' => ['nullable', 'date'],
+            'reminded_date' => ['nullable', 'date'],
+            'consultant_status' => ['nullable', 'string', 'max:60'],
+            'client_status' => ['nullable', 'string', 'max:60'],
+            'consultant_closed_date' => ['nullable', 'date'],
+            'client_closed_date' => ['nullable', 'date'],
             'response' => ['nullable', 'string'],
             'files' => ['nullable', 'array', 'max:10'],
             'files.*' => ['file', 'max:1048576', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
@@ -66,6 +74,8 @@ class CorrespondenceController extends Controller
 
     public function update(Request $request, int $id): JsonResponse
     {
+        $projectId = $request->input('project_id', ProjectCorrespondence::findOrFail($id)->project_id);
+
         $validated = $request->validate([
             'project_id' => ['sometimes', 'exists:projects,id'],
             'site_id' => ['nullable', 'exists:project_sites,id'],
@@ -88,9 +98,14 @@ class CorrespondenceController extends Controller
             }],
             'other_status_text' => ['required_if:status,others', 'nullable', 'string', 'max:255'],
             'current_party_id' => ['nullable', 'exists:project_parties,id'],
+            'from_party_id' => ['nullable', $this->partyInProject($projectId)],
+            'to_party_id' => ['nullable', $this->partyInProject($projectId)],
             'raised_date' => ['sometimes', 'date'],
             'due_date' => ['nullable', 'date'],
             'expected_close_date' => ['nullable', 'date'],
+            'reminded_date' => ['nullable', 'date'],
+            'consultant_status' => ['nullable', 'string', 'max:60'],
+            'client_status' => ['nullable', 'string', 'max:60'],
             'client_closed_date' => ['nullable', 'date'],
             'consultant_closed_date' => ['nullable', 'date'],
             'response' => ['nullable', 'string'],
@@ -208,6 +223,7 @@ class CorrespondenceController extends Controller
     {
         $c = ProjectCorrespondence::with([
             'project:id,name,code', 'creator:id,first_name,last_name', 'currentParty:id,name',
+            'fromParty:id,name', 'toParty:id,name',
             'closer:id,first_name,last_name', 'files',
             'events' => fn ($q) => $q->with(['fromParty:id,name', 'toParty:id,name', 'creator:id,first_name,last_name']),
         ])->findOrFail($id);
@@ -215,5 +231,13 @@ class CorrespondenceController extends Controller
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.correspondence', ['c' => $c]);
 
         return $pdf->download('correspondence-'.($c->reference_no ?: $c->id).'.pdf');
+    }
+
+    /**
+     * A from/to party must belong to the same project as the correspondence.
+     */
+    private function partyInProject(mixed $projectId): \Illuminate\Validation\Rules\Exists
+    {
+        return Rule::exists('project_parties', 'id')->where('project_id', $projectId);
     }
 }

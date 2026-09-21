@@ -16,6 +16,8 @@ class ProjectCorrespondence extends Model
         'status', 'raised_date', 'due_date', 'response', 'created_by',
         'current_party_id', 'expected_close_date', 'actual_close_date', 'closing_reference', 'closed_by',
         'other_status_text', 'client_closed_date', 'consultant_closed_date',
+        'from_party_id', 'to_party_id',
+        'reminded_date', 'consultant_status', 'client_status',
     ];
 
     protected function casts(): array
@@ -27,6 +29,7 @@ class ProjectCorrespondence extends Model
             'actual_close_date' => 'date:Y-m-d',
             'client_closed_date' => 'date:Y-m-d',
             'consultant_closed_date' => 'date:Y-m-d',
+            'reminded_date' => 'date:Y-m-d',
         ];
     }
 
@@ -53,6 +56,16 @@ class ProjectCorrespondence extends Model
     public function currentParty(): BelongsTo
     {
         return $this->belongsTo(ProjectParty::class, 'current_party_id');
+    }
+
+    public function fromParty(): BelongsTo
+    {
+        return $this->belongsTo(ProjectParty::class, 'from_party_id');
+    }
+
+    public function toParty(): BelongsTo
+    {
+        return $this->belongsTo(ProjectParty::class, 'to_party_id');
     }
 
     public function events(): HasMany
