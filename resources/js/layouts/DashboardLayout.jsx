@@ -37,6 +37,8 @@ import {
     HiOutlineAcademicCap,
     HiOutlineScale,
     HiOutlineUserCircle,
+    HiOutlineViewList,
+    HiOutlineDocumentAdd,
 } from 'react-icons/hi';
 import NotificationBell from '@/components/NotificationBell';
 import toast from 'react-hot-toast';
@@ -52,9 +54,23 @@ const navigation = [
             { name: 'Milestones', href: '/projects/milestones', icon: HiOutlineFlag, permission: 'projects.view' },
             { name: 'Project Finances', href: '/projects/invoices', icon: HiOutlineDocumentText, permission: 'projects.view' },
             { name: 'Correspondence', href: '/projects/correspondence', icon: HiOutlineDocumentDuplicate, permission: 'projects.view' },
+            { name: 'Correspondence List', href: '/projects/correspondence-list', icon: HiOutlineViewList, permission: 'projects.view' },
             { name: 'Discussions', href: '/projects/discussions', icon: HiOutlineChatAlt2, permission: 'projects.view' },
             { name: 'Contracts', href: '/projects/contracts', icon: HiOutlineClipboardCheck, permission: 'projects.view' },
             { name: 'Monthly Reports', href: '/projects/monthly-reports', icon: HiOutlineDocumentReport, permission: 'reports.view' },
+        ],
+    },
+    {
+        name: 'Forms', icon: HiOutlineDocumentAdd,
+        children: [
+            { name: 'Site Memo', href: '/forms/site-memo', icon: HiOutlineDocumentText, permission: 'projects.view' },
+            { name: 'Engineering Instruction', href: '/forms/engineering-instruction', icon: HiOutlineDocumentText, permission: 'projects.view' },
+            { name: 'Permit To Work', href: '/forms/permit-to-work', icon: HiOutlineDocumentText, permission: 'projects.view' },
+            { name: 'Borang Harian Tapak Bina', href: '/forms/daily-site-diary', icon: HiOutlineDocumentText, permission: 'projects.view' },
+            { name: 'Borang Kelulusan Bahan', href: '/forms/material-approval', icon: HiOutlineDocumentText, permission: 'projects.view' },
+            { name: 'Borang NCR', href: '/forms/ncr', icon: HiOutlineDocumentText, permission: 'projects.view' },
+            { name: 'Borang RFI', href: '/forms/rfi', icon: HiOutlineDocumentText, permission: 'projects.view' },
+            { name: 'Borang RFWI', href: '/forms/rfwi', icon: HiOutlineDocumentText, permission: 'projects.view' },
         ],
     },
     { name: 'Clients', href: '/clients', icon: HiOutlineOfficeBuilding, permission: 'clients.view' },

@@ -8,6 +8,7 @@ import ProjectFilesPanel from '@/components/ProjectFilesPanel';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
 import CorrespondenceWorkflowDrawer from './CorrespondenceWorkflowDrawer';
+import statusColors from './statusColors';
 import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
 import {
@@ -26,15 +27,6 @@ const DOT_COLORS = {
     teal: 'bg-teal-500', blue: 'bg-blue-500', indigo: 'bg-indigo-500', purple: 'bg-purple-500', pink: 'bg-pink-500',
 };
 const PALETTE = Object.keys(BADGE_COLORS);
-
-const statusColors = {
-    open: 'bg-green-100 text-green-700',
-    pending: 'bg-yellow-100 text-yellow-700',
-    closed: 'bg-gray-100 text-gray-600',
-    declined: 'bg-red-100 text-red-700',
-    forwarded: 'bg-indigo-100 text-indigo-700',
-    others: 'bg-gray-200 text-gray-800',
-};
 
 const today = () => new Date().toISOString().split('T')[0];
 const dayDiff = (from, to) => {

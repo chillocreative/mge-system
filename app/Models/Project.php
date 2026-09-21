@@ -93,6 +93,11 @@ class Project extends Model
         return $this->hasMany(ProjectParty::class)->orderBy('sort_order');
     }
 
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(ProjectContract::class);
+    }
+
     // Scopes
 
     public function scopeActive($query)

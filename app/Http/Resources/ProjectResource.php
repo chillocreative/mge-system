@@ -29,6 +29,7 @@ class ProjectResource extends JsonResource
                 'id' => $this->client->id,
                 'company_name' => $this->client->company_name,
             ]),
+            'latest_contract_no' => $this->whenLoaded('contracts', fn () => $this->contracts->sortByDesc('id')->first()?->contract_no),
             'manager' => $this->whenLoaded('manager', fn () => new UserResource($this->manager)),
             'members' => UserResource::collection($this->whenLoaded('members')),
             'tasks' => $this->whenLoaded('tasks'),

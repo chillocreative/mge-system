@@ -25,6 +25,7 @@ class ProjectService
         $project->load([
             'client',
             'manager',
+            'contracts:id,project_id,contract_no',
             'members',
             'tasks.assignee:id,first_name,last_name',
             'tasks.assignees:id,first_name,last_name',

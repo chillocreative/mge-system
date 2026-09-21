@@ -16,7 +16,7 @@ class ProjectRepository extends BaseRepository implements ProjectRepositoryInter
 
     public function getWithRelations(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
-        $query = $this->model->with(['client', 'manager'])->withCount('documents');
+        $query = $this->model->with(['client', 'manager', 'contracts:id,project_id,contract_no'])->withCount('documents');
 
         if (! empty($filters['status']) && $filters['status'] === 'archived') {
             $query->whereNotNull('archived_at');

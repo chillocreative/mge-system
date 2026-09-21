@@ -20,6 +20,8 @@ import Tasks from '@/pages/tasks/Tasks';
 import Milestones from '@/pages/projects/milestones/Milestones';
 import ProjectInvoices from '@/pages/projects/invoices/ProjectInvoices';
 import Correspondence from '@/pages/projects/correspondence/Correspondence';
+import CorrespondenceList from '@/pages/projects/correspondence/CorrespondenceList';
+import SiteFormPage from '@/pages/forms/SiteFormPage';
 import Discussions from '@/pages/projects/discussions/Discussions';
 import Contracts from '@/pages/projects/contracts/Contracts';
 import ContractDetail from '@/pages/projects/contracts/ContractDetail';
@@ -111,6 +113,8 @@ function AppRoutes() {
                         <Route path="/projects/milestones" element={<Milestones />} />
                         <Route path="/projects/invoices" element={<ProjectInvoices />} />
                         <Route path="/projects/correspondence" element={<Correspondence />} />
+                        <Route path="/projects/correspondence-list" element={<CorrespondenceList />} />
+                        <Route path="/forms/:type" element={<SiteFormPage />} />
                         <Route path="/projects/discussions" element={<Discussions />} />
                         <Route path="/projects/contracts" element={<Contracts />} />
                         <Route path="/projects/contracts/:id" element={<ContractDetail />} />

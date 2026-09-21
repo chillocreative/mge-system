@@ -99,6 +99,27 @@ const correspondenceService = {
         link.remove();
         window.URL.revokeObjectURL(url);
     },
+    // ── Register (correspondence list per project & type) ──
+    async register(params) {
+        const response = await apiClient.get('/correspondence/register', { params });
+        return response.data;
+    },
+    async downloadRegister(params, format) {
+        const response = await apiClient.get('/correspondence/register/export', {
+            params: { ...params, format },
+            responseType: 'blob',
+        });
+        const mime = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: mime }));
+        const link = document.createElement('a');
+        link.href = url;
+        const type = (params.type || 'register').toUpperCase();
+        link.setAttribute('download', `${type}-register.${format}`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    },
     // ── Project parties ──
     async listParties(projectId) {
         const response = await apiClient.get('/project-parties', { params: { project_id: projectId } });

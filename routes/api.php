@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\CompanyDocumentController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\CorrespondenceController;
+use App\Http\Controllers\Api\CorrespondenceRegisterController;
 use App\Http\Controllers\Api\CorrespondenceTypeController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DepartmentController;
@@ -53,6 +54,7 @@ use App\Http\Controllers\Api\ReportData\ScheduleBaselineController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SafetyController;
 use App\Http\Controllers\Api\SafetyStatisticsController;
+use App\Http\Controllers\Api\SiteFormController;
 use App\Http\Controllers\Api\SiteLogController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TrainingController;
@@ -326,6 +328,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{report}', [MonthlyReportController::class, 'destroy'])->middleware('permission:reports.manage');
     });
 
+    Route::prefix('site-forms')->group(function () {
+        Route::get('/', [SiteFormController::class, 'index'])->middleware('permission:projects.view');
+        Route::get('/next-ref', [SiteFormController::class, 'nextRef'])->middleware('permission:projects.view');
+        Route::get('/attachments/{attachment}/download', [SiteFormController::class, 'downloadAttachment'])->middleware('permission:projects.view');
+        Route::get('/{id}', [SiteFormController::class, 'show'])->middleware('permission:projects.view');
+        Route::post('/', [SiteFormController::class, 'store'])->middleware('permission:projects.edit');
+        Route::put('/{id}', [SiteFormController::class, 'update'])->middleware('permission:projects.edit');
+        Route::delete('/{id}', [SiteFormController::class, 'destroy'])->middleware('permission:projects.edit');
+        Route::post('/{id}/attachments', [SiteFormController::class, 'uploadAttachment'])->middleware('permission:projects.edit');
+        Route::delete('/attachments/{attachment}', [SiteFormController::class, 'deleteAttachment'])->middleware('permission:projects.edit');
+    });
+
     Route::prefix('project-invoices')->group(function () {
         Route::get('/files/{fileId}/download', [ProjectInvoiceController::class, 'downloadFile'])->middleware('permission:projects.view');
         Route::delete('/files/{fileId}', [ProjectInvoiceController::class, 'destroyFile'])->middleware('permission:projects.edit');
@@ -350,6 +364,8 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('correspondence')->group(function () {
+        Route::get('/register', [CorrespondenceRegisterController::class, 'index'])->middleware('permission:projects.view');
+        Route::get('/register/export', [CorrespondenceRegisterController::class, 'export'])->middleware('permission:projects.view');
         Route::get('/files/{fileId}/download', [CorrespondenceController::class, 'downloadFile'])->middleware('permission:projects.view');
         Route::delete('/files/{fileId}', [CorrespondenceController::class, 'destroyFile'])->middleware('permission:projects.edit');
         Route::get('/', [CorrespondenceController::class, 'index'])->middleware('permission:projects.view');
