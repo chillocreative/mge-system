@@ -48,3 +48,79 @@
     --color-accent-600: #d97706;
     --color-accent-700: #b45309;
 }
+
+/* Site Forms — print only the paper sheet(s), one A4 page per sheet. */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 10mm;
+    }
+
+    body:has(.site-form-print-area) * {
+        visibility: hidden;
+    }
+
+    body:has(.site-form-print-area) .site-form-print-area,
+    body:has(.site-form-print-area) .site-form-print-area * {
+        visibility: visible;
+    }
+
+    body:has(.site-form-print-area) .site-form-print-area {
+        position: absolute;
+        inset: 0 auto auto 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Ancestors with fixed heights / overflow clip the print to the first page. */
+    body:has(.site-form-print-area),
+    body:has(.site-form-print-area) #app,
+    body:has(.site-form-print-area) main {
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+    }
+
+    .site-form-paper {
+        break-after: page;
+        page-break-after: always;
+    }
+
+    .site-form-paper:last-child {
+        break-after: auto;
+        page-break-after: auto;
+    }
+
+    .site-form-paper input,
+    .site-form-paper textarea {
+        background: transparent !important;
+        border: 0 !important;
+        color: #111827;
+        padding-top: 0;
+        padding-bottom: 0;
+        line-height: 1.2;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+    /* Tighter rows so each sheet fits its A4 page like the original document. */
+    .site-form-paper td,
+    .site-form-paper th {
+        padding-top: 1px;
+        padding-bottom: 1px;
+    }
+
+    .site-form-paper {
+        font-size: 10px;
+    }
+
+    .site-form-paper input::placeholder,
+    .site-form-paper textarea::placeholder {
+        color: transparent;
+    }
+
+    .site-form-paper input[type='date']::-webkit-calendar-picker-indicator {
+        display: none;
+    }
+}

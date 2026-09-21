@@ -229,7 +229,7 @@ export function PhotoSlot({ n, record, onUploaded }) {
 
     if (!record?.id) {
         return (
-            <div className="flex aspect-[4/3] w-full items-center justify-center rounded border border-dashed border-gray-400 bg-gray-50 text-center text-[10px] text-gray-400">
+            <div className="flex aspect-[4/3] w-full print:aspect-auto print:h-[40mm] items-center justify-center rounded border border-dashed border-gray-400 bg-gray-50 text-center text-[10px] text-gray-400">
                 Save form first to add photos
             </div>
         );
@@ -237,7 +237,7 @@ export function PhotoSlot({ n, record, onUploaded }) {
 
     if (attachment) {
         return (
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded border border-gray-400 bg-gray-50">
+            <div className="relative aspect-[4/3] w-full print:aspect-auto print:h-[40mm] overflow-hidden rounded border border-gray-400 bg-gray-50">
                 <img src={siteFormService.attachmentUrl(attachment.id)} alt={slot} className="h-full w-full object-cover" />
                 <button
                     type="button"
@@ -252,7 +252,7 @@ export function PhotoSlot({ n, record, onUploaded }) {
     }
 
     return (
-        <label className="flex aspect-[4/3] w-full cursor-pointer flex-col items-center justify-center gap-1 rounded border border-dashed border-gray-400 bg-gray-50 text-center text-[10px] text-gray-400 hover:border-primary-400 hover:text-primary-500">
+        <label className="flex aspect-[4/3] w-full print:aspect-auto print:h-[40mm] cursor-pointer flex-col items-center justify-center gap-1 rounded border border-dashed border-gray-400 bg-gray-50 text-center text-[10px] text-gray-400 hover:border-primary-400 hover:text-primary-500">
             <HiOutlinePhotograph className="h-6 w-6" />
             <span className="px-2">Tampal / Sisip Gambar &mdash; Insert Photo Here</span>
             <input type="file" accept="image/*" className="hidden" onChange={onFile} />

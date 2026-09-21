@@ -14,7 +14,7 @@ export default function FormPaper({ meta, page = 1, totalPages, children }) {
     const effectiveLabel = isQf ? 'Commencement Date' : 'Effective Date';
 
     return (
-        <div className="mx-auto w-full max-w-[210mm] bg-white p-6 text-[11px] leading-tight text-gray-900 shadow-md ring-1 ring-gray-300 print:shadow-none">
+        <div className="site-form-paper mx-auto w-full max-w-[210mm] bg-white p-6 text-[11px] leading-tight text-gray-900 shadow-md ring-1 ring-gray-300 print:max-w-none print:p-0 print:shadow-none print:ring-0">
             {/* Letterhead */}
             <table className="w-full border-collapse border border-black text-[11px]">
                 <tbody>

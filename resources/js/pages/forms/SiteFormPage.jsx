@@ -10,7 +10,7 @@ import { formatDate } from '@/utils/date';
 import { bySlug } from './formTypes';
 import { FormDataProvider } from './fields';
 import {
-    HiOutlinePlus, HiOutlineSearch, HiOutlineDocumentText, HiOutlinePencil, HiOutlineTrash,
+    HiOutlinePlus, HiOutlineSearch, HiOutlineDocumentText, HiOutlinePencil, HiOutlineTrash, HiOutlinePrinter,
 } from 'react-icons/hi';
 
 const today = () => new Date().toISOString().split('T')[0];
@@ -212,6 +212,13 @@ export default function SiteFormPage() {
                     >
                         <HiOutlinePlus className="h-5 w-5" /> New
                     </button>
+                    <button
+                        type="button"
+                        onClick={() => window.print()}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                    >
+                        <HiOutlinePrinter className="h-5 w-5" /> Print
+                    </button>
                     {canEdit && (
                         <button
                             type="button"
@@ -237,9 +244,11 @@ export default function SiteFormPage() {
                 <p className="mb-4 text-sm text-amber-600">Select a project to save this form.</p>
             )}
 
-            <FormDataProvider data={record.data} onChange={setData} record={record} onRecordChange={setRecordFields}>
-                <Layout meta={meta} record={record} setRecord={setRecordFields} onReload={() => record.id && loadRecord(record.id)} />
-            </FormDataProvider>
+            <div className="site-form-print-area">
+                <FormDataProvider data={record.data} onChange={setData} record={record} onRecordChange={setRecordFields}>
+                    <Layout meta={meta} record={record} setRecord={setRecordFields} onReload={() => record.id && loadRecord(record.id)} />
+                </FormDataProvider>
+            </div>
 
             <div className="mt-8 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
