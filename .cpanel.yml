@@ -1,11 +1,7 @@
 ---
+# Single source of truth: deploy.sh. It resolves a real PHP CLI binary (the bare `php` on
+# this host is CGI and silently drops artisan's arguments) and fails loudly if migrations
+# are still pending afterwards, instead of exiting 0 having done nothing.
 deployment:
   tasks:
-    - export PHP_BIN=$(which php8.3 2>/dev/null || which php83 2>/dev/null || which php 2>/dev/null)
-    - $PHP_BIN artisan config:clear
-    - $PHP_BIN artisan cache:clear
-    - $PHP_BIN artisan view:clear
-    - $PHP_BIN artisan route:clear
-    - $PHP_BIN artisan migrate --force
-    - $PHP_BIN artisan storage:link --force
-    - $PHP_BIN artisan optimize
+    - bash deploy.sh
