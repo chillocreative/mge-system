@@ -332,6 +332,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [SiteFormController::class, 'index'])->middleware('permission:projects.view');
         Route::get('/next-ref', [SiteFormController::class, 'nextRef'])->middleware('permission:projects.view');
         Route::get('/attachments/{attachment}/download', [SiteFormController::class, 'downloadAttachment'])->middleware('permission:projects.view');
+        Route::post('/{id}/export-docx', [SiteFormController::class, 'exportDocx'])->middleware('permission:projects.view');
         Route::get('/{id}', [SiteFormController::class, 'show'])->middleware('permission:projects.view');
         Route::post('/', [SiteFormController::class, 'store'])->middleware('permission:projects.edit');
         Route::put('/{id}', [SiteFormController::class, 'update'])->middleware('permission:projects.edit');

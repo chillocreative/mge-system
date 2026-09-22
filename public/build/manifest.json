@@ -1,6 +1,50 @@
 {
+  "_jspdf.es.min-CbQC5_pH.js": {
+    "file": "assets/jspdf.es.min-CbQC5_pH.js",
+    "name": "jspdf.es.min",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx"
+    ],
+    "dynamicImports": [
+      "node_modules/html2canvas/dist/html2canvas.esm.js",
+      "node_modules/dompurify/dist/purify.es.mjs",
+      "node_modules/canvg/lib/index.es.js"
+    ]
+  },
+  "node_modules/canvg/lib/index.es.js": {
+    "file": "assets/index.es-p3l-M_ic.js",
+    "name": "index.es",
+    "src": "node_modules/canvg/lib/index.es.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_jspdf.es.min-CbQC5_pH.js"
+    ],
+    "css": [
+      "assets/app-Dwt89ayK.css"
+    ]
+  },
+  "node_modules/dompurify/dist/purify.es.mjs": {
+    "file": "assets/purify.es-CEBYger9.js",
+    "name": "purify.es",
+    "src": "node_modules/dompurify/dist/purify.es.mjs",
+    "isDynamicEntry": true
+  },
+  "node_modules/html-to-image/es/index.js": {
+    "file": "assets/index-DoLiZPBX.js",
+    "name": "index",
+    "src": "node_modules/html-to-image/es/index.js",
+    "isDynamicEntry": true
+  },
+  "node_modules/html2canvas/dist/html2canvas.esm.js": {
+    "file": "assets/html2canvas.esm-DXEQVQnt.js",
+    "name": "html2canvas.esm",
+    "src": "node_modules/html2canvas/dist/html2canvas.esm.js",
+    "isDynamicEntry": true
+  },
   "resources/css/app.css": {
-    "file": "assets/app-CXQJ0U4u.css",
+    "file": "assets/app-Dwt89ayK.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -9,12 +53,16 @@
     ]
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-Cbyd8LyO.js",
+    "file": "assets/app-DMyTgRuH.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true,
+    "dynamicImports": [
+      "node_modules/html-to-image/es/index.js",
+      "_jspdf.es.min-CbQC5_pH.js"
+    ],
     "css": [
-      "assets/app-CXQJ0U4u.css"
+      "assets/app-Dwt89ayK.css"
     ]
   }
 }

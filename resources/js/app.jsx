@@ -22,6 +22,7 @@ import ProjectInvoices from '@/pages/projects/invoices/ProjectInvoices';
 import Correspondence from '@/pages/projects/correspondence/Correspondence';
 import CorrespondenceList from '@/pages/projects/correspondence/CorrespondenceList';
 import SiteFormPage from '@/pages/forms/SiteFormPage';
+import SiteFormViewer from '@/pages/forms/SiteFormViewer';
 import Discussions from '@/pages/projects/discussions/Discussions';
 import Contracts from '@/pages/projects/contracts/Contracts';
 import ContractDetail from '@/pages/projects/contracts/ContractDetail';
@@ -270,6 +271,13 @@ function AppRoutes() {
 
                     {/* Unauthorized — accessible to all authenticated users */}
                     <Route path="/unauthorized" element={<Unauthorized />} />
+                </Route>
+            </Route>
+
+            {/* Full-screen Site Form viewer — no DashboardLayout chrome */}
+            <Route element={<ProtectedRoute />}>
+                <Route element={<PermissionGate permission="projects.view" />}>
+                    <Route path="/forms/:type/view/:id" element={<SiteFormViewer />} />
                 </Route>
             </Route>
 

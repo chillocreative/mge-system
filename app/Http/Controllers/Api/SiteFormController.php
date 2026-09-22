@@ -10,6 +10,8 @@ use App\Services\SiteFormService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpWord\IOFactory;
+use PhpOffice\PhpWord\PhpWord;
 
 class SiteFormController extends Controller
 {
@@ -130,5 +132,65 @@ class SiteFormController extends Controller
             'Content-Type' => 'application/octet-stream',
             'X-Content-Type-Options' => 'nosniff',
         ]);
+    }
+
+    /**
+     * Build a DOCX from client-rendered sheet screenshots (one page image per
+     * `.site-form-paper` sheet, captured with html2canvas in the viewer) and
+     * return it as a download. Images are the only input — no server-side
+     * PDF/HTML rendering is involved.
+     */
+    public function exportDocx(Request $request, int $id)
+    {
+        $form = SiteForm::findOrFail($id);
+
+        $data = $request->validate([
+            'images' => ['required', 'array', 'min:1', 'max:10'],
+            'images.*' => ['required', 'string', 'regex:/^data:image\/(jpeg|png);base64,/'],
+        ]);
+
+        $tempFiles = [];
+
+        try {
+            foreach ($data['images'] as $image) {
+                [$header, $base64] = explode(',', $image, 2);
+                $bytes = base64_decode($base64, true);
+
+                if ($bytes === false || strlen($bytes) > 6 * 1024 * 1024) {
+                    return response()->json(['message' => 'Each image must be a valid, non-empty base64 image no larger than 6 MB.'], 422);
+                }
+
+                $extension = str_contains($header, 'image/png') ? 'png' : 'jpg';
+                $tmp = tempnam(sys_get_temp_dir(), 'sfd_').'.'.$extension;
+                file_put_contents($tmp, $bytes);
+                $tempFiles[] = $tmp;
+            }
+
+            $phpWord = new PhpWord;
+
+            foreach ($tempFiles as $tmp) {
+                $section = $phpWord->addSection([
+                    'pageSizeW' => 11906,
+                    'pageSizeH' => 16838,
+                    'marginTop' => 567,
+                    'marginBottom' => 567,
+                    'marginLeft' => 567,
+                    'marginRight' => 567,
+                ]);
+                $section->addImage($tmp, ['width' => 520, 'alignment' => 'center']);
+            }
+
+            $base = preg_replace('/[^A-Za-z0-9._-]+/', '-', $form->ref_no ?: "site-form-{$form->id}");
+            $outputPath = tempnam(sys_get_temp_dir(), 'sfd_out_').'.docx';
+            IOFactory::createWriter($phpWord, 'Word2007')->save($outputPath);
+
+            return response()->download($outputPath, "{$base}.docx")->deleteFileAfterSend(true);
+        } finally {
+            foreach ($tempFiles as $tmp) {
+                if (is_file($tmp)) {
+                    @unlink($tmp);
+                }
+            }
+        }
     }
 }

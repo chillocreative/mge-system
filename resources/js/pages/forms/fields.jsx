@@ -1,5 +1,6 @@
 import { createContext, useContext, useRef, useEffect, useCallback } from 'react';
 import siteFormService from '@/services/siteFormService';
+import { formatDate } from '@/utils/date';
 import { HiOutlineX, HiOutlinePhotograph } from 'react-icons/hi';
 
 /**
@@ -47,7 +48,7 @@ function setByPath(obj, path, value) {
  * is called with the updated blob on every `set`. `record` + `onRecordChange`
  * let `$.`-prefixed paths read/write promoted columns (ref_no, form_date, title).
  */
-export function FormDataProvider({ data, onChange, record, onRecordChange, readOnly = false, children }) {
+export function FormDataProvider({ data, onChange, record, onRecordChange, readOnly = false, staticView = false, children }) {
     const get = useCallback((path) => {
         if (path?.startsWith('$.')) return getByPath(record, path.slice(2));
         return getByPath(data, path);
@@ -62,7 +63,7 @@ export function FormDataProvider({ data, onChange, record, onRecordChange, readO
     }, [data, record, onChange, onRecordChange]);
 
     return (
-        <FormDataContext.Provider value={{ data, get, set, readOnly }}>
+        <FormDataContext.Provider value={{ data, get, set, readOnly, staticView }}>
             {children}
         </FormDataContext.Provider>
     );
@@ -77,10 +78,20 @@ export function useFormData() {
 const baseInputClass = 'w-full min-w-[3rem] flex-1 bg-transparent outline-none text-[11px] px-1 py-0.5 focus:bg-yellow-50';
 
 export function Field({ path, className = '', placeholder = '', type = 'text', align = 'left' }) {
-    const { get, set, readOnly } = useFormData();
+    const { get, set, readOnly, staticView } = useFormData();
     const value = get(path) ?? '';
     const filled = value !== '' && value !== null && value !== undefined;
     const alignClass = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left';
+
+    if (staticView) {
+        const display = type === 'date' ? formatDate(value, '') : value;
+
+        return (
+            <span className={`inline-block w-full min-h-[1.25rem] px-1 border-b border-dotted border-gray-400 whitespace-pre-wrap ${alignClass} ${className}`}>
+                {display || ' '}
+            </span>
+        );
+    }
 
     return (
         <input
@@ -96,17 +107,28 @@ export function Field({ path, className = '', placeholder = '', type = 'text', a
 }
 
 export function Area({ path, rows = 3, className = '' }) {
-    const { get, set, readOnly } = useFormData();
+    const { get, set, readOnly, staticView } = useFormData();
     const value = get(path) ?? '';
     const filled = value !== '' && value !== null && value !== undefined;
     const ref = useRef(null);
 
     useEffect(() => {
         const el = ref.current;
-        if (!el) return;
+        if (!el || staticView) return;
         el.style.height = 'auto';
         el.style.height = `${el.scrollHeight}px`;
-    }, [value]);
+    }, [value, staticView]);
+
+    if (staticView) {
+        return (
+            <div
+                style={{ minHeight: `${rows * 1.25}rem` }}
+                className={`whitespace-pre-wrap px-1 ${className}`}
+            >
+                {value || ' '}
+            </div>
+        );
+    }
 
     return (
         <textarea
