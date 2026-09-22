@@ -27,7 +27,7 @@ class UserAccessController extends Controller
 
     public function update(Request $request, int $id): JsonResponse
     {
-        $user = User::findOrFail($id);
+        $user = User::with('roles')->findOrFail($id);
 
         $validated = $request->validate([
             'permissions' => ['present', 'array'],
@@ -39,6 +39,18 @@ class UserAccessController extends Controller
         $isManager = $request->boolean('is_manager');
         $isDirector = $request->boolean('is_director');
         $perms = $validated['permissions'];
+
+        // A Managers/Directors-role user who is granted leave.approve here is
+        // implicitly a system-wide approver for that stage, even though this
+        // form (unlike user creation) doesn't otherwise flip the flag.
+        if (in_array('leave.approve', $perms, true)) {
+            if ($user->hasRole('Managers')) {
+                $isManager = true;
+            }
+            if ($user->hasRole('Directors')) {
+                $isDirector = true;
+            }
+        }
 
         // Manager / Director must be able to reach and act on the leave approvals page.
         if ($isManager || $isDirector) {

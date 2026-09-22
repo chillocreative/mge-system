@@ -29,7 +29,21 @@ class LeaveStatusNotification extends Notification
             'message' => $this->message,
             'action_type' => $this->actionType,
             'leave_request_id' => $this->leaveRequestId,
+            'type' => 'leave',
+            'link' => $this->approverAction()
+                ? '/hr/leave/approvals'
+                : '/leave/my',
         ];
+    }
+
+    /**
+     * True when this notification is asking an approver (manager or director) to act,
+     * as opposed to informing the employee of a decision on their own request.
+     */
+    private function approverAction(): bool
+    {
+        return $this->actionType === 'leave_submitted'
+            || str_starts_with($this->actionType, 'leave_awaiting_');
     }
 
     public function toMail(object $notifiable): MailMessage

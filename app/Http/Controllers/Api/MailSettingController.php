@@ -28,6 +28,11 @@ class MailSettingController extends Controller
         ] : null);
     }
 
+    public function status(): JsonResponse
+    {
+        return $this->success($this->service->status());
+    }
+
     public function update(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -74,7 +79,10 @@ class MailSettingController extends Controller
         try {
             $this->service->sendTest($to, $data);
 
-            return $this->success(null, 'Test email sent to '.$to.'.');
+            return $this->success(
+                ['warnings' => $this->service->deliveryWarnings()],
+                'Test email sent to '.$to.'.'
+            );
         } catch (Throwable $e) {
             return $this->error('Failed to send test email: '.$e->getMessage(), 422);
         }

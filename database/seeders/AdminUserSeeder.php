@@ -21,6 +21,7 @@ class AdminUserSeeder extends Seeder
             ]
         );
         $admin->syncRoles(['Admin & HR']);
+        $admin->syncPermissions(RolePresets::for('Admin & HR'));
 
         // Role 2: Finances & HR
         $finance = User::firstOrCreate(

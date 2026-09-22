@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import notificationService from '@/services/notificationService';
 import { HiOutlineBell, HiOutlineCheck, HiOutlineTrash } from 'react-icons/hi';
 import { formatDate } from '@/utils/date';
+import { notificationLink } from '@/utils/notificationLink';
 
 function relativeTime(value) {
     if (!value) return '';
@@ -57,8 +58,7 @@ export default function NotificationBell() {
             loadCount();
         }
         setOpen(false);
-        const link = n.data?.link;
-        if (link) navigate(link);
+        navigate(notificationLink(n));
     };
 
     const markAllRead = async () => {

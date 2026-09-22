@@ -64,6 +64,29 @@ class User extends Authenticatable
         ];
     }
 
+    // Leave approval
+
+    /**
+     * A user is a system-wide Manager-stage approver either by the explicit
+     * flag (set when they were created/edited with the "Managers" role, or
+     * granted directly on the User Access page) or by currently holding the
+     * "Managers" role — so a user given the role any other way (Access page,
+     * pre-existing account, seeder) is still recognised.
+     */
+    public function isManagerApprover(): bool
+    {
+        return (bool) $this->is_manager || $this->hasRole('Managers');
+    }
+
+    /**
+     * A user is a system-wide Director-stage approver either by the explicit
+     * flag or by currently holding the "Directors" role.
+     */
+    public function isDirectorApprover(): bool
+    {
+        return (bool) $this->is_director || $this->hasRole('Directors');
+    }
+
     // Accessors
 
     public function getFullNameAttribute(): string

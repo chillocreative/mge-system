@@ -4,6 +4,7 @@ import { useConfirm } from '@/context/ConfirmContext';
 import notificationService from '@/services/notificationService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { notificationLink } from '@/utils/notificationLink';
 import { HiOutlineBell, HiOutlineCheck, HiOutlineTrash } from 'react-icons/hi';
 
 function relativeTime(value) {
@@ -37,7 +38,7 @@ export default function Notifications() {
             try { await notificationService.markAsRead(n.id); } catch { /* ignore */ }
             setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x)));
         }
-        if (n.data?.link) navigate(n.data.link);
+        navigate(notificationLink(n));
     };
 
     const remove = async (e, n) => {

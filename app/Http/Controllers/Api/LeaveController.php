@@ -194,10 +194,10 @@ class LeaveController extends Controller
             // approvers see every request awaiting their stage.
             $query->where(function ($q) use ($user) {
                 $q->awaitingApprovalBy($user->id);
-                if ($user->is_manager) {
+                if ($user->isManagerApprover()) {
                     $q->orWhere('current_approval_level', 'manager');
                 }
-                if ($user->is_director) {
+                if ($user->isDirectorApprover()) {
                     $q->orWhere('current_approval_level', 'director');
                 }
             });

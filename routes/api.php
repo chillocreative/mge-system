@@ -540,6 +540,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('settings/mail')->group(function () {
         Route::get('/', [MailSettingController::class, 'show'])
             ->middleware('permission:settings.view');
+        Route::get('/status', [MailSettingController::class, 'status'])
+            ->middleware('permission:settings.view');
         Route::put('/', [MailSettingController::class, 'update'])
             ->middleware('permission:settings.manage');
         Route::post('/test', [MailSettingController::class, 'test'])

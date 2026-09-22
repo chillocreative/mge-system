@@ -373,7 +373,7 @@ class DashboardService
 
     private function canApproveLeave(User $user, callable $can): bool
     {
-        return $can('leave.manage') || $can('leave.approve') || $user->is_manager || $user->is_director;
+        return $can('leave.manage') || $can('leave.approve') || $user->isManagerApprover() || $user->isDirectorApprover();
     }
 
     private function pendingLeaveQuery(User $user, callable $can)
@@ -383,10 +383,10 @@ class DashboardService
         if (! $can('leave.manage')) {
             $query->where(function ($w) use ($user) {
                 $w->awaitingApprovalBy($user->id);
-                if ($user->is_manager) {
+                if ($user->isManagerApprover()) {
                     $w->orWhere('current_approval_level', 'manager');
                 }
-                if ($user->is_director) {
+                if ($user->isDirectorApprover()) {
                     $w->orWhere('current_approval_level', 'director');
                 }
             });

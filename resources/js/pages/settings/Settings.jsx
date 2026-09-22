@@ -46,6 +46,9 @@ export default function Settings() {
     const [mailErrors, setMailErrors] = useState({});
     const [testTo, setTestTo] = useState('');
     const [testSending, setTestSending] = useState(false);
+    const [testWarnings, setTestWarnings] = useState([]);
+    const [mailStatus, setMailStatus] = useState(null);
+    const [mailStatusLoading, setMailStatusLoading] = useState(false);
 
     const loadDepartments = useCallback(() => {
         return departmentService.list({ all: true }).then((r) => setDepartments(r.data || [])).catch(() => {});
@@ -77,6 +80,19 @@ export default function Settings() {
     useEffect(() => {
         if (tab === 'mail' && !mailLoaded) loadMailSettings();
     }, [tab, mailLoaded, loadMailSettings]);
+
+    const loadMailStatus = useCallback(() => {
+        if (!canViewMail) return;
+        setMailStatusLoading(true);
+        mailSettingService.status()
+            .then((r) => setMailStatus(r.data))
+            .catch(() => {})
+            .finally(() => setMailStatusLoading(false));
+    }, [canViewMail]);
+
+    useEffect(() => {
+        if (tab === 'mail' && canViewMail) loadMailStatus();
+    }, [tab, canViewMail, loadMailStatus]);
 
     // ── Departments ──
     const openDeptCreate = () => { setDeptEditId(null); setDeptForm(emptyDept); setDeptErrors({}); setDeptModal(true); };
@@ -169,6 +185,7 @@ export default function Settings() {
             setMailHasPassword(!!res.data.has_password);
             setMailForm((p) => ({ ...p, password: '' }));
             toast.success('Mail settings saved');
+            loadMailStatus();
         } catch (err) {
             if (err.response?.status === 422) setMailErrors(err.response.data.errors || {});
             toast.error(err.response?.data?.message || 'Failed to save mail settings');
@@ -180,11 +197,16 @@ export default function Settings() {
     const sendTestEmail = async () => {
         if (!testTo.trim()) return toast.error('Enter an email address to send the test to');
         setTestSending(true);
+        setTestWarnings([]);
         try {
             const payload = { to: testTo, ...mailForm };
             if (!payload.password) delete payload.password;
             const res = await mailSettingService.test(payload);
             toast.success(res.message || 'Test email sent');
+            const warnings = res.data?.warnings || [];
+            setTestWarnings(warnings);
+            warnings.forEach((w) => toast.error(w, { duration: 8000 }));
+            loadMailStatus();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to send test email');
         } finally {
@@ -352,6 +374,94 @@ export default function Settings() {
                                 <input type="email" value={testTo} onChange={(e) => setTestTo(e.target.value)} placeholder="you@example.com" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                                 <button onClick={sendTestEmail} disabled={testSending} className="shrink-0 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">{testSending ? 'Sending...' : 'Send Test'}</button>
                             </div>
+                            {testWarnings.length > 0 && (
+                                <div className="mt-3 space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                                    {testWarnings.map((w, i) => <p key={i}>{w}</p>)}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {canViewMail && (
+                        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                            <div className="mb-3 flex items-center justify-between">
+                                <h3 className="text-sm font-semibold text-gray-900">Delivery Status</h3>
+                                <button onClick={loadMailStatus} disabled={mailStatusLoading} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                                    {mailStatusLoading ? 'Refreshing...' : 'Refresh'}
+                                </button>
+                            </div>
+
+                            {!mailStatus ? (
+                                <p className="text-sm text-gray-400">{mailStatusLoading ? 'Loading...' : 'No data yet.'}</p>
+                            ) : (
+                                <>
+                                    <div className="mb-4 flex flex-wrap gap-2">
+                                        <span className={`rounded-full px-3 py-1 text-xs font-medium ${mailStatus.smtp_enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                            SMTP {mailStatus.smtp_enabled ? 'enabled' : 'disabled'}
+                                        </span>
+                                        <span className={`rounded-full px-3 py-1 text-xs font-medium ${mailStatus.effective_mailer === 'smtp' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                            Effective mailer: {mailStatus.effective_mailer}
+                                        </span>
+                                        <span className={`rounded-full px-3 py-1 text-xs font-medium ${mailStatus.notifications_email_enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                            Email notifications {mailStatus.notifications_email_enabled ? 'on' : 'off'}
+                                        </span>
+                                    </div>
+
+                                    <div className="mb-4 flex gap-4 text-xs text-gray-600">
+                                        <span>Last 7 days:</span>
+                                        <span className="font-medium text-green-700">{mailStatus.last_7_days.sent} sent</span>
+                                        <span className="font-medium text-gray-500">{mailStatus.last_7_days.skipped} skipped</span>
+                                        <span className="font-medium text-red-600">{mailStatus.last_7_days.failed} failed</span>
+                                    </div>
+
+                                    {mailStatus.problems.length === 0 ? (
+                                        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-xs text-green-700">
+                                            All good — emails are being handed to SMTP.
+                                        </div>
+                                    ) : (
+                                        <div className="mb-4 space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                                            {mailStatus.problems.map((p, i) => <p key={i}>{p}</p>)}
+                                        </div>
+                                    )}
+
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs">
+                                            <thead>
+                                                <tr className="border-b border-gray-100 text-gray-400">
+                                                    <th className="py-1.5 pr-3 font-medium">Time</th>
+                                                    <th className="py-1.5 pr-3 font-medium">User</th>
+                                                    <th className="py-1.5 pr-3 font-medium">Type</th>
+                                                    <th className="py-1.5 pr-3 font-medium">Channel</th>
+                                                    <th className="py-1.5 pr-3 font-medium">Status</th>
+                                                    <th className="py-1.5 font-medium">Error</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {mailStatus.recent.length === 0 ? (
+                                                    <tr><td colSpan={6} className="py-3 text-center text-gray-400">No log entries yet.</td></tr>
+                                                ) : mailStatus.recent.map((r) => (
+                                                    <tr key={r.id} className="border-b border-gray-50">
+                                                        <td className="py-1.5 pr-3 whitespace-nowrap text-gray-500">{new Date(r.created_at).toLocaleString()}</td>
+                                                        <td className="py-1.5 pr-3 text-gray-700">{r.user?.name || '—'}</td>
+                                                        <td className="py-1.5 pr-3 text-gray-500">{r.type}</td>
+                                                        <td className="py-1.5 pr-3 text-gray-500">{r.channel}</td>
+                                                        <td className="py-1.5 pr-3">
+                                                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                                                r.status === 'sent' ? 'bg-green-100 text-green-700'
+                                                                    : r.status === 'skipped' ? 'bg-gray-100 text-gray-600'
+                                                                        : 'bg-red-100 text-red-700'
+                                                            }`}>
+                                                                {r.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="max-w-[12rem] truncate py-1.5 text-gray-500" title={r.error || ''}>{r.error || '—'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     )}
                 </div>

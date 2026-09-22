@@ -258,7 +258,7 @@ class LeaveService
             : $request->leaveType->director_approver_id;
 
         // System-wide Manager / Director approvers can act on the matching stage.
-        $hasFlag = $level === 'manager' ? (bool) $actor->is_manager : (bool) $actor->is_director;
+        $hasFlag = $level === 'manager' ? $actor->isManagerApprover() : $actor->isDirectorApprover();
 
         $allowed = $hasFlag
             || ($designated && $actor->id === $designated)
@@ -282,7 +282,8 @@ class LeaveService
 
     private function notifyManager(LeaveRequest $request): void
     {
-        $ids = User::where('is_manager', true)->pluck('id')->all();
+        $ids = User::where('is_manager', true)->orWhereHas('roles', fn ($q) => $q->where('name', 'Managers'))
+            ->pluck('id')->all();
         $ids[] = $request->leaveType?->manager_approver_id;
 
         $this->sendLeaveNotificationToMany(
@@ -296,7 +297,8 @@ class LeaveService
 
     private function notifyDirector(LeaveRequest $request): void
     {
-        $ids = User::where('is_director', true)->pluck('id')->all();
+        $ids = User::where('is_director', true)->orWhereHas('roles', fn ($q) => $q->where('name', 'Directors'))
+            ->pluck('id')->all();
         $ids[] = $request->leaveType?->director_approver_id;
 
         $this->sendLeaveNotificationToMany(

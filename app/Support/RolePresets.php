@@ -2,7 +2,10 @@
 
 namespace App\Support;
 
+use App\Models\User;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 /**
  * Permission templates per role. A role no longer grants permissions directly;
@@ -89,6 +92,52 @@ class RolePresets
             'environmental.view',
             'memos.view', 'memos.send-hr',
         ];
+    }
+
+    /**
+     * Backfill DIRECT permissions for users who have exactly one role with a
+     * known preset and no direct permissions of their own yet (e.g. seeded
+     * users created before role presets existed, or users created before the
+     * "syncPermissions on role assignment" behaviour was added).
+     *
+     * Idempotent: a user who already has any direct permission is left alone,
+     * since that set may be intentionally customised on the User Access page.
+     *
+     * @return int number of users updated
+     */
+    public static function backfillDirectPermissions(): int
+    {
+        if (! Schema::hasTable('model_has_roles')) {
+            return 0;
+        }
+
+        $updated = 0;
+
+        try {
+            $users = User::with('roles')->whereDoesntHave('permissions')->get();
+
+            foreach ($users as $user) {
+                if ($user->roles->count() !== 1) {
+                    continue;
+                }
+
+                $roleName = $user->roles->first()->name;
+                $preset = self::for($roleName);
+
+                if (empty($preset)) {
+                    continue;
+                }
+
+                $user->syncPermissions($preset);
+                $updated++;
+            }
+
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+        } catch (\Throwable $e) {
+            return $updated;
+        }
+
+        return $updated;
     }
 
     private static function projects(): array
