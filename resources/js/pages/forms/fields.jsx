@@ -47,7 +47,7 @@ function setByPath(obj, path, value) {
  * is called with the updated blob on every `set`. `record` + `onRecordChange`
  * let `$.`-prefixed paths read/write promoted columns (ref_no, form_date, title).
  */
-export function FormDataProvider({ data, onChange, record, onRecordChange, children }) {
+export function FormDataProvider({ data, onChange, record, onRecordChange, readOnly = false, children }) {
     const get = useCallback((path) => {
         if (path?.startsWith('$.')) return getByPath(record, path.slice(2));
         return getByPath(data, path);
@@ -62,7 +62,7 @@ export function FormDataProvider({ data, onChange, record, onRecordChange, child
     }, [data, record, onChange, onRecordChange]);
 
     return (
-        <FormDataContext.Provider value={{ data, get, set }}>
+        <FormDataContext.Provider value={{ data, get, set, readOnly }}>
             {children}
         </FormDataContext.Provider>
     );
@@ -77,7 +77,7 @@ export function useFormData() {
 const baseInputClass = 'w-full min-w-[3rem] flex-1 bg-transparent outline-none text-[11px] px-1 py-0.5 focus:bg-yellow-50';
 
 export function Field({ path, className = '', placeholder = '', type = 'text', align = 'left' }) {
-    const { get, set } = useFormData();
+    const { get, set, readOnly } = useFormData();
     const value = get(path) ?? '';
     const filled = value !== '' && value !== null && value !== undefined;
     const alignClass = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left';
@@ -87,14 +87,16 @@ export function Field({ path, className = '', placeholder = '', type = 'text', a
             type={type}
             value={value}
             placeholder={placeholder}
-            onChange={(e) => set(path, e.target.value)}
-            className={`${baseInputClass} ${alignClass} ${filled ? 'border-transparent' : 'border-b border-dotted border-gray-400'} ${className}`}
+            onChange={readOnly ? undefined : (e) => set(path, e.target.value)}
+            readOnly={readOnly}
+            tabIndex={readOnly ? -1 : undefined}
+            className={`${baseInputClass} ${alignClass} ${filled ? 'border-transparent' : 'border-b border-dotted border-gray-400'} ${readOnly ? 'cursor-default focus:bg-transparent' : ''} ${className}`}
         />
     );
 }
 
 export function Area({ path, rows = 3, className = '' }) {
-    const { get, set } = useFormData();
+    const { get, set, readOnly } = useFormData();
     const value = get(path) ?? '';
     const filled = value !== '' && value !== null && value !== undefined;
     const ref = useRef(null);
@@ -111,14 +113,16 @@ export function Area({ path, rows = 3, className = '' }) {
             ref={ref}
             rows={rows}
             value={value}
-            onChange={(e) => set(path, e.target.value)}
-            className={`${baseInputClass} resize-none overflow-hidden ${filled ? 'border-transparent' : 'border-b border-dotted border-gray-400'} ${className}`}
+            onChange={readOnly ? undefined : (e) => set(path, e.target.value)}
+            readOnly={readOnly}
+            tabIndex={readOnly ? -1 : undefined}
+            className={`${baseInputClass} resize-none overflow-hidden ${filled ? 'border-transparent' : 'border-b border-dotted border-gray-400'} ${readOnly ? 'cursor-default focus:bg-transparent' : ''} ${className}`}
         />
     );
 }
 
 export function Check({ path, label }) {
-    const { get, set } = useFormData();
+    const { get, set, readOnly } = useFormData();
     const checked = !!get(path);
 
     const toggle = () => set(path, !checked);
@@ -128,6 +132,20 @@ export function Check({ path, label }) {
             toggle();
         }
     };
+
+    if (readOnly) {
+        return (
+            <span
+                role="checkbox"
+                aria-checked={checked}
+                aria-disabled="true"
+                className="inline-flex cursor-default items-center gap-1 select-none"
+            >
+                <span className="text-[13px] leading-none">{checked ? '☑' : '☐'}</span>
+                <span className="whitespace-nowrap">{label}</span>
+            </span>
+        );
+    }
 
     return (
         <span
@@ -206,6 +224,7 @@ export function Table({ children, className = '' }) {
 }
 
 export function PhotoSlot({ n, record, onUploaded }) {
+    const { readOnly } = useFormData();
     const slot = `photo_${n}`;
     const attachment = record?.attachments?.find((a) => a.slot === slot);
 
@@ -227,26 +246,36 @@ export function PhotoSlot({ n, record, onUploaded }) {
         } catch { /* ignore */ }
     };
 
-    if (!record?.id) {
-        return (
-            <div className="flex aspect-[4/3] w-full print:aspect-auto print:h-[40mm] items-center justify-center rounded border border-dashed border-gray-400 bg-gray-50 text-center text-[10px] text-gray-400">
-                Save form first to add photos
-            </div>
-        );
-    }
-
     if (attachment) {
         return (
             <div className="relative aspect-[4/3] w-full print:aspect-auto print:h-[40mm] overflow-hidden rounded border border-gray-400 bg-gray-50">
                 <img src={siteFormService.attachmentUrl(attachment.id)} alt={slot} className="h-full w-full object-cover" />
-                <button
-                    type="button"
-                    onClick={removePhoto}
-                    title="Remove photo"
-                    className="absolute right-1 top-1 rounded-full bg-white/90 p-0.5 text-gray-600 shadow hover:bg-red-50 hover:text-red-600"
-                >
-                    <HiOutlineX className="h-3.5 w-3.5" />
-                </button>
+                {!readOnly && (
+                    <button
+                        type="button"
+                        onClick={removePhoto}
+                        title="Remove photo"
+                        className="absolute right-1 top-1 rounded-full bg-white/90 p-0.5 text-gray-600 shadow hover:bg-red-50 hover:text-red-600"
+                    >
+                        <HiOutlineX className="h-3.5 w-3.5" />
+                    </button>
+                )}
+            </div>
+        );
+    }
+
+    if (readOnly) {
+        return (
+            <div className="flex aspect-[4/3] w-full print:aspect-auto print:h-[40mm] items-center justify-center rounded border border-dashed border-gray-300 bg-gray-50 text-center text-[10px] text-gray-400">
+                &mdash;
+            </div>
+        );
+    }
+
+    if (!record?.id) {
+        return (
+            <div className="flex aspect-[4/3] w-full print:aspect-auto print:h-[40mm] items-center justify-center rounded border border-dashed border-gray-400 bg-gray-50 text-center text-[10px] text-gray-400">
+                Save form first to add photos
             </div>
         );
     }

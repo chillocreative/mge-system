@@ -10,7 +10,7 @@ import { formatDate } from '@/utils/date';
 import { bySlug } from './formTypes';
 import { FormDataProvider } from './fields';
 import {
-    HiOutlinePlus, HiOutlineSearch, HiOutlineDocumentText, HiOutlinePencil, HiOutlineTrash, HiOutlinePrinter,
+    HiOutlinePlus, HiOutlineSearch, HiOutlineDocumentText, HiOutlinePencil, HiOutlineTrash, HiOutlinePrinter, HiOutlineEye,
 } from 'react-icons/hi';
 
 const today = () => new Date().toISOString().split('T')[0];
@@ -36,6 +36,7 @@ export default function SiteFormPage() {
     const [projects, setProjects] = useState([]);
     const [projectId, setProjectId] = useState('');
     const [record, setRecord] = useState(emptyRecord());
+    const [mode, setMode] = useState('edit');
     const [list, setList] = useState([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(false);
@@ -103,10 +104,11 @@ export default function SiteFormPage() {
     const newForm = () => {
         setRecord(emptyRecord());
         setProjectId('');
+        setMode('edit');
         topRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    const loadRecord = async (id) => {
+    const loadRecord = async (id, nextMode = 'edit') => {
         setLoading(true);
         try {
             const res = await siteFormService.get(id);
@@ -121,6 +123,7 @@ export default function SiteFormPage() {
                 attachments: loaded.attachments || [],
             });
             setProjectId(loaded.project_id ? String(loaded.project_id) : '');
+            setMode(nextMode === 'view' || !canEdit ? 'view' : 'edit');
             topRef.current?.scrollIntoView({ behavior: 'smooth' });
         } catch {
             toast.error('Failed to load form');
@@ -185,6 +188,7 @@ export default function SiteFormPage() {
     }
 
     const Layout = meta.Layout;
+    const readOnly = mode === 'view' || !canEdit;
 
     const setData = (nextData) => setRecord((prev) => ({ ...prev, data: nextData }));
     const setRecordFields = (nextRecord) => setRecord((prev) => ({ ...prev, ...nextRecord }));
@@ -193,14 +197,20 @@ export default function SiteFormPage() {
         <div ref={topRef}>
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">{meta.title}{meta.subtitle ? ` ${meta.subtitle}` : ''}</h1>
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-2xl font-bold text-gray-900">{meta.title}{meta.subtitle ? ` ${meta.subtitle}` : ''}</h1>
+                        {mode === 'view' && (
+                            <span className="rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-semibold text-gray-600">Viewing</span>
+                        )}
+                    </div>
                     <p className="text-sm text-gray-500">{meta.docNo} &middot; Rev {meta.revision}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <select
                         value={projectId}
                         onChange={(e) => onProjectChange(e.target.value)}
-                        className="rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        disabled={mode === 'view'}
+                        className="rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:cursor-not-allowed disabled:bg-gray-100"
                     >
                         <option value="">Select project...</option>
                         {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -219,7 +229,16 @@ export default function SiteFormPage() {
                     >
                         <HiOutlinePrinter className="h-5 w-5" /> Print
                     </button>
-                    {canEdit && (
+                    {mode === 'view' && canEdit && (
+                        <button
+                            type="button"
+                            onClick={() => setMode('edit')}
+                            className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700"
+                        >
+                            <HiOutlinePencil className="h-5 w-5" /> Edit
+                        </button>
+                    )}
+                    {mode === 'edit' && canEdit && (
                         <button
                             type="button"
                             onClick={save}
@@ -240,13 +259,13 @@ export default function SiteFormPage() {
                     )}
                 </div>
             </div>
-            {!projectId && (
+            {!projectId && mode !== 'view' && (
                 <p className="mb-4 text-sm text-amber-600">Select a project to save this form.</p>
             )}
 
             <div className="site-form-print-area">
-                <FormDataProvider data={record.data} onChange={setData} record={record} onRecordChange={setRecordFields}>
-                    <Layout meta={meta} record={record} setRecord={setRecordFields} onReload={() => record.id && loadRecord(record.id)} />
+                <FormDataProvider data={record.data} onChange={setData} record={record} onRecordChange={setRecordFields} readOnly={readOnly}>
+                    <Layout meta={meta} record={record} setRecord={setRecordFields} onReload={() => record.id && loadRecord(record.id, mode)} />
                 </FormDataProvider>
             </div>
 
@@ -286,7 +305,7 @@ export default function SiteFormPage() {
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {list.map((f) => (
-                                    <tr key={f.id} className="cursor-pointer hover:bg-gray-50" onClick={() => loadRecord(f.id)}>
+                                    <tr key={f.id} className="cursor-pointer hover:bg-gray-50" onClick={() => loadRecord(f.id, 'view')}>
                                         <td className="px-3 py-2 text-sm font-medium text-gray-900">{f.ref_no || '-'}</td>
                                         <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-500">{formatDate(f.form_date)}</td>
                                         <td className="px-3 py-2 text-sm text-gray-600">{f.title || '-'}</td>
@@ -295,8 +314,11 @@ export default function SiteFormPage() {
                                         <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-500">{formatDate(f.updated_at)}</td>
                                         <td className="whitespace-nowrap px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
                                             <div className="flex items-center justify-end gap-1">
+                                                <button onClick={() => loadRecord(f.id, 'view')} title="View" className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+                                                    <HiOutlineEye className="h-4 w-4" />
+                                                </button>
                                                 {canEdit && (
-                                                    <button onClick={() => loadRecord(f.id)} title="Edit" className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+                                                    <button onClick={() => loadRecord(f.id, 'edit')} title="Edit" className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
                                                         <HiOutlinePencil className="h-4 w-4" />
                                                     </button>
                                                 )}
