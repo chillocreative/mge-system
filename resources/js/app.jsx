@@ -43,6 +43,10 @@ import Hirarc from '@/pages/safety/Hirarc';
 import Permits from '@/pages/safety/Permits';
 import SafetyStatistics from '@/pages/safety/Statistics';
 import Environmental from '@/pages/environmental/Environmental';
+import WaterQuality from '@/pages/environment/WaterQuality';
+import EnvironmentReports from '@/pages/environment/EnvironmentReports';
+import EnvironmentReportEditor from '@/pages/environment/EnvironmentReportEditor';
+import EnvironmentReportViewer from '@/pages/environment/EnvironmentReportViewer';
 import QcRecords from '@/pages/qc/QcRecords';
 import Chat from '@/pages/chat/Chat';
 import StaffList from '@/pages/staff/StaffList';
@@ -172,6 +176,10 @@ function AppRoutes() {
                     {/* Environmental — requires environmental.view */}
                     <Route element={<PermissionGate permission="environmental.view" />}>
                         <Route path="/environmental" element={<Environmental />} />
+                        <Route path="/environment/reports" element={<EnvironmentReports />} />
+                        <Route path="/environment/reports/:id" element={<EnvironmentReportViewer />} />
+                        <Route path="/environment/reports/:id/edit" element={<EnvironmentReportEditor />} />
+                        <Route path="/environment/water-quality" element={<WaterQuality />} />
                     </Route>
 
                     {/* QA/QC — requires qc.view */}

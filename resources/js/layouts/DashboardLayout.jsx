@@ -39,6 +39,7 @@ import {
     HiOutlineUserCircle,
     HiOutlineViewList,
     HiOutlineDocumentAdd,
+    HiOutlineBeaker,
 } from 'react-icons/hi';
 import NotificationBell from '@/components/NotificationBell';
 import toast from 'react-hot-toast';
@@ -109,7 +110,13 @@ const navigation = [
         ],
     },
     { name: 'Safety', href: '/safety', icon: HiOutlineShieldCheck, permission: 'safety.view' },
-    { name: 'Environmental', href: '/environmental', icon: HiOutlineGlobe, permission: 'environmental.view' },
+    {
+        name: 'Environment', icon: HiOutlineGlobe,
+        children: [
+            { name: 'Monthly Reports', href: '/environment/reports', icon: HiOutlineDocumentReport, permission: 'environmental.view' },
+            { name: 'Water Quality', href: '/environment/water-quality', icon: HiOutlineBeaker, permission: 'environmental.view' },
+        ],
+    },
     {
         name: 'QA/QC', icon: HiOutlineClipboardCheck,
         children: [

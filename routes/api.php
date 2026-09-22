@@ -18,6 +18,8 @@ use App\Http\Controllers\Api\DiscussionController;
 use App\Http\Controllers\Api\DrawingController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\EnvironmentalController;
+use App\Http\Controllers\Api\EnvironmentProjectSettingController;
+use App\Http\Controllers\Api\EnvironmentReportController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\FinanceController;
 use App\Http\Controllers\Api\HirarcController;
@@ -61,6 +63,7 @@ use App\Http\Controllers\Api\TrainingController;
 use App\Http\Controllers\Api\UserAccessController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VehicleController;
+use App\Http\Controllers\Api\WaterQualityController;
 use App\Http\Controllers\Api\WorkPermitController;
 use Illuminate\Support\Facades\Route;
 
@@ -831,6 +834,72 @@ Route::middleware('auth:sanctum')->group(function () {
     // Environmental photo uploads
     Route::post('/environmental/{type}/{id}/photos', [EnvironmentalController::class, 'uploadPhotos'])
         ->middleware('permission:environmental.create');
+
+    // Water Quality Monitoring + per-project environment settings + monthly environment reports
+    Route::prefix('environment')->group(function () {
+        Route::prefix('water-quality')->group(function () {
+            Route::get('/', [WaterQualityController::class, 'index'])
+                ->middleware('permission:environmental.view');
+            Route::get('/{id}/pdf', [WaterQualityController::class, 'pdf'])
+                ->middleware('permission:environmental.view');
+            Route::get('/{id}', [WaterQualityController::class, 'show'])
+                ->middleware('permission:environmental.view');
+            Route::post('/', [WaterQualityController::class, 'store'])
+                ->middleware('permission:environmental.create');
+            Route::put('/{id}', [WaterQualityController::class, 'update'])
+                ->middleware('permission:environmental.manage');
+            Route::delete('/{id}', [WaterQualityController::class, 'destroy'])
+                ->middleware('permission:environmental.manage');
+        });
+
+        Route::prefix('settings')->group(function () {
+            Route::get('/{project}', [EnvironmentProjectSettingController::class, 'show'])
+                ->middleware('permission:environmental.view');
+            Route::get('/{project}/image/{kind}', [EnvironmentProjectSettingController::class, 'image'])
+                ->middleware('permission:environmental.view');
+            Route::put('/{project}', [EnvironmentProjectSettingController::class, 'update'])
+                ->middleware('permission:environmental.manage');
+            Route::post('/{project}/image', [EnvironmentProjectSettingController::class, 'uploadImage'])
+                ->middleware('permission:environmental.manage');
+            Route::delete('/{project}/image/{kind}', [EnvironmentProjectSettingController::class, 'deleteImage'])
+                ->middleware('permission:environmental.manage');
+        });
+
+        // export routes added by the exporter work order
+        Route::prefix('reports')->group(function () {
+            Route::get('/assets/{asset}/download', [EnvironmentReportController::class, 'downloadAsset'])
+                ->middleware('permission:environmental.view');
+            Route::put('/assets/{asset}', [EnvironmentReportController::class, 'updateAsset'])
+                ->middleware('permission:environmental.manage');
+            Route::delete('/assets/{asset}', [EnvironmentReportController::class, 'destroyAsset'])
+                ->middleware('permission:environmental.manage');
+
+            Route::get('/', [EnvironmentReportController::class, 'index'])
+                ->middleware('permission:environmental.view');
+            Route::post('/', [EnvironmentReportController::class, 'store'])
+                ->middleware('permission:environmental.create');
+            Route::get('/{id}/export/pdf', [EnvironmentReportController::class, 'exportPdf'])
+                ->middleware('permission:environmental.view');
+            Route::get('/{id}/export/docx', [EnvironmentReportController::class, 'exportDocx'])
+                ->middleware('permission:environmental.view');
+            Route::get('/{id}', [EnvironmentReportController::class, 'show'])
+                ->middleware('permission:environmental.view');
+            Route::put('/{id}', [EnvironmentReportController::class, 'update'])
+                ->middleware('permission:environmental.manage');
+            Route::delete('/{id}', [EnvironmentReportController::class, 'destroy'])
+                ->middleware('permission:environmental.manage');
+            Route::post('/{id}/regenerate/{section}', [EnvironmentReportController::class, 'regenerate'])
+                ->middleware('permission:environmental.manage');
+            Route::post('/{id}/finalise', [EnvironmentReportController::class, 'finalise'])
+                ->middleware('permission:environmental.manage');
+            Route::post('/{id}/reopen', [EnvironmentReportController::class, 'reopen'])
+                ->middleware('permission:environmental.manage');
+            Route::get('/{id}/assets', [EnvironmentReportController::class, 'assets'])
+                ->middleware('permission:environmental.view');
+            Route::post('/{id}/assets', [EnvironmentReportController::class, 'storeAsset'])
+                ->middleware('permission:environmental.manage');
+        });
+    });
 
     /*
     |----------------------------------------------------------------------
