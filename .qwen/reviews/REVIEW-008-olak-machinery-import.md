@@ -261,3 +261,18 @@ and `--commit` behaviour is therefore certified by the feature tests above (whic
 through the framework kernel and capture its real output), not by a production-shaped run. The operator
 must still read the dry-run output before passing `--commit`.
 
+### Post-approval correction (same day, after `01add380` was pushed)
+
+This APPROVE was incomplete, and the reason is worth keeping on record. Running the real dry run against
+the developer database showed `Creates 45 | Updates 1 | Docs 33 | Assigns 0 | Retired 0` — the dry run
+never reports the assignment plan at all, because `assignProjects()` counts inside `if ($commit)` **and**
+rebuilds its list by querying `Vehicle` for rows that a dry run has not created. So one third of what
+`--commit` writes is invisible to the person approving it.
+
+My round-3 approval asserted the `CREATE`/`UPDATE` line counts and never asserted an `ASSIGN` line, so a
+green suite certified a plan that was partly blank. Fixed under `SPEC-010`
+(`.qwen/specs/SPEC-010-olak-dryrun-assignment-plan.md`). The lesson stands as written: an APPROVE is only
+as good as the observable it actually made someone count, and running the tool for real is a review step,
+not a release step.
+
+

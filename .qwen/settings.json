@@ -20,14 +20,18 @@
     ],
     "ask": [
       "Bash(php artisan migrate*)",
-      "Bash(php artisan db:seed*)"
+      "Bash(php artisan db:seed*)",
+      "Bash(mysql *)",
+      "Bash(php artisan tinker*)"
     ],
     "deny": [
       "Read(.env)",
       "Read(.env.*)",
       "Bash(rm -rf /*)",
       "Bash(php artisan migrate --force*)",
-      "Bash(php artisan db:seed --force*)"
+      "Bash(php artisan db:seed --force*)",
+      "Bash(php artisan migrate:fresh*)",
+      "Bash(php artisan db:wipe*)"
     ]
   },
   "hooks": {

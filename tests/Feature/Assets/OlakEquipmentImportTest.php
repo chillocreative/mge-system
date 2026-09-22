@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleDocument;
 use App\Models\VehicleProjectAssignment;
+use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -311,7 +312,7 @@ class OlakEquipmentImportTest extends TestCase
         $this->withoutMockingConsoleOutput();
 
         $buffer = new \Symfony\Component\Console\Output\BufferedOutput;
-        $this->app['Illuminate\Contracts\Console\Kernel']->call('assets:import-olak', [], $buffer);
+        $this->app[Kernel::class]->call('assets:import-olak', [], $buffer);
 
         $output = $buffer->fetch();
 
@@ -343,11 +344,11 @@ class OlakEquipmentImportTest extends TestCase
 
         // First commit to create all vehicles
         $commitBuffer = new \Symfony\Component\Console\Output\BufferedOutput;
-        $this->app['Illuminate\Contracts\Console\Kernel']->call('assets:import-olak', ['--commit' => true], $commitBuffer);
+        $this->app[Kernel::class]->call('assets:import-olak', ['--commit' => true], $commitBuffer);
 
         // Reset buffer for second run
         $buffer = new \Symfony\Component\Console\Output\BufferedOutput;
-        $this->app['Illuminate\Contracts\Console\Kernel']->call('assets:import-olak', [], $buffer);
+        $this->app[Kernel::class]->call('assets:import-olak', [], $buffer);
 
         $output = $buffer->fetch();
 
@@ -400,5 +401,148 @@ class OlakEquipmentImportTest extends TestCase
         $abcAssignments = VehicleProjectAssignment::where('vehicle_id',
             Vehicle::where('registration_no', 'ABC 111')->sole()->id)->count();
         $this->assertSame(0, $abcAssignments);
+    }
+
+    /**
+     * @test
+     * dry run reports the assignment plan: empty database, one OLAK project,
+     * output contains exactly 46 ASSIGN lines and summary shows Assigns 46
+     */
+    public function test_dry_run_reports_the_assignment_plan(): void
+    {
+        $this->withoutMockingConsoleOutput();
+
+        // Setup: one OLAK project
+        Project::create(['name' => 'OLAK Site Maintenance', 'code' => 'OLK', 'status' => 'in_progress']);
+
+        $buffer = new \Symfony\Component\Console\Output\BufferedOutput;
+        $this->app[Kernel::class]->call('assets:import-olak', [], $buffer);
+
+        $output = $buffer->fetch();
+
+        // Count ASSIGN lines (must be exactly 46)
+        $lines = explode("\n", $output);
+        $assignLines = preg_grep('/^ASSIGN\s+.*\s->\s/', $lines);
+        $this->assertCount(46, $assignLines, 'Should have exactly 46 ASSIGN lines');
+
+        // Assert summary mentions Assigns 46
+        $this->assertMatchesRegularExpression('/Assigns\s+46/', $output);
+
+        // Verify that no assignments were written
+        $this->assertSame(0, VehicleProjectAssignment::count());
+    }
+
+    /**
+     * @test
+     * after a commit, a subsequent dry run shows Assigns 0 and mentions 46 already assigned
+     */
+    public function test_dry_run_after_commit_reports_already_assigned(): void
+    {
+        $this->withoutMockingConsoleOutput();
+
+        // Create OLAK project first
+        Project::create(['name' => 'OLAK Site Maintenance', 'code' => 'OLK', 'status' => 'in_progress']);
+
+        // First commit to create all vehicles and their assignments
+        $commitBuffer = new \Symfony\Component\Console\Output\BufferedOutput;
+        $this->app[Kernel::class]->call('assets:import-olak', ['--commit' => true], $commitBuffer);
+
+        // Run dry run after commit
+        $buffer = new \Symfony\Component\Console\Output\BufferedOutput;
+        $this->app[Kernel::class]->call('assets:import-olak', [], $buffer);
+
+        $output = $buffer->fetch();
+
+        // Should show Assigns 0
+        $this->assertMatchesRegularExpression('/Assigns\s+0/', $output);
+
+        // Should mention already assigned
+        $this->assertStringContainsString('already assigned', $output);
+
+        // Verify assignments count is still 46 (not doubled)
+        $this->assertSame(46, VehicleProjectAssignment::whereNull('released_at')->count());
+    }
+
+    /**
+     * @test
+     * conflict row is reported and not assigned: move one vehicle's assignment,
+     * dry run shows CONFLICT line, Assigns 0 new, no growth in open assignments
+     */
+    public function test_conflict_row_is_reported_not_assigned(): void
+    {
+        $this->withoutMockingConsoleOutput();
+
+        // Create OLAK project first
+        Project::create(['name' => 'OLAK Site Maintenance', 'code' => 'OLK', 'status' => 'in_progress']);
+
+        // Commit to create vehicles and assignments
+        $commitBuffer = new \Symfony\Component\Console\Output\BufferedOutput;
+        $this->app[Kernel::class]->call('assets:import-olak', ['--commit' => true], $commitBuffer);
+
+        // Create a second non-OLAK project
+        $secondProject = Project::create([
+            'name' => 'Bukit Talam Roadworks',
+            'code' => 'BTR',
+            'status' => 'in_progress',
+        ]);
+
+        // Move one vehicle's open assignment to the second project
+        $firstAssignment = VehicleProjectAssignment::whereNull('released_at')->first();
+        $this->assertNotNull($firstAssignment, 'Should have at least one assignment');
+
+        $firstAssignment->update(['project_id' => $secondProject->id]);
+        $conflictPlate = Vehicle::findOrFail($firstAssignment->vehicle_id)->registration_no;
+
+        $openBefore = VehicleProjectAssignment::whereNull('released_at')->count();
+
+        // Run dry run
+        $buffer = new \Symfony\Component\Console\Output\BufferedOutput;
+        $this->app[Kernel::class]->call('assets:import-olak', [], $buffer);
+
+        $output = $buffer->fetch();
+
+        // The conflicting plate is named on a CONFLICT line and never on an ASSIGN line
+        $this->assertStringContainsString("CONFLICT {$conflictPlate}:", $output);
+        $this->assertStringNotContainsString("ASSIGN  {$conflictPlate} ->", $output);
+
+        // Nothing would be newly assigned: 45 are already on OLAK, 1 conflicts
+        $this->assertMatchesRegularExpression('/Assigns\s+0\b/', $output);
+        $this->assertStringContainsString('1 conflict', $output);
+
+        // Verify open assignments did not grow
+        $this->assertSame(
+            $openBefore,
+            VehicleProjectAssignment::whereNull('released_at')->count(),
+            'A dry run must not create an assignment'
+        );
+    }
+
+    /**
+     * @test
+     * two matching projects → ASSIGN skipped: 2, zero ASSIGN lines, zero assignments created
+     */
+    public function test_two_olak_projects_results_in_skipped_assignment(): void
+    {
+        $this->withoutMockingConsoleOutput();
+
+        // Create two matching OLAK projects
+        Project::create(['name' => 'OLAK Site A', 'code' => 'OLA', 'status' => 'in_progress']);
+        Project::create(['name' => 'OLAK Site B', 'code' => 'OLB', 'status' => 'in_progress']);
+
+        $buffer = new \Symfony\Component\Console\Output\BufferedOutput;
+        $this->app[Kernel::class]->call('assets:import-olak', ['--commit' => true], $buffer);
+
+        $output = $buffer->fetch();
+
+        // Should show skipped message
+        $this->assertStringContainsString('ASSIGN skipped: 2', $output);
+
+        // Should have zero ASSIGN lines
+        $lines = explode("\n", $output);
+        $assignLines = preg_grep('/^ASSIGN\s+.*\s->\s/', $lines);
+        $this->assertCount(0, $assignLines, 'Should have zero ASSIGN lines');
+
+        // Should have zero assignments created
+        $this->assertSame(0, VehicleProjectAssignment::whereNull('released_at')->count());
     }
 }

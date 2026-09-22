@@ -91,9 +91,9 @@ class ImportOlakEquipment extends Command
         $userWithRole = User::whereHas('roles', fn ($q) => $q->where('name', 'Admin & HR'))->first();
         $creatorId = $userWithRole ? $userWithRole->id : null;
 
-        [$createCount, $updateCount, $docCount, $touchedRegs] = $this->importAll($creatorId, $commit);
+        [$createCount, $updateCount, $docCount, $touchedRegs, $plannedVehicles] = $this->importAll($creatorId, $commit);
         $retiredCount = $this->retireLegacy($commit);
-        $assignResult = $this->assignProjects($commit, $touchedRegs);
+        $assignResult = $this->assignProjects($commit, $plannedVehicles);
 
         $this->summary([
             'creates' => $createCount,
@@ -101,6 +101,7 @@ class ImportOlakEquipment extends Command
             'docs' => $docCount,
             'assigns' => $assignResult['count'],
             'conflicts' => $assignResult['conflicts'],
+            'already_assigned' => $assignResult['already_assigned'],
             'skipped_assign' => $assignResult['skipped'],
             'retired' => $retiredCount,
         ], $commit);
@@ -114,13 +115,14 @@ class ImportOlakEquipment extends Command
         $updateCount = 0;
         $docCount = 0;
         $touchedRegs = [];
+        $plannedVehicles = [];
 
         $this->line('Machinery: '.count(self::MACHINES).' | Vehicles: '.count(self::VEHICLES));
 
         if ($commit) {
-            DB::transaction(function () use ($creatorId, &$createCount, &$updateCount, &$docCount, &$touchedRegs) {
+            DB::transaction(function () use ($creatorId, &$createCount, &$updateCount, &$docCount, &$touchedRegs, &$plannedVehicles) {
                 foreach (self::MACHINES as $row) {
-                    [$created, $updated, $vehicle] = $this->upsertMachine($row, $creatorId, true, $touchedRegs);
+                    [$created, $updated, $vehicle] = $this->upsertMachine($row, $creatorId, true, $touchedRegs, $plannedVehicles);
                     if ($created) {
                         $createCount++;
                     }
@@ -134,7 +136,7 @@ class ImportOlakEquipment extends Command
                 }
 
                 foreach (self::VEHICLES as $row) {
-                    [$created, $updated, $vehicle] = $this->upsertVehicle($row, $creatorId, true, $touchedRegs);
+                    [$created, $updated, $vehicle] = $this->upsertVehicle($row, $creatorId, true, $touchedRegs, $plannedVehicles);
                     if ($created) {
                         $createCount++;
                     }
@@ -150,7 +152,7 @@ class ImportOlakEquipment extends Command
         } else {
             // Dry run: same logic as commit, but no writes
             foreach (self::MACHINES as $row) {
-                [$created, $updated, $vehicle] = $this->upsertMachine($row, $creatorId, false, $touchedRegs);
+                [$created, $updated, $vehicle] = $this->upsertMachine($row, $creatorId, false, $touchedRegs, $plannedVehicles);
                 if ($created) {
                     $createCount++;
                 }
@@ -164,7 +166,7 @@ class ImportOlakEquipment extends Command
             }
 
             foreach (self::VEHICLES as $row) {
-                [$created, $updated, $vehicle] = $this->upsertVehicle($row, $creatorId, false, $touchedRegs);
+                [$created, $updated, $vehicle] = $this->upsertVehicle($row, $creatorId, false, $touchedRegs, $plannedVehicles);
                 if ($created) {
                     $createCount++;
                 }
@@ -178,10 +180,10 @@ class ImportOlakEquipment extends Command
             }
         }
 
-        return [$createCount, $updateCount, $docCount, $touchedRegs];
+        return [$createCount, $updateCount, $docCount, $touchedRegs, $plannedVehicles];
     }
 
-    private function upsertMachine(array $row, ?int $creatorId, bool $commit, array &$touchedRegs): array
+    private function upsertMachine(array $row, ?int $creatorId, bool $commit, array &$touchedRegs, array &$plannedVehicles): array
     {
         $no = $row['no'];
         $reg = trim($row['reg']);
@@ -239,16 +241,18 @@ class ImportOlakEquipment extends Command
                 $attrs
             );
         } else {
-            // In dry-run mode: return a fake model instance for output purposes
-            $vehicle = new Vehicle($attrs);
+            // Dry run: reuse the saved row when there is one, so assignProjects() can read its
+            // open assignment. Only a genuinely new row is represented by an unsaved instance.
+            $vehicle = $exists ?: new Vehicle($attrs);
         }
 
         $touchedRegs[] = $reg;
+        $plannedVehicles[] = $vehicle;
 
         return [$isNew, ! $isNew, $vehicle];
     }
 
-    private function upsertVehicle(array $row, ?int $creatorId, bool $commit, array &$touchedRegs): array
+    private function upsertVehicle(array $row, ?int $creatorId, bool $commit, array &$touchedRegs, array &$plannedVehicles): array
     {
         $no = $row['no'];
         $reg = trim($row['reg']);
@@ -306,11 +310,13 @@ class ImportOlakEquipment extends Command
                 $attrs
             );
         } else {
-            // In dry-run mode: return a fake model instance for output purposes
-            $vehicle = new Vehicle($attrs);
+            // Dry run: reuse the saved row when there is one, so assignProjects() can read its
+            // open assignment. Only a genuinely new row is represented by an unsaved instance.
+            $vehicle = $exists ?: new Vehicle($attrs);
         }
 
         $touchedRegs[] = $reg;
+        $plannedVehicles[] = $vehicle;
 
         return [$isNew, ! $isNew, $vehicle];
     }
@@ -400,7 +406,7 @@ class ImportOlakEquipment extends Command
         return count($regs);
     }
 
-    private function assignProjects(bool $commit, array $touchedRegs): array
+    private function assignProjects(bool $commit, array $plannedVehicles): array
     {
         $projects = Project::where('name', 'like', '%OLAK%')
             ->orWhere('code', 'like', '%OLAK%')
@@ -409,17 +415,21 @@ class ImportOlakEquipment extends Command
         if (count($projects) !== 1) {
             $this->line('ASSIGN skipped: '.count($projects).' projects match "OLAK"');
 
-            return ['count' => 0, 'conflicts' => 0, 'skipped' => true];
+            return ['count' => 0, 'conflicts' => 0, 'already_assigned' => 0, 'skipped' => true];
         }
 
         $project = $projects->first();
         $count = 0;
         $conflicts = 0;
+        $alreadyAssigned = 0;
 
-        $vehicles = Vehicle::whereIn('registration_no', $touchedRegs)->get();
-
-        foreach ($vehicles as $vehicle) {
-            $open = $vehicle->projectAssignments()->whereNull('released_at')->first();
+        foreach ($plannedVehicles as $vehicle) {
+            // A row this dry run has not created yet cannot carry a prior assignment, so there is
+            // nothing to read. Never rebuild this list with a query — SPEC-008 round 1 did that and
+            // assigned every vehicle in the database to OLAK.
+            $open = $vehicle->exists
+                ? $vehicle->projectAssignments()->whereNull('released_at')->first()
+                : null;
 
             if ($open && $open->project_id !== $project->id) {
                 $this->line("CONFLICT {$vehicle->registration_no}: open assignment is project {$open->project_id}");
@@ -429,12 +439,19 @@ class ImportOlakEquipment extends Command
             }
 
             if ($open && $open->project_id === $project->id) {
+                $alreadyAssigned++;
+
                 continue;
             }
 
-            $purchaseDate = $vehicle->purchase_date ? $vehicle->purchase_date->toDateString() : now()->toDateString();
+            // Print ASSIGN line for both dry-run and commit modes
+            $this->line("ASSIGN  {$vehicle->registration_no} -> {$project->code}");
+            $count++;
 
+            // Only create the assignment row when committing
             if ($commit) {
+                $purchaseDate = $vehicle->purchase_date ? $vehicle->purchase_date->toDateString() : now()->toDateString();
+
                 VehicleProjectAssignment::create([
                     'vehicle_id' => $vehicle->id,
                     'project_id' => $project->id,
@@ -443,17 +460,34 @@ class ImportOlakEquipment extends Command
                     'created_by' => $vehicle->created_by,
                     'notes' => 'Imported from '.self::SOURCE,
                 ]);
-                $count++;
             }
         }
 
-        return ['count' => $count, 'conflicts' => $conflicts, 'skipped' => false];
+        return [
+            'count' => $count,
+            'conflicts' => $conflicts,
+            'already_assigned' => $alreadyAssigned,
+            'skipped' => false,
+        ];
     }
 
     private function summary(array $counts, bool $commit): void
     {
         $this->line('---');
-        $this->line("Creates {$counts['creates']} | Updates {$counts['updates']} | Docs {$counts['docs']} | Assigns {$counts['assigns']} | Retired {$counts['retired']}");
+
+        // "Assigns" counts the rows this run would attach; the parentheses account for every
+        // other planned vehicle, so the three numbers always sum to the vehicles considered.
+        if ($counts['skipped_assign']) {
+            $assignString = 'Assigns 0 (assignment skipped)';
+        } else {
+            $assignString = "Assigns {$counts['assigns']} ({$counts['assigns']} new, {$counts['already_assigned']} already assigned";
+            if ($counts['conflicts'] > 0) {
+                $assignString .= ", {$counts['conflicts']} conflict".($counts['conflicts'] === 1 ? '' : 's');
+            }
+            $assignString .= ')';
+        }
+
+        $this->line("Creates {$counts['creates']} | Updates {$counts['updates']} | Docs {$counts['docs']} | {$assignString} | Retired {$counts['retired']}");
 
         if ($commit) {
             $this->line('Committed.');
