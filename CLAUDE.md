@@ -245,7 +245,11 @@ Six project facts this workflow already paid to discover:
    host, so `deploy.sh`'s old `which php8.3 || which php8.2 || which php` fell straight through to
    that CGI binary: every artisan call in the deploy, `migrate --force` included, printed the
    command list and exited 0 while the script announced "Deploy complete". Confirmed 2026-09-23.
-   This is the likeliest cause of the unapplied-migrations 500 that hit production once before.
+   **Scope of this, measured rather than assumed:** production was checked the same day and had
+   **0 pending migrations**, so whatever path actually deploys there — most likely cPanel running
+   `.cpanel.yml` itself, with its own PHP rather than the shell's — does work. The arg-dropping is
+   confirmed for the *interactive* cPanel terminal only. Do not repeat the earlier inference that
+   the deploy had never migrated; it had.
    Never call `php artisan` directly on that host. Use `bash artisan.sh <command>`, which resolves
    through `bin/php-cli.sh` — it picks a binary by asking it for `PHP_SAPI` and rejects anything
    that is not `cli`, because the file name tells you nothing about which SAPI you get. Override
