@@ -84,3 +84,67 @@ to this work order, and is left alone).
 tests — explicitly, never `-A`/`.` — while the OLAK session's files and `vendor/**` stay unstaged.
 If the concurrent session writes anything new after this review, the gate will (correctly) refuse
 the commit and a fresh review is required.
+
+---
+
+## Re-certification — 2026-09-22 19:02 (+08)
+
+The commit was attempted and the orchestrator gate **refused** it, for the right reason:
+`.qwen/runs/RUN-008.md` was written at 18:58, after this review's 18:50 timestamp. That file is
+not this round's report — the concurrent OLAK session's writer collided on the number and
+**overwrote my writer's `RUN-008.md`** (its content is now
+`ImportOlakEquipment.php` / `OlakEquipmentImportTest.php`). Two of the three SPEC/RUN numbering
+schemes in this repo are being driven by two sessions at once, so `RUN-NNN.md` can no longer be
+treated as a per-work-order record; `.qwen/runs/` is gitignored, so nothing certified here is
+lost, but the lesson is recorded: claim the number at the moment you write the SPEC, not later.
+
+I re-ran the certification myself against the tree that is now staged rather than re-stamping the
+verdict:
+
+```
+$ DB_CONNECTION=mysql DB_DATABASE=mge_pms php artisan test tests/Feature/MonthlyReport/RegisterSectionsTest.php
+  Tests:    7 passed (29 assertions)
+$ php artisan test --filter='Environment|WaterQuality'
+  Tests:    29 passed (112 assertions)
+$ mysql ... information_schema.TABLES WHERE TABLE_SCHEMA='mge_pms' ...
+  correspondence_types 18:12:22 | migrations 18:12:18 | projects 18:12:21 | users 18:12:21  <- unchanged all day
+$ git diff --staged --name-only | grep -iE "olak|vendor/|settings.json"
+  (no match — nothing from the concurrent session, vendor/** or .qwen/settings.json is staged)
+```
+
+What moved since 18:50 is exclusively outside the certified scope and outside the staged set
+(`app/Console/Commands/ImportOlakEquipment.php` 18:57:51,
+`tests/Feature/Assets/OlakEquipmentImportTest.php` 18:57:43 — the other session's work).
+62 files are staged, +6794/-236, all Environment module, `phpunit.xml`, `tests/TestCase.php`,
+this module's tests, the built `public/build/**` bundle (manifest 16:51:13, newer than every JS
+source at 16:51:08, so no rebuild was owed), and this round's SPECs and reviews.
+
+### Verdict: APPROVE (re-certified, unchanged)
+
+Addendum, 19:07: the follow-up commit carrying this re-certification was itself refused — the
+concurrent session had rewritten `app/Console/Commands/ImportOlakEquipment.php` again in the
+minutes since. The gate is doing its job; under a live second writer in the same tree it cannot be
+satisfied by re-stamping timestamps, so the certification above stands as recorded here (and as
+committed in the pre-re-cert form inside `6072f70f`) rather than being chased into a loop.
+
+Addendum, 19:30 — two things happened after the push that belong in the record.
+
+1. **The push carried a commit I did not certify.** I verified `git log origin/main..HEAD` at 19:12
+   and it showed only `6072f70f`. At 19:17:34 the concurrent session committed
+   `01add380 "Import the OLAK site machinery and vehicle register"` on top, so `git push` sent both.
+   `01add380` is additive (console command, feature test, its own SPEC/REVIEW docs; no migration,
+   no route, no frontend) and its tests are inside the 660 that passed locally and in CI
+   (`35720718237` success), but it is not covered by any verdict of mine. Recorded so nobody later
+   reads the green deploy as a review of it.
+2. **`vendor/composer/autoload_{classmap,static}.php` are committed here deliberately.** The
+   concurrent session ran `composer dump-autoload` and then committed its new classes *without* the
+   regenerated autoloader, so the tracked classmap did not know `ImportOlakEquipment` or
+   `EquipmentMachineryImportSeeder` (verified: 1 reference each in the files now staged). With the
+   vendor directory tracked in this repo, that mismatch is a latent "class not found" for any
+   environment that does not re-run composer. The autoloader is being brought back in step with the
+   committed code — the command itself is still uncertified.
+
+Deliberately **not** committed: `.qwen/settings.json`, which another session had widened with
+`Bash(git *)`, `Bash(eval *)` and `Bash(xargs *)`. `Bash(git *)` auto-approves `git push`,
+`git reset --hard` and `git clean -fd` for every future session in this repo. That is the harness's
+own permission surface and needs the operator's explicit yes, not an agent's convenience.
