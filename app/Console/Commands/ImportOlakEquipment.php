@@ -91,7 +91,7 @@ class ImportOlakEquipment extends Command
         $userWithRole = User::whereHas('roles', fn ($q) => $q->where('name', 'Admin & HR'))->first();
         $creatorId = $userWithRole ? $userWithRole->id : null;
 
-        [$createCount, $updateCount, $docCount, $touchedRegs, $plannedVehicles] = $this->importAll($creatorId, $commit);
+        [$createCount, $updateCount, $docCount, $touchedRegs, $plannedVehicles, $blockedRegs] = $this->importAll($creatorId, $commit);
         $retiredCount = $this->retireLegacy($commit);
         $assignResult = $this->assignProjects($commit, $plannedVehicles);
 
@@ -104,6 +104,7 @@ class ImportOlakEquipment extends Command
             'already_assigned' => $assignResult['already_assigned'],
             'skipped_assign' => $assignResult['skipped'],
             'retired' => $retiredCount,
+            'blocked' => count($blockedRegs),
         ], $commit);
 
         return self::SUCCESS;
@@ -116,13 +117,14 @@ class ImportOlakEquipment extends Command
         $docCount = 0;
         $touchedRegs = [];
         $plannedVehicles = [];
+        $blockedRegs = [];
 
         $this->line('Machinery: '.count(self::MACHINES).' | Vehicles: '.count(self::VEHICLES));
 
         if ($commit) {
-            DB::transaction(function () use ($creatorId, &$createCount, &$updateCount, &$docCount, &$touchedRegs, &$plannedVehicles) {
+            DB::transaction(function () use ($creatorId, &$createCount, &$updateCount, &$docCount, &$touchedRegs, &$plannedVehicles, &$blockedRegs) {
                 foreach (self::MACHINES as $row) {
-                    [$created, $updated, $vehicle] = $this->upsertMachine($row, $creatorId, true, $touchedRegs, $plannedVehicles);
+                    [$created, $updated, $vehicle] = $this->upsertMachine($row, $creatorId, true, $touchedRegs, $plannedVehicles, $blockedRegs);
                     if ($created) {
                         $createCount++;
                     }
@@ -136,7 +138,7 @@ class ImportOlakEquipment extends Command
                 }
 
                 foreach (self::VEHICLES as $row) {
-                    [$created, $updated, $vehicle] = $this->upsertVehicle($row, $creatorId, true, $touchedRegs, $plannedVehicles);
+                    [$created, $updated, $vehicle] = $this->upsertVehicle($row, $creatorId, true, $touchedRegs, $plannedVehicles, $blockedRegs);
                     if ($created) {
                         $createCount++;
                     }
@@ -152,7 +154,7 @@ class ImportOlakEquipment extends Command
         } else {
             // Dry run: same logic as commit, but no writes
             foreach (self::MACHINES as $row) {
-                [$created, $updated, $vehicle] = $this->upsertMachine($row, $creatorId, false, $touchedRegs, $plannedVehicles);
+                [$created, $updated, $vehicle] = $this->upsertMachine($row, $creatorId, false, $touchedRegs, $plannedVehicles, $blockedRegs);
                 if ($created) {
                     $createCount++;
                 }
@@ -166,7 +168,7 @@ class ImportOlakEquipment extends Command
             }
 
             foreach (self::VEHICLES as $row) {
-                [$created, $updated, $vehicle] = $this->upsertVehicle($row, $creatorId, false, $touchedRegs, $plannedVehicles);
+                [$created, $updated, $vehicle] = $this->upsertVehicle($row, $creatorId, false, $touchedRegs, $plannedVehicles, $blockedRegs);
                 if ($created) {
                     $createCount++;
                 }
@@ -180,10 +182,10 @@ class ImportOlakEquipment extends Command
             }
         }
 
-        return [$createCount, $updateCount, $docCount, $touchedRegs, $plannedVehicles];
+        return [$createCount, $updateCount, $docCount, $touchedRegs, $plannedVehicles, $blockedRegs];
     }
 
-    private function upsertMachine(array $row, ?int $creatorId, bool $commit, array &$touchedRegs, array &$plannedVehicles): array
+    private function upsertMachine(array $row, ?int $creatorId, bool $commit, array &$touchedRegs, array &$plannedVehicles, array &$blockedRegs): array
     {
         $no = $row['no'];
         $reg = trim($row['reg']);
@@ -220,6 +222,12 @@ class ImportOlakEquipment extends Command
             'created_by' => $creatorId,
         ];
 
+        if ($blocked = $this->blockedByDeletedRow($reg)) {
+            $blockedRegs[] = $blocked;
+
+            return [false, false, null];
+        }
+
         $exists = Vehicle::where('registration_no', $reg)->withoutTrashed()->first();
         $isNew = ! $exists;
 
@@ -253,7 +261,7 @@ class ImportOlakEquipment extends Command
         return [$isNew, ! $isNew, $vehicle];
     }
 
-    private function upsertVehicle(array $row, ?int $creatorId, bool $commit, array &$touchedRegs, array &$plannedVehicles): array
+    private function upsertVehicle(array $row, ?int $creatorId, bool $commit, array &$touchedRegs, array &$plannedVehicles, array &$blockedRegs): array
     {
         $no = $row['no'];
         $reg = trim($row['reg']);
@@ -290,6 +298,12 @@ class ImportOlakEquipment extends Command
             'created_by' => $creatorId,
         ];
 
+        if ($blocked = $this->blockedByDeletedRow($reg)) {
+            $blockedRegs[] = $blocked;
+
+            return [false, false, null];
+        }
+
         $exists = Vehicle::where('registration_no', $reg)->withoutTrashed()->first();
         $isNew = ! $exists;
 
@@ -321,6 +335,28 @@ class ImportOlakEquipment extends Command
         $plannedVehicles[] = $vehicle;
 
         return [$isNew, ! $isNew, $vehicle];
+    }
+
+    /**
+     * `registration_no` is uniquely indexed and the index does not honour soft deletes, so a
+     * trashed row still owns that plate: looking up withoutTrashed() finds nothing, the insert
+     * goes ahead and MySQL rejects it. That killed a production --commit after the dry run had
+     * promised 46 creates, because the dry run used the same blind lookup.
+     *
+     * Neither resurrecting someone's deleted row nor destroying it belongs in a routine import,
+     * so this reports and skips. Clear the row deliberately, then re-run.
+     */
+    private function blockedByDeletedRow(string $reg): ?string
+    {
+        $trashed = Vehicle::onlyTrashed()->where('registration_no', $reg)->first();
+
+        if (! $trashed) {
+            return null;
+        }
+
+        $this->line("BLOCKED {$reg}: a deleted row holds this registration (deleted {$trashed->deleted_at})");
+
+        return $reg;
     }
 
     private function buildNotes(array $row, string $sheet): string
@@ -489,7 +525,15 @@ class ImportOlakEquipment extends Command
             $assignString .= ')';
         }
 
-        $this->line("Creates {$counts['creates']} | Updates {$counts['updates']} | Docs {$counts['docs']} | {$assignString} | Retired {$counts['retired']}");
+        $line = "Creates {$counts['creates']} | Updates {$counts['updates']} | Docs {$counts['docs']} | {$assignString} | Retired {$counts['retired']}";
+
+        // Only shown when non-zero: a blocked row is the one number that makes the rest of this
+        // line an under-count, so it must never be silently absent from a plan that says 46.
+        if (($counts['blocked'] ?? 0) > 0) {
+            $line .= " | BLOCKED {$counts['blocked']}";
+        }
+
+        $this->line($line);
 
         if ($commit) {
             $this->line('Committed.');

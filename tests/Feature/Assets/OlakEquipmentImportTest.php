@@ -322,6 +322,65 @@ class OlakEquipmentImportTest extends TestCase
      * @test
      * dry run prints the full plan — summary says Creates 46 but Vehicle::count() === 0 (nothing written)
      */
+    /**
+     * Reproduces the production failure of 2026-09-23. `registration_no` is uniquely indexed and
+     * that index ignores soft deletes, so a trashed row still owns its plate. The importer looked
+     * up withoutTrashed(), found nothing, and inserted — MySQL rejected it with
+     * "Duplicate entry 'VBL1055'", after a dry run had promised 46 creates. sqlite enforces the
+     * same unique index, so this test fails the same way without the guard.
+     */
+    public function test_a_soft_deleted_row_blocks_its_plate_and_is_reported_not_overwritten(): void
+    {
+        $this->withoutMockingConsoleOutput();
+
+        $doomed = Vehicle::create([
+            'registration_no' => 'VBL1055',
+            'make' => 'PERODUA',
+            'model' => 'BEZZA-1300 X (AUTO)',
+            'type' => 'car',
+            'status' => 'active',
+            'notes' => 'Added by hand, then deleted',
+        ]);
+        $doomed->delete();
+        $this->assertSoftDeleted('vehicles', ['id' => $doomed->id]);
+
+        $buffer = new \Symfony\Component\Console\Output\BufferedOutput;
+        $this->app[Kernel::class]->call('assets:import-olak', ['--commit' => true], $buffer);
+        $output = $buffer->fetch();
+
+        // Reported by plate, in both the body and the summary.
+        $this->assertStringContainsString('BLOCKED VBL1055:', $output);
+        $this->assertMatchesRegularExpression('/BLOCKED\s+1/', $output);
+
+        // 45 of 46 land; the blocked plate is not among them and is not resurrected.
+        $this->assertSame(45, Vehicle::count());
+        $this->assertSame(0, Vehicle::where('registration_no', 'VBL1055')->count());
+        $this->assertSoftDeleted('vehicles', ['id' => $doomed->id]);
+        $this->assertSame('Added by hand, then deleted', Vehicle::withTrashed()->find($doomed->id)->notes);
+
+        // And no document or assignment was hung off the blocked plate.
+        $this->assertSame(0, VehicleDocument::where('vehicle_id', $doomed->id)->count());
+        $this->assertSame(0, VehicleProjectAssignment::where('vehicle_id', $doomed->id)->count());
+    }
+
+    /** The same collision must be visible in the dry run, which is where it was invisible. */
+    public function test_dry_run_reports_the_blocked_plate_before_any_commit(): void
+    {
+        $this->withoutMockingConsoleOutput();
+
+        Vehicle::create([
+            'registration_no' => 'VBL1055', 'make' => 'PERODUA', 'type' => 'car', 'status' => 'active',
+        ])->delete();
+
+        $buffer = new \Symfony\Component\Console\Output\BufferedOutput;
+        $this->app[Kernel::class]->call('assets:import-olak', [], $buffer);
+        $output = $buffer->fetch();
+
+        $this->assertStringContainsString('BLOCKED VBL1055:', $output);
+        $this->assertMatchesRegularExpression('/Creates\s+45/', $output);
+        $this->assertMatchesRegularExpression('/BLOCKED\s+1/', $output);
+    }
+
     public function test_dry_run_prints_the_full_plan(): void
     {
         $this->withoutMockingConsoleOutput();
