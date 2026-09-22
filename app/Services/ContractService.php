@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Imports\BoqImport;
 use App\Models\Attachment;
 use App\Models\ContractBoqItem;
+use App\Models\Project;
 use App\Models\ProjectContract;
 use App\Models\ProjectContractFile;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -19,6 +20,7 @@ class ContractService
     {
         $query = ProjectContract::with([
             'project:id,name,code',
+            'client:id,company_name,contact_person',
             'creator:id,first_name,last_name',
             'files',
             'pics',
@@ -44,6 +46,7 @@ class ContractService
     {
         return ProjectContract::with([
             'project:id,name,code',
+            'client:id,company_name,contact_person',
             'creator:id,first_name,last_name',
             'files',
             'pics',
@@ -67,6 +70,11 @@ class ContractService
     {
         return DB::transaction(function () use ($data, $userId, $files, $pics) {
             $data['created_by'] = $userId;
+
+            if (empty($data['client_id']) && ! empty($data['project_id'])) {
+                $data['client_id'] = Project::find($data['project_id'])?->client_id;
+            }
+
             $contract = ProjectContract::create($data);
 
             $this->storeFiles($contract, $files);

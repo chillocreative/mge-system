@@ -217,6 +217,7 @@ class ContractController extends Controller
 
         return $request->validate([
             'project_id' => [$required, 'exists:projects,id'],
+            'client_id' => ['nullable', 'exists:clients,id'],
             'title' => [$required, 'string', 'max:255'],
             'contract_no' => ['nullable', 'string', 'max:255'],
             'contract_value' => ['nullable', 'numeric', 'min:0'],

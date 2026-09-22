@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useConfirm } from '@/context/ConfirmContext';
 import contractService from '@/services/contractService';
 import projectService from '@/services/projectService';
+import clientService from '@/services/clientService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
 import useDragScroll from '@/hooks/useDragScroll';
@@ -40,11 +41,17 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
+function clientLabel(c) {
+    if (!c) return '';
+    return c.contact_person ? `${c.company_name} — ${c.contact_person}` : c.company_name;
+}
+
 const emptyPic = () => ({ name: '', email: '', phone: '', company: '', designation: '' });
 
 function emptyForm() {
     return {
         project_id: '',
+        client_id: '',
         title: '',
         contract_no: '',
         contract_value: '',
@@ -70,6 +77,7 @@ export default function Contracts() {
     const [projectFilter, setProjectFilter] = useState('');
     const [pagination, setPagination] = useState({});
     const [projects, setProjects] = useState([]);
+    const [clients, setClients] = useState([]);
 
     const [showForm, setShowForm] = useState(false);
     const [editing, setEditing] = useState(null);
@@ -118,6 +126,7 @@ export default function Contracts() {
     useEffect(() => {
         fetchContracts();
         projectService.list({ per_page: 100 }).then((r) => setProjects(r.data?.data || [])).catch(() => {});
+        clientService.list({ per_page: 100 }).then((r) => setClients(r.data?.data || [])).catch(() => {});
     }, []);
 
     const openCreate = () => {
@@ -131,6 +140,7 @@ export default function Contracts() {
         setEditing(c);
         setForm({
             project_id: c.project_id || '',
+            client_id: c.client_id || c.client?.id || '',
             title: c.title || '',
             contract_no: c.contract_no || '',
             contract_value: c.contract_value ?? '',
@@ -156,6 +166,7 @@ export default function Contracts() {
         try {
             const fd = new FormData();
             fd.append('project_id', form.project_id);
+            if (form.client_id) fd.append('client_id', form.client_id);
             fd.append('title', form.title);
             fd.append('status', form.status);
             if (form.contract_no) fd.append('contract_no', form.contract_no);
@@ -280,7 +291,10 @@ export default function Contracts() {
                             <tbody className="divide-y divide-gray-100">
                                 {contracts.map((c) => (
                                     <tr key={c.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-3 text-sm text-gray-600">{c.project?.name || '-'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">
+                                            {c.project?.name || '-'}
+                                            {c.client?.company_name && <p className="text-xs text-gray-400">{c.client.company_name}</p>}
+                                        </td>
                                         <td className="px-4 py-3">
                                             <Link to={`/projects/contracts/${c.id}`} className="text-sm font-medium text-primary-700 hover:underline">{c.title}</Link>
                                             {c.contract_no && <p className="text-xs text-gray-500">{c.contract_no}</p>}
@@ -376,7 +390,15 @@ export default function Contracts() {
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Project *</label>
                                     <select
                                         value={form.project_id}
-                                        onChange={(e) => setForm((p) => ({ ...p, project_id: e.target.value }))}
+                                        onChange={(e) => {
+                                            const projectId = e.target.value;
+                                            const selected = projects.find((p) => String(p.id) === String(projectId));
+                                            setForm((p) => ({
+                                                ...p,
+                                                project_id: projectId,
+                                                client_id: p.client_id || selected?.client?.id || '',
+                                            }));
+                                        }}
                                         required
                                         className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                                     >
@@ -387,14 +409,15 @@ export default function Contracts() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Client</label>
                                     <select
-                                        value={form.status}
-                                        onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))}
+                                        value={form.client_id}
+                                        onChange={(e) => setForm((p) => ({ ...p, client_id: e.target.value }))}
                                         className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                                     >
-                                        {statuses.map((s) => (
-                                            <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                                        <option value="">Select Client</option>
+                                        {clients.map((c) => (
+                                            <option key={c.id} value={c.id}>{clientLabel(c)}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -419,6 +442,18 @@ export default function Contracts() {
                                         className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                                     />
                                 </div>
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
+                                <select
+                                    value={form.status}
+                                    onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))}
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                >
+                                    {statuses.map((s) => (
+                                        <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="grid gap-4 sm:grid-cols-3">
                                 <div>

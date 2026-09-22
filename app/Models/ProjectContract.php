@@ -13,6 +13,7 @@ class ProjectContract extends Model
 
     protected $fillable = [
         'project_id',
+        'client_id',
         'title',
         'contract_no',
         'contract_value',
@@ -60,6 +61,11 @@ class ProjectContract extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
     }
 
     public function creator(): BelongsTo

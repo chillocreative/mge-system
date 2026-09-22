@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useConfirm } from '@/context/ConfirmContext';
 import contractService from '@/services/contractService';
 import drawingService from '@/services/drawingService';
+import clientService from '@/services/clientService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
 import useDragScroll from '@/hooks/useDragScroll';
@@ -102,6 +103,7 @@ export default function ContractDetail() {
                                 </Link>
                             ) : (contract.project?.name || '-')}
                             {contract.contract_no ? ` · ${contract.contract_no}` : ''}
+                            {contract.client?.company_name ? ` · Client: ${contract.client.company_name}` : ''}
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -581,6 +583,7 @@ function BoqTab({ contract, canEdit, onContractChange }) {
 // ─── Edit Contract Modal ──────────────────────────────────────────────
 function EditContractModal({ contract, onClose, onSaved }) {
     const [saving, setSaving] = useState(false);
+    const [clients, setClients] = useState([]);
     const [form, setForm] = useState({
         title: contract.title || '',
         contract_no: contract.contract_no || '',
@@ -590,10 +593,15 @@ function EditContractModal({ contract, onClose, onSaved }) {
         status: contract.status || 'active',
         is_main: !!contract.is_main,
         notes: contract.notes || '',
+        client_id: contract.client_id || contract.client?.id || '',
         pics: contract.pics?.length
             ? contract.pics.map((p) => ({ name: p.name || '', email: p.email || '', phone: p.phone || '', company: p.company || '', designation: p.designation || '' }))
             : [emptyPic()],
     });
+
+    useEffect(() => {
+        clientService.list({ per_page: 100 }).then((r) => setClients(r.data?.data || [])).catch(() => {});
+    }, []);
 
     const addPic = () => setForm((p) => ({ ...p, pics: [...p.pics, emptyPic()] }));
     const removePic = (idx) => setForm((p) => ({ ...p, pics: p.pics.filter((_, i) => i !== idx) }));
@@ -605,6 +613,7 @@ function EditContractModal({ contract, onClose, onSaved }) {
         try {
             const fd = new FormData();
             fd.append('project_id', contract.project_id);
+            if (form.client_id) fd.append('client_id', form.client_id);
             fd.append('title', form.title);
             fd.append('status', form.status);
             if (form.contract_no) fd.append('contract_no', form.contract_no);
@@ -650,6 +659,15 @@ function EditContractModal({ contract, onClose, onSaved }) {
                             <label className="mb-1 block text-sm font-medium text-gray-700">Contract No</label>
                             <input type="text" value={form.contract_no} onChange={(e) => setForm((p) => ({ ...p, contract_no: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                         </div>
+                    </div>
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Client</label>
+                        <select value={form.client_id} onChange={(e) => setForm((p) => ({ ...p, client_id: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                            <option value="">Select Client</option>
+                            {clients.map((c) => (
+                                <option key={c.id} value={c.id}>{c.contact_person ? `${c.company_name} — ${c.contact_person}` : c.company_name}</option>
+                            ))}
+                        </select>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-3">
                         <div>
