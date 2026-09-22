@@ -25,6 +25,7 @@ import {
     HiOutlineDocumentDownload,
     HiOutlineFolderOpen,
     HiOutlineClipboardList,
+    HiOutlineBriefcase,
 } from 'react-icons/hi';
 
 const statusColors = {
@@ -94,12 +95,27 @@ export default function ContractDetail() {
                                 <span className="rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-700">MAIN</span>
                             )}
                         </h1>
-                        <p className="text-sm text-gray-500">{contract.project?.name || '-'}{contract.contract_no ? ` · ${contract.contract_no}` : ''}</p>
+                        <p className="text-sm text-gray-500">
+                            {contract.project_id ? (
+                                <Link to={`/projects/${contract.project_id}`} className="font-medium text-primary-600 hover:underline" title="Open project overview">
+                                    {contract.project?.name || 'Project'}
+                                </Link>
+                            ) : (contract.project?.name || '-')}
+                            {contract.contract_no ? ` · ${contract.contract_no}` : ''}
+                        </p>
                     </div>
                     <div className="flex items-center gap-3">
                         <span className={`rounded-full px-3 py-1 text-sm font-medium ${statusColors[contract.status] || 'bg-gray-100 text-gray-600'}`}>
                             {contract.status}
                         </span>
+                        {contract.project_id && (
+                            <Link
+                                to={`/projects/${contract.project_id}`}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                <HiOutlineBriefcase className="h-4 w-4" /> Project Overview
+                            </Link>
+                        )}
                         {canEdit && (
                             <button
                                 onClick={() => setShowEdit(true)}
