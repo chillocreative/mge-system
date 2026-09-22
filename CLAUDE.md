@@ -210,7 +210,7 @@ Enforced by a `PreToolUse` hook, `.qwen/hooks/orchestrator-gate.py`:
   on an older approval.
 - Emergency bypass only: `touch .qwen/hooks/GATE_OFF`, and record why in the review.
 
-Four project facts this workflow already paid to discover:
+Six project facts this workflow already paid to discover:
 
 1. `vendor/bin/*` is committed **without the exec bit**, so `vendor/bin/pint` dies with
    `Permission denied` on every clone, local and production. Use `php vendor/bin/pint …`
@@ -238,8 +238,29 @@ Four project facts this workflow already paid to discover:
    available — same underlying `fileinfo` gap, different code path. If a fresh "Server Error"
    appears on any upload feature, check `fileinfo` first before re-diagnosing from scratch.
 
+6. **The bare `php` on the production host is the CGI binary, and it drops artisan's
+   arguments.** `php artisan assets:import-olak` there printed the full command list and exited
+   0, ending its output with `X-Powered-By` and `Content-type` headers — the CGI SAPI, which does
+   not populate `$argv`. Artisan therefore sees no command at all. `php8.3` does not exist on that
+   host, so `deploy.sh`'s old `which php8.3 || which php8.2 || which php` fell straight through to
+   that CGI binary: every artisan call in the deploy, `migrate --force` included, printed the
+   command list and exited 0 while the script announced "Deploy complete". Confirmed 2026-09-23.
+   This is the likeliest cause of the unapplied-migrations 500 that hit production once before.
+   Never call `php artisan` directly on that host. Use `bash artisan.sh <command>`, which resolves
+   through `bin/php-cli.sh` — it picks a binary by asking it for `PHP_SAPI` and rejects anything
+   that is not `cli`, because the file name tells you nothing about which SAPI you get. Override
+   with `PHP_CLI_BIN=/path/to/php` if needed. A silent no-op is the failure mode to expect here,
+   not an error message.
+
+7. **Production was never actually seeded with the real OLAK asset register.** As of 2026-09-23 a
+   dry run there reported `Creates 46 | Updates 0 | Docs 34 | Assigns 46 | Retired 180` — the 46
+   real rows did not exist, and the table instead held 180 `MGE-excavator-001`-style placeholder
+   rows from the old seeder. Do not assume production mirrors dev: check with a dry run first.
+
 Deploy is unchanged: `git pull` then `bash deploy.sh` in the cPanel terminal (that is where
-`artisan migrate --force` runs).
+`artisan migrate --force` runs). Since 2026-09-23 `deploy.sh` resolves a real CLI binary and
+fails hard if any migration is still `Pending` afterwards, rather than exiting 0 having done
+nothing; `.cpanel.yml` just calls it.
 
 ---
 
