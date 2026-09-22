@@ -39,12 +39,14 @@ class EnvironmentProjectSettingController extends Controller
             'officer_reg_no' => ['nullable', 'string', 'max:255'],
         ]);
 
-        EnvironmentProjectSetting::firstOrCreate(
+        // updateOrCreate, not firstOrCreate: firstOrCreate applies $data only when it creates the
+        // row, so every PUT after the first would silently discard the operator's edits.
+        $setting = EnvironmentProjectSetting::updateOrCreate(
             ['project_id' => $project],
             $data
         );
 
-        $setting = EnvironmentProjectSetting::with('project')->where('project_id', $project)->first();
+        $setting->load('project');
 
         return $this->success($this->present($setting, $project), 'Environment settings updated.');
     }

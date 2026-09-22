@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import environmentReportService from '@/services/environmentReportService';
+import environmentReportService, { REPORT_STATUS_FINAL } from '@/services/environmentReportService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 import {
@@ -62,7 +62,7 @@ export default function EnvironmentReportViewer() {
         );
     }
 
-    const isFinal = report.status === 'final';
+    const isFinal = report.status === REPORT_STATUS_FINAL;
 
     return (
         <div>

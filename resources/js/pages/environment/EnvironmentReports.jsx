@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useConfirm } from '@/context/ConfirmContext';
-import environmentReportService from '@/services/environmentReportService';
+import environmentReportService, { REPORT_STATUS_DRAFT, REPORT_STATUS_FINAL } from '@/services/environmentReportService';
 import projectService from '@/services/projectService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
@@ -16,8 +16,8 @@ import {
 const STORAGE_KEY = 'environment.project';
 
 const statusColors = {
-    draft: 'bg-gray-100 text-gray-600',
-    final: 'bg-green-100 text-green-700',
+    [REPORT_STATUS_DRAFT]: 'bg-gray-100 text-gray-600',
+    [REPORT_STATUS_FINAL]: 'bg-green-100 text-green-700',
 };
 
 function previousMonth15() {
@@ -174,7 +174,7 @@ export default function EnvironmentReports() {
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
                     <option value="">All Statuses</option>
                     <option value="draft">Draft</option>
-                    <option value="final">Final</option>
+                    <option value={REPORT_STATUS_FINAL}>Final</option>
                 </select>
                 <div className="relative max-w-xs flex-1">
                     <HiOutlineSearch className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
@@ -217,7 +217,7 @@ export default function EnvironmentReports() {
                                         <td className="whitespace-nowrap px-4 py-3 text-right">
                                             <div className="flex items-center justify-end gap-1">
                                                 <Link to={`/environment/reports/${report.id}`} title="View" className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><HiOutlineEye className="h-4 w-4" /></Link>
-                                                {canManage && report.status !== 'final' && (
+                                                {canManage && report.status !== REPORT_STATUS_FINAL && (
                                                     <Link to={`/environment/reports/${report.id}/edit`} title="Edit" className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><HiOutlinePencil className="h-4 w-4" /></Link>
                                                 )}
                                                 <button onClick={() => downloadPdf(report)} title="Download PDF" className="rounded p-1.5 text-gray-400 hover:bg-primary-50 hover:text-primary-600"><HiOutlineDownload className="h-4 w-4" /></button>

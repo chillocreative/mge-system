@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useConfirm } from '@/context/ConfirmContext';
-import environmentReportService from '@/services/environmentReportService';
+import environmentReportService, { REPORT_STATUS_FINAL } from '@/services/environmentReportService';
 import environmentSettingService from '@/services/environmentSettingService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
@@ -95,7 +95,7 @@ export default function EnvironmentReportEditor() {
 
     useEffect(() => { load(); }, [load]);
 
-    const isFinal = report?.status === 'final';
+    const isFinal = report?.status === REPORT_STATUS_FINAL;
     const canEdit = canManage && !isFinal;
 
     const setSection = (key, updater) => {

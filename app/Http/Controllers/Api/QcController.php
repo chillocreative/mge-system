@@ -47,7 +47,7 @@ class QcController extends Controller
             'findings' => 'nullable|string',
             'corrective_action' => 'nullable|string',
             'verified_by' => 'nullable|string|max:255',
-            'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:1048576',
+            'attachment' => 'nullable|file|extensions:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:1048576',
         ]);
 
         $data = array_merge($validated, ['created_by' => auth()->id()]);
@@ -84,7 +84,7 @@ class QcController extends Controller
             'findings' => 'nullable|string',
             'corrective_action' => 'nullable|string',
             'verified_by' => 'nullable|string|max:255',
-            'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:1048576',
+            'attachment' => 'nullable|file|extensions:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:1048576',
         ]);
 
         if ($request->hasFile('attachment')) {

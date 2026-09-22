@@ -10,7 +10,7 @@
 @endphp
 <div class="section-title">{{ $section_numbers['parameters'] }} {{ $section_titles['parameters'] }}</div>
 
-<div class="sub-title">7.1 Test Parameters</div>
+<div class="sub-title">{{ $section_subitems['parameters'][0]['num'] }} {{ $section_subitems['parameters'][0]['title'] }}</div>
 <table class="grid">
     <tr>
         @foreach(array_keys($groups) as $label)
@@ -26,7 +26,7 @@
     @endfor
 </table>
 
-<div class="sub-title">7.1 Monitoring Period</div>
+<div class="sub-title">{{ $section_subitems['parameters'][1]['num'] }} {{ $section_subitems['parameters'][1]['title'] }}</div>
 <table class="grid">
     <tr>
         <th style="width:6%">No.</th>

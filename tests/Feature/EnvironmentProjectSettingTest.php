@@ -76,6 +76,43 @@ class EnvironmentProjectSettingTest extends TestCase
         ]);
     }
 
+    /**
+     * The first PUT creates the row; every later PUT must overwrite it. Guards the
+     * firstOrCreate/updateOrCreate distinction — firstOrCreate applies its attributes only on
+     * create, so a second PUT silently discarded the operator's edits and the endpoint still
+     * answered 200 with the stale values.
+     */
+    public function test_second_update_overwrites_the_existing_row(): void
+    {
+        $actor = $this->actor();
+        $project = $this->project();
+
+        $this->actingAs($actor)->putJson("/api/environment/settings/{$project->id}", [
+            'consultant_company' => 'Acme Consultants',
+            'officer_name' => 'Jane Doe',
+        ])->assertOk();
+
+        $response = $this->actingAs($actor)->putJson("/api/environment/settings/{$project->id}", [
+            'consultant_company' => 'Beta Environmental',
+            'officer_name' => 'John Smith',
+        ]);
+
+        $response->assertOk();
+        $this->assertSame('Beta Environmental', $response->json('data.consultant_company'));
+        $this->assertSame('John Smith', $response->json('data.officer_name'));
+
+        $this->assertDatabaseHas('environment_project_settings', [
+            'project_id' => $project->id,
+            'consultant_company' => 'Beta Environmental',
+            'officer_name' => 'John Smith',
+        ]);
+        $this->assertDatabaseMissing('environment_project_settings', [
+            'project_id' => $project->id,
+            'consultant_company' => 'Acme Consultants',
+        ]);
+        $this->assertSame(1, \App\Models\EnvironmentProjectSetting::where('project_id', $project->id)->count());
+    }
+
     public function test_upload_image_stores_file_and_serves_it(): void
     {
         Storage::fake('local');

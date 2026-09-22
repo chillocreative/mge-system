@@ -197,6 +197,38 @@ class EnvironmentReportTest extends TestCase
         $this->assertSame($originalSignatories, $response->json('data.signatories'));
     }
 
+    /**
+     * Pins the literal status string the API stores and returns. The UI gates its read-only mode,
+     * its Reopen button and its list filter on this exact value; it read 'final' while the API
+     * wrote 'finalised', so no report ever appeared locked. Change this value and the frontend
+     * constant REPORT_STATUS_FINAL in resources/js/services/environmentReportService.js together.
+     */
+    public function test_finalise_sets_the_status_string_the_frontend_matches_on(): void
+    {
+        $actor = $this->actor();
+        $project = $this->project();
+        $this->contract($project);
+        $this->seedParties($project);
+        $this->seedSettings($project);
+
+        $created = $this->actingAs($actor)->postJson('/api/environment/reports', [
+            'project_id' => $project->id,
+            'period_start' => '2025-12-15',
+            'period_end' => '2026-01-15',
+        ]);
+        $this->assertSame('draft', $created->json('data.status'));
+        $reportId = $created->json('data.id');
+
+        $finalised = $this->actingAs($actor)->postJson("/api/environment/reports/{$reportId}/finalise");
+        $finalised->assertOk();
+        $this->assertSame('finalised', $finalised->json('data.status'));
+
+        // And the list endpoint filters on the same spelling.
+        $filtered = $this->actingAs($actor)->getJson('/api/environment/reports?status=finalised');
+        $filtered->assertOk();
+        $this->assertContains($reportId, array_column($filtered->json('data.data') ?? $filtered->json('data'), 'id'));
+    }
+
     public function test_regenerate_restores_defaults_and_finalised_report_rejects_update(): void
     {
         $actor = $this->actor();

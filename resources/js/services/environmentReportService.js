@@ -1,5 +1,11 @@
 import apiClient from './apiClient';
 
+// The value the API actually stores. It is NOT 'final' — every UI check used that spelling and so
+// no report ever read as locked: the editor stayed writable, Reopen was unreachable and the status
+// filter matched nothing. Import this instead of writing the literal.
+export const REPORT_STATUS_DRAFT = 'draft';
+export const REPORT_STATUS_FINAL = 'finalised';
+
 const environmentReportService = {
     async list(params = {}) {
         const response = await apiClient.get('/environment/reports', { params });

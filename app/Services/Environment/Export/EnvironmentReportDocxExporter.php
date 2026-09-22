@@ -205,7 +205,11 @@ class EnvironmentReportDocxExporter
         $params = $data['sections']['parameters'];
         $this->heading($doc, $data, 'parameters');
 
-        $doc->heading('7.1 Test Parameters', 2);
+        // Numbering comes from SECTION_SUBITEMS so the DOCX, the PDF and the table of contents
+        // cannot drift apart — they did, and both sub-headings read "7.1".
+        [$testParams, $monitoringPeriod] = EnvironmentReportViewData::SECTION_SUBITEMS['parameters'];
+
+        $doc->heading("{$testParams['num']} {$testParams['title']}", 2);
         $groups = [
             'Water Quality' => $params['water'] ?? [],
             'Air Quality' => $params['air'] ?? [],
@@ -223,7 +227,7 @@ class EnvironmentReportDocxExporter
         }
         $doc->table(array_keys($groups), $rows);
 
-        $doc->heading('7.1 Monitoring Period', 2);
+        $doc->heading("{$monitoringPeriod['num']} {$monitoringPeriod['title']}", 2);
         $periodRows = [];
         foreach ($params['periods'] ?? [] as $period) {
             $periodRows[] = [$period['no'], $period['session'], $period['water'], $period['air'], $period['noise'], $period['vibration']];

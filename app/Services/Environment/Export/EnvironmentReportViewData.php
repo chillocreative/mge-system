@@ -50,7 +50,7 @@ class EnvironmentReportViewData
         'ems' => [['num' => '2.1', 'title' => 'Certified Environment Consultant']],
         'parameters' => [
             ['num' => '7.1', 'title' => 'Test Parameters'],
-            ['num' => '7.1', 'title' => 'Monitoring Period'],
+            ['num' => '7.2', 'title' => 'Monitoring Period'],
         ],
     ];
 
