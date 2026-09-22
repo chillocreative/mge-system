@@ -13,7 +13,7 @@ class Vehicle extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'registration_no', 'make', 'model', 'year', 'type', 'custom_type',
+        'registration_no', 'make', 'model', 'year', 'type', 'category', 'custom_type',
         'chassis_no', 'engine_no', 'serial_no',
         'purchase_date', 'current_value', 'assigned_to', 'status',
         'notes', 'created_by',
@@ -70,6 +70,11 @@ class Vehicle extends Model
     public function scopeByType($q, string $t)
     {
         return $q->where('type', $t);
+    }
+
+    public function scopeByCategory($q, string $c)
+    {
+        return $q->where('category', $c);
     }
 
     public function scopeSearch($q, string $term)

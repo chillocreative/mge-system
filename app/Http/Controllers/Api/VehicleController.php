@@ -19,7 +19,7 @@ class VehicleController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $filters = $request->only(['status', 'type', 'search']);
+        $filters = $request->only(['status', 'type', 'category', 'search']);
         $perPage = min($request->integer('per_page', 15), 100);
 
         return $this->success($this->assetService->listVehicles($filters, $perPage));
@@ -36,6 +36,7 @@ class VehicleController extends Controller
             'serial_no' => ['nullable', 'string', 'max:255'],
             'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
             'type' => ['required', 'in:car,van,truck,lorry,machinery,other'],
+            'category' => ['nullable', 'in:vehicle,machine'],
             'custom_type' => ['nullable', 'string', 'max:255', 'required_if:type,other'],
             'purchase_date' => ['nullable', 'date'],
             'current_value' => ['nullable', 'numeric', 'min:0'],
@@ -76,6 +77,7 @@ class VehicleController extends Controller
             'serial_no' => ['nullable', 'string', 'max:255'],
             'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
             'type' => ['sometimes', 'in:car,van,truck,lorry,machinery,other'],
+            'category' => ['nullable', 'in:vehicle,machine'],
             'custom_type' => ['nullable', 'string', 'max:255', 'required_if:type,other'],
             'purchase_date' => ['nullable', 'date'],
             'current_value' => ['nullable', 'numeric', 'min:0'],
@@ -178,7 +180,9 @@ class VehicleController extends Controller
     public function expiring(Request $request): JsonResponse
     {
         $days = min($request->integer('days', 30), 365);
+        $category = $request->string('category')->toString();
+        $category = in_array($category, ['vehicle', 'machine'], true) ? $category : null;
 
-        return $this->success($this->assetService->dashboard($days));
+        return $this->success($this->assetService->dashboard($days, $category));
     }
 }

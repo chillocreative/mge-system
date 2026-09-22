@@ -4,7 +4,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useConfirm } from '@/context/ConfirmContext';
 import assetService from '@/services/assetService';
 import projectService from '@/services/projectService';
-import inventoryService from '@/services/inventoryService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
@@ -13,7 +12,6 @@ import {
     HiOutlineSearch,
     HiOutlineTruck,
     HiOutlineExclamation,
-    HiOutlineCube,
     HiOutlinePencilAlt,
     HiOutlineTrash,
 } from 'react-icons/hi';
@@ -34,7 +32,11 @@ function typeLabel(v) {
     return v.type === 'other' && v.custom_type ? v.custom_type : cap(v.type);
 }
 
-export default function Vehicles() {
+export default function Vehicles({ category = 'vehicle' }) {
+    const label = category === 'machine' ? 'Machine' : 'Vehicle';
+    const labelPlural = category === 'machine' ? 'Machines' : 'Vehicles';
+    const labelLower = label.toLowerCase();
+    const labelPluralLower = labelPlural.toLowerCase();
     const { can } = useAuth();
     const confirm = useConfirm();
     const [vehicles, setVehicles] = useState([]);
@@ -49,7 +51,6 @@ export default function Vehicles() {
     const [projects, setProjects] = useState([]);
     const [saving, setSaving] = useState(false);
     const [dashboard, setDashboard] = useState(null);
-    const [lowStockCount, setLowStockCount] = useState(0);
     const [form, setForm] = useState({
         registration_no: '',
         chassis_no: '',
@@ -74,6 +75,7 @@ export default function Vehicles() {
             if (search) params.search = search;
             if (statusFilter) params.status = statusFilter;
             if (typeFilter) params.type = typeFilter;
+            params.category = category;
             const res = await assetService.listVehicles(params);
             setVehicles(res.data?.data || []);
             setPagination(res.data?.meta || res.data || {});
@@ -86,19 +88,15 @@ export default function Vehicles() {
 
     const fetchSummary = async () => {
         try {
-            const res = await assetService.getExpiring(60);
+            const res = await assetService.getExpiring(60, category);
             setDashboard(res.data || null);
-        } catch { /* ignore */ }
-        try {
-            const res = await inventoryService.getLowStock();
-            setLowStockCount((res.data || []).length);
         } catch { /* ignore */ }
     };
 
     useEffect(() => {
         const timer = setTimeout(() => fetchVehicles(), 400);
         return () => clearTimeout(timer);
-    }, [search, statusFilter, typeFilter]);
+    }, [search, statusFilter, typeFilter, category]);
 
     useEffect(() => {
         fetchVehicles();
@@ -106,7 +104,7 @@ export default function Vehicles() {
         projectService.list({ per_page: 100 })
             .then((r) => setProjects(r.data?.data || []))
             .catch(() => {});
-    }, []);
+    }, [category]);
 
     const openEdit = (vehicle) => {
         setForm({
@@ -159,36 +157,36 @@ export default function Vehicles() {
         e.preventDefault();
         setSaving(true);
         try {
-            const payload = { ...form };
+            const payload = { ...form, category };
             if (payload.status === '' || payload.status === null) delete payload.status;
 
             if (editingId) {
                 await assetService.updateVehicle(editingId, payload);
-                toast.success('Machinery updated successfully');
+                toast.success(`${label} updated successfully`);
             } else {
                 await assetService.createVehicle(payload);
-                toast.success('Machinery created successfully');
+                toast.success(`${label} created successfully`);
             }
 
             closeForm();
             fetchVehicles();
             fetchSummary();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to save machinery');
+            toast.error(err.response?.data?.message || `Failed to save ${labelLower}`);
         } finally {
             setSaving(false);
         }
     };
 
     const handleDelete = async (id) => {
-        if (!(await confirm({ title: 'Delete machinery?', message: 'This action cannot be undone.' }))) return;
+        if (!(await confirm({ title: `Delete ${labelLower}?`, message: 'This action cannot be undone.' }))) return;
         try {
             await assetService.deleteVehicle(id);
-            toast.success('Machinery deleted successfully');
+            toast.success(`${label} deleted successfully`);
             fetchVehicles();
             fetchSummary();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to delete machinery');
+            toast.error(err.response?.data?.message || `Failed to delete ${labelLower}`);
         }
     };
 
@@ -196,8 +194,8 @@ export default function Vehicles() {
         <div>
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Machineries &amp; Assets</h1>
-                    <p className="text-sm text-gray-500">Manage company vehicles, road tax, insurance and permits</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{labelPlural} &amp; Assets</h1>
+                    <p className="text-sm text-gray-500">Manage company {labelPluralLower}, road tax, insurance and permits</p>
                 </div>
                 {can('assets.manage') && (
                     <button
@@ -205,18 +203,18 @@ export default function Vehicles() {
                         className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700"
                     >
                         <HiOutlinePlus className="h-5 w-5" />
-                        New Machinery
+                        New {label}
                     </button>
                 )}
             </div>
 
             {/* Summary row */}
-            <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
                     <div className="flex items-center gap-3">
                         <span className="rounded-lg bg-primary-50 p-2 text-primary-600"><HiOutlineTruck className="h-6 w-6" /></span>
                         <div>
-                            <p className="text-xs text-gray-500">Total Machineries</p>
+                            <p className="text-xs text-gray-500">Total {labelPlural}</p>
                             <p className="text-xl font-bold text-gray-900">{dashboard?.total_vehicles ?? '–'}</p>
                         </div>
                     </div>
@@ -236,15 +234,6 @@ export default function Vehicles() {
                         <div>
                             <p className="text-xs text-gray-500">Insurance Expiring (60d)</p>
                             <p className="text-xl font-bold text-gray-900">{dashboard?.expiring_insurance ?? '–'}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
-                    <div className="flex items-center gap-3">
-                        <span className="rounded-lg bg-orange-50 p-2 text-orange-600"><HiOutlineCube className="h-6 w-6" /></span>
-                        <div>
-                            <p className="text-xs text-gray-500">Low-stock Items</p>
-                            <p className="text-xl font-bold text-gray-900">{lowStockCount}</p>
                         </div>
                     </div>
                 </div>
@@ -287,7 +276,7 @@ export default function Vehicles() {
             ) : vehicles.length === 0 ? (
                 <div className="rounded-xl bg-white py-12 text-center shadow-sm ring-1 ring-gray-200">
                     <HiOutlineTruck className="mx-auto h-12 w-12 text-gray-300" />
-                    <p className="mt-2 text-sm text-gray-500">No machineries found</p>
+                    <p className="mt-2 text-sm text-gray-500">No {labelPluralLower} found</p>
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
@@ -372,7 +361,7 @@ export default function Vehicles() {
             {showForm && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={closeForm}>
                     <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="mb-4 text-lg font-semibold text-gray-900">{editingId ? 'Edit Machinery' : 'Add Machinery'}</h3>
+                        <h3 className="mb-4 text-lg font-semibold text-gray-900">{editingId ? `Edit ${label}` : `Add ${label}`}</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -458,7 +447,7 @@ export default function Vehicles() {
                             </div>
                             <div className="flex justify-end gap-2 pt-2">
                                 <button type="button" onClick={closeForm} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                                <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Saving...' : editingId ? 'Update Machinery' : 'Add Machinery'}</button>
+                                <button type="submit" disabled={saving} className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50">{saving ? 'Saving...' : editingId ? `Update ${label}` : `Add ${label}`}</button>
                             </div>
                         </form>
                     </div>

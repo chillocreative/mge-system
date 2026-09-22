@@ -44,6 +44,21 @@ class OlakEquipmentImportTest extends TestCase
 
     /**
      * @test
+     * --commit categorises by SHEET TAB, not by the `type` enum: exactly 26 rows land
+     * as category='machine' (the MESIN sheet, including the 6 lorries it contains) and
+     * exactly 20 as category='vehicle' (the KENDERAAN sheet).
+     */
+    public function test_commit_categorises_by_sheet_not_by_type(): void
+    {
+        $this->artisan('assets:import-olak', ['--commit' => true])
+            ->assertExitCode(0);
+
+        $this->assertSame(26, Vehicle::where('category', 'machine')->count());
+        $this->assertSame(20, Vehicle::where('category', 'vehicle')->count());
+    }
+
+    /**
+     * @test
      * spot check of machinery row BPJ 4284 → make VOLVO, model EC210D, serial_no EX215,
      * year 2017, type machinery, custom_type Excavator, current_value 429300.00,
      * purchase_date 2017-05-12, status active

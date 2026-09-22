@@ -248,10 +248,11 @@ function AppRoutes() {
                         <Route path="/hr/payroll/:id" element={<PayslipDetail />} />
                     </Route>
 
-                    {/* Assets — Vehicles / Inventory / Maintenance */}
+                    {/* Assets — Vehicles / Machine / Inventory / Maintenance */}
                     <Route element={<PermissionGate permission="assets.view" />}>
-                        <Route path="/assets/vehicles" element={<Vehicles />} />
+                        <Route path="/assets/vehicles" element={<Vehicles category="vehicle" />} />
                         <Route path="/assets/vehicles/:id" element={<VehicleDetail />} />
+                        <Route path="/assets/machines" element={<Vehicles category="machine" />} />
                     </Route>
                     <Route element={<PermissionGate permission="inventory.view" />}>
                         <Route path="/assets/inventory" element={<Inventory />} />

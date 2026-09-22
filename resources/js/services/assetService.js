@@ -51,8 +51,8 @@ const assetService = {
     },
 
     // ── Dashboard / Expiring ──
-    async getExpiring(days = 30) {
-        const response = await apiClient.get('/assets/expiring', { params: { days } });
+    async getExpiring(days = 30, category) {
+        const response = await apiClient.get('/assets/expiring', { params: { days, category } });
         return response.data;
     },
 };

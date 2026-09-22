@@ -26,6 +26,9 @@ class AssetService
         if (! empty($filters['type'])) {
             $query->byType($filters['type']);
         }
+        if (! empty($filters['category'])) {
+            $query->byCategory($filters['category']);
+        }
         if (! empty($filters['search'])) {
             $query->search($filters['search']);
         }
@@ -173,21 +176,25 @@ class AssetService
 
     // ── Expiring documents (across all vehicles) ──
 
-    public function expiringDocuments(int $days = 30): Collection
+    public function expiringDocuments(int $days = 30, ?string $category = null): Collection
     {
         return VehicleDocument::with('vehicle:id,registration_no,make,model')
             ->expiringWithin($days)
+            ->when($category, fn ($q) => $q->whereHas('vehicle', fn ($v) => $v->where('category', $category)))
             ->orderBy('expiry_date')
             ->get();
     }
 
-    public function dashboard(int $days = 30): array
+    public function dashboard(int $days = 30, ?string $category = null): array
     {
-        $expiring = $this->expiringDocuments($days);
+        $expiring = $this->expiringDocuments($days, $category);
+
+        // Rebuilt per count: a scope call mutates the builder it is called on.
+        $scoped = fn () => $category ? Vehicle::byCategory($category) : Vehicle::query();
 
         return [
-            'total_vehicles' => Vehicle::count(),
-            'active_vehicles' => Vehicle::byStatus('active')->count(),
+            'total_vehicles' => $scoped()->count(),
+            'active_vehicles' => $scoped()->byStatus('active')->count(),
             'expiring_count' => $expiring->count(),
             'expiring_road_tax' => $expiring->where('doc_type', 'road_tax')->count(),
             'expiring_insurance' => $expiring->where('doc_type', 'insurance')->count(),

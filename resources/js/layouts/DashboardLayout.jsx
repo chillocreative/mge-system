@@ -97,8 +97,8 @@ const navigation = [
     {
         name: 'Assets', icon: HiOutlineCube,
         children: [
-            { name: 'Machineries', href: '/assets/vehicles', icon: HiOutlineTruck, permission: 'assets.view' },
-            { name: 'Inventory', href: '/assets/inventory', icon: HiOutlineCube, permission: 'inventory.view' },
+            { name: 'Vehicles', href: '/assets/vehicles', icon: HiOutlineTruck, permission: 'assets.view' },
+            { name: 'Machine', href: '/assets/machines', icon: HiOutlineCube, permission: 'assets.view' },
             { name: 'Maintenance', href: '/assets/maintenance', icon: HiOutlineCog, permission: 'maintenance.view' },
         ],
     },

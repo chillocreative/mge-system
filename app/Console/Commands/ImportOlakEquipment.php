@@ -63,7 +63,7 @@ class ImportOlakEquipment extends Command
     // Sheet 2 "KENDERAAN": section KERETA rows 6-17 (12), section MOTORSIKAL rows 22-29 (8 stored;
     // source BIL 6 is missing from the sheet — do NOT invent it).
     private const VEHICLES = [
-        ['no' => 1, 'reg' => 'WB160J', 'type' => 'car', 'custom' => null, 'make' => 'FORD', 'model' => 'RANGER', 'year' => 2015, 'value' => 123006.45, 'purchased' => '2015-03-25', 'roadtax' => '2027-03-16', 'insurance' => null, 'user' => 'MOHD SYAFIQ BIN MOHD SAUFI', 'site' => 'OLAK, MUAR', 'src' => 'Insurance 16/3/207'],
+        ['no' => 1, 'reg' => 'WB160J', 'type' => 'car', 'custom' => null, 'make' => 'FORD', 'model' => 'RANGER', 'year' => 2015, 'value' => 123006.45, 'purchased' => '2015-03-25', 'roadtax' => '2027-03-16', 'insurance' => '2027-03-16', 'user' => 'MOHD SYAFIQ BIN MOHD SAUFI', 'site' => 'OLAK, MUAR', 'src' => 'Insurance reads 16/3/207 in the source register — a missing digit; confirmed as 2027-03-16 by the owner on 2026-09-22'],
         ['no' => 2, 'reg' => 'VA5631', 'type' => 'car', 'custom' => null, 'make' => 'HONDA', 'model' => 'CRV 2.4 L', 'year' => 2016, 'value' => 172600, 'purchased' => '2016-10-01', 'roadtax' => '2026-12-23', 'insurance' => '2026-12-23', 'user' => 'ZHOU FENG', 'site' => 'OLAK, MUAR'],
         ['no' => 3, 'reg' => 'JNC7510', 'type' => 'car', 'custom' => null, 'make' => 'HONDA', 'model' => 'CRV 2-0L I-VTEC', 'year' => 2011, 'value' => 145948.1, 'purchased' => '2011-09-12', 'roadtax' => '2026-10-27', 'insurance' => '2026-10-27', 'user' => 'ALINA', 'site' => 'OLAK, MUAR'],
         ['no' => 4, 'reg' => 'WB6104K', 'type' => 'car', 'custom' => null, 'make' => 'HONDA', 'model' => 'HR-V 1.8L S_2', 'year' => 2015, 'value' => 95729.71, 'purchased' => '2015-04-17', 'roadtax' => '2027-04-23', 'insurance' => '2027-04-23', 'user' => 'IZZUL KHAIRI', 'site' => 'OLAK, MUAR'],
@@ -208,6 +208,7 @@ class ImportOlakEquipment extends Command
             'registration_no' => $reg,
             'serial_no' => $serial,
             'type' => $row['type'],
+            'category' => 'machine',
             'custom_type' => $row['custom'],
             'make' => $row['make'],
             'model' => $model,
@@ -277,6 +278,7 @@ class ImportOlakEquipment extends Command
         $attrs = [
             'registration_no' => $reg,
             'type' => $row['type'],
+            'category' => 'vehicle',
             'custom_type' => $row['custom'],
             'make' => $row['make'],
             'model' => $model,
