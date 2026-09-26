@@ -15,6 +15,7 @@ const MODULE_LABELS = {
     settings: 'Settings', safety: 'Safety', environmental: 'Environmental', 'activity-logs': 'Activity Logs',
     staff: 'Staff', leave: 'Leave', training: 'Training', calendar: 'Calendar', assets: 'Assets', inventory: 'Inventory',
     maintenance: 'Maintenance', meetings: 'Meetings', documents: 'Documents', drawings: 'Drawings', memos: 'Memos',
+    qc: 'QA/QC',
 };
 const moduleName = (key) => MODULE_LABELS[key] || key.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 const actionLabel = (perm) => perm.split('.').slice(1).join('.').replace(/-/g, ' ') || perm;
