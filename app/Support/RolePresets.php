@@ -32,7 +32,7 @@ class RolePresets
             'Admin & HR' => Permission::pluck('name')->all(),
             'Finances & HR' => self::financesHr(),
             'Projects' => self::projects(),
-            'Employee', 'General Workers' => self::BASE,
+            'Employee', 'General Workers', 'Protege' => self::BASE,
             'Executives' => self::executives(),
             'Managers' => self::managers(),
             'Directors' => self::directors(),

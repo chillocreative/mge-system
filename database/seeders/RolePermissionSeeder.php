@@ -202,7 +202,7 @@ class RolePermissionSeeder extends Seeder
         // when a role is assigned (see UserService::applyRolePreset).
         foreach ([
             'Admin & HR', 'Finances & HR', 'Projects', 'Employee',
-            'General Workers', 'Executives', 'Managers', 'Directors',
+            'General Workers', 'Executives', 'Managers', 'Directors', 'Protege',
         ] as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
         }
