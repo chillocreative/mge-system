@@ -73,6 +73,7 @@ export default function Correspondence() {
     const [newPartyField, setNewPartyField] = useState(null); // 'from_party_id' | 'to_party_id' | null
     const [newParty, setNewParty] = useState({ name: '', type: 'other' });
     const [addingParty, setAddingParty] = useState(false);
+    const [deletingPartyId, setDeletingPartyId] = useState(null);
 
     // Manage types modal
     const [showTypes, setShowTypes] = useState(false);
@@ -129,6 +130,29 @@ export default function Correspondence() {
         if (!form.project_id) { setParties([]); return; }
         correspondenceService.listParties(form.project_id).then((r) => setParties(r.data || [])).catch(() => setParties([]));
     }, [form.project_id]);
+
+    const deleteParty = async (party) => {
+        if (!(await confirm({
+            message: `Permanently delete party "${party.name}"? This will clear this party from existing correspondence records.`,
+        }))) return;
+
+        setDeletingPartyId(party.id);
+        try {
+            await correspondenceService.deleteParty(party.id);
+            const res = await correspondenceService.listParties(form.project_id);
+            setParties(res.data || []);
+            setForm((current) => ({
+                ...current,
+                from_party_id: String(current.from_party_id) === String(party.id) ? '' : current.from_party_id,
+                to_party_id: String(current.to_party_id) === String(party.id) ? '' : current.to_party_id,
+            }));
+            toast.success('Party deleted');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to delete party');
+        } finally {
+            setDeletingPartyId(null);
+        }
+    };
 
     const addNewParty = async () => {
         if (!newParty.name.trim() || !newPartyField) return;
@@ -467,6 +491,11 @@ export default function Correspondence() {
                                         {parties.map((p) => <option key={p.id} value={p.id}>{p.name}{p.type ? ` — ${p.type}` : ''}</option>)}
                                         {form.project_id && <option value={NEW_PARTY_VALUE}>+ Add new party…</option>}
                                     </select>
+                                    {parties.find((p) => String(p.id) === String(form.from_party_id)) && (
+                                        <button type="button" onClick={() => deleteParty(parties.find((p) => String(p.id) === String(form.from_party_id)))} disabled={deletingPartyId !== null} className="mt-1 inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+                                            <HiOutlineTrash className="h-3.5 w-3.5" /> Delete selected party
+                                        </button>
+                                    )}
                                     {newPartyField === 'from_party_id' && (
                                         <div className="mt-2 flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 sm:flex-row">
                                             <input type="text" placeholder="Party name" value={newParty.name} onChange={(e) => setNewParty((p) => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
@@ -487,6 +516,11 @@ export default function Correspondence() {
                                         {parties.map((p) => <option key={p.id} value={p.id}>{p.name}{p.type ? ` — ${p.type}` : ''}</option>)}
                                         {form.project_id && <option value={NEW_PARTY_VALUE}>+ Add new party…</option>}
                                     </select>
+                                    {parties.find((p) => String(p.id) === String(form.to_party_id)) && (
+                                        <button type="button" onClick={() => deleteParty(parties.find((p) => String(p.id) === String(form.to_party_id)))} disabled={deletingPartyId !== null} className="mt-1 inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+                                            <HiOutlineTrash className="h-3.5 w-3.5" /> Delete selected party
+                                        </button>
+                                    )}
                                     {newPartyField === 'to_party_id' && (
                                         <div className="mt-2 flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 sm:flex-row">
                                             <input type="text" placeholder="Party name" value={newParty.name} onChange={(e) => setNewParty((p) => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
