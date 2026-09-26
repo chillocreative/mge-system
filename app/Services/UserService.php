@@ -15,9 +15,9 @@ class UserService
         private NotificationService $notifications,
     ) {}
 
-    public function listUsers(int $perPage = 15, ?string $status = null): LengthAwarePaginator
+    public function listUsers(int $perPage = 15, ?string $status = null, ?string $search = null): LengthAwarePaginator
     {
-        return $this->userRepository->getAllUsers($perPage, $status);
+        return $this->userRepository->getAllUsers($perPage, $status, $search);
     }
 
     public function getUser(int $id): User

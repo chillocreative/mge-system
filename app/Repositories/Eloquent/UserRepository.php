@@ -35,12 +35,22 @@ class UserRepository extends BaseRepository implements UserRepositoryInterface
         return $this->model->where('email', $email)->first();
     }
 
-    public function getAllUsers(int $perPage = 15, ?string $status = null): LengthAwarePaginator
+    public function getAllUsers(int $perPage = 15, ?string $status = null, ?string $search = null): LengthAwarePaginator
     {
         $query = $this->model->with(['department', 'designation', 'roles', 'permissions'])->latest();
 
         if ($status) {
             $query->where('status', $status);
+        }
+
+        $terms = preg_split('/\\s+/', mb_strtolower(trim((string) $search)), -1, PREG_SPLIT_NO_EMPTY);
+        foreach ($terms as $term) {
+            $like = '%'.$term.'%';
+            $query->where(function ($matches) use ($like) {
+                $matches->whereRaw('LOWER(first_name) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(last_name) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(email) LIKE ?', [$like]);
+            });
         }
 
         return $query->paginate($perPage);

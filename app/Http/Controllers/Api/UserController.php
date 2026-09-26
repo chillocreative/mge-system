@@ -45,10 +45,14 @@ class UserController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+        ]);
         $perPage = $request->integer('per_page', 15);
         $status = $request->query('status');
+        $search = $validated['search'] ?? null;
 
-        $users = $this->userService->listUsers($perPage, $status);
+        $users = $this->userService->listUsers($perPage, $status, $search);
 
         return $this->success(
             UserResource::collection($users)->response()->getData(true)
