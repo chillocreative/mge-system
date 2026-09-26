@@ -47,6 +47,7 @@ import WaterQuality from '@/pages/environment/WaterQuality';
 import EnvironmentReports from '@/pages/environment/EnvironmentReports';
 import EnvironmentReportEditor from '@/pages/environment/EnvironmentReportEditor';
 import EnvironmentReportViewer from '@/pages/environment/EnvironmentReportViewer';
+import EnvironmentDocuments from '@/pages/environment/EnvironmentDocuments';
 import QcRecords from '@/pages/qc/QcRecords';
 import Chat from '@/pages/chat/Chat';
 import StaffList from '@/pages/staff/StaffList';
@@ -175,6 +176,7 @@ function AppRoutes() {
 
                     {/* Environmental — requires environmental.view */}
                     <Route element={<PermissionGate permission="environmental.view" />}>
+                        <Route path="/environment/documents/:category" element={<EnvironmentDocuments />} />
                         <Route path="/environmental" element={<Environmental />} />
                         <Route path="/environment/reports" element={<EnvironmentReports />} />
                         <Route path="/environment/reports/:id" element={<EnvironmentReportViewer />} />

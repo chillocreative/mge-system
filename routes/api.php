@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\EnvironmentalController;
 use App\Http\Controllers\Api\EnvironmentProjectSettingController;
 use App\Http\Controllers\Api\EnvironmentReportController;
+use App\Http\Controllers\Api\EnvironmentDocumentController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\FinanceController;
 use App\Http\Controllers\Api\HirarcController;
@@ -837,6 +838,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Water Quality Monitoring + per-project environment settings + monthly environment reports
     Route::prefix('environment')->group(function () {
+        Route::prefix('documents')->group(function () {
+            Route::get('/', [EnvironmentDocumentController::class, 'index'])->middleware('permission:environmental.view');
+            Route::post('/', [EnvironmentDocumentController::class, 'store'])->middleware('permission:environmental.create');
+            Route::get('/{document}/download', [EnvironmentDocumentController::class, 'download'])->middleware('permission:environmental.view');
+            Route::delete('/{document}', [EnvironmentDocumentController::class, 'destroy'])->middleware('permission:environmental.manage');
+        });
         Route::prefix('water-quality')->group(function () {
             Route::get('/', [WaterQualityController::class, 'index'])
                 ->middleware('permission:environmental.view');

@@ -35,11 +35,13 @@ import {
     HiOutlineKey,
     HiOutlineBell,
     HiOutlineAcademicCap,
+    HiOutlineTrash,
+    HiOutlineBadgeCheck,
+    HiOutlineBeaker,
     HiOutlineScale,
     HiOutlineUserCircle,
     HiOutlineViewList,
     HiOutlineDocumentAdd,
-    HiOutlineBeaker,
 } from 'react-icons/hi';
 import NotificationBell from '@/components/NotificationBell';
 import toast from 'react-hot-toast';
@@ -113,8 +115,14 @@ const navigation = [
     {
         name: 'Environment', icon: HiOutlineGlobe,
         children: [
-            { name: 'Monthly Reports', href: '/environment/reports', icon: HiOutlineDocumentReport, permission: 'environmental.view' },
-            { name: 'Water Quality', href: '/environment/water-quality', icon: HiOutlineBeaker, permission: 'environmental.view' },
+            { name: 'Env. Report', href: '/environment/documents/env-report', icon: HiOutlineDocumentReport, permission: 'environmental.view' },
+            { name: 'Env. Monitoring', href: '/environment/documents/env-monitoring', icon: HiOutlineBeaker, permission: 'environmental.view' },
+            { name: 'BMP Inspections', href: '/environment/documents/bmp-inspections', icon: HiOutlineClipboardCheck, permission: 'environmental.view' },
+            { name: 'Scheduled Waste & e-SWIS', href: '/environment/documents/scheduled-waste', icon: HiOutlineTrash, permission: 'environmental.view' },
+            { name: 'GSE / Diesel Records', href: '/environment/documents/gse-diesel', icon: HiOutlineTruck, permission: 'environmental.view' },
+            { name: 'Training & Awareness', href: '/environment/documents/training-awareness', icon: HiOutlineAcademicCap, permission: 'environmental.view' },
+            { name: 'DOE & Environmental Compliance', href: '/environment/documents/doe-compliance', icon: HiOutlineShieldCheck, permission: 'environmental.view' },
+            { name: 'Permits / Certificates', href: '/environment/documents/permits-certificates', icon: HiOutlineBadgeCheck, permission: 'environmental.view' },
         ],
     },
     {
