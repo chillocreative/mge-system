@@ -365,7 +365,9 @@ export default function Correspondence() {
                                         </td>
                                         <td className="px-4 py-3"><span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${badgeClass(item.type)}`}>{typeLabel(item.type)}</span></td>
                                         <td className="min-w-[16rem] px-4 py-3">
-                                            <p className="text-sm font-medium text-gray-900">{item.title}</p>
+                                            <button type="button" onClick={() => setWorkflowItem(item)} className="text-left text-sm font-medium text-primary-600 hover:underline">
+                                                {item.title}
+                                            </button>
                                             {!projectFilter && item.project?.name && (
                                                 <p className="mt-0.5 text-xs text-gray-400">{item.project.name}</p>
                                             )}
