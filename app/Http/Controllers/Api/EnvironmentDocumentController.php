@@ -25,7 +25,7 @@ class EnvironmentDocumentController extends Controller
         ]);
 
         $query = EnvironmentDocument::query()->where('category', $validated['category'])->latest();
-        if (!empty($validated['search'])) {
+        if (! empty($validated['search'])) {
             $search = $validated['search'];
             $query->where(fn ($builder) => $builder
                 ->where('ref_number', 'like', "%{$search}%")
@@ -70,6 +70,7 @@ class EnvironmentDocumentController extends Controller
     public function download(EnvironmentDocument $document): BinaryFileResponse
     {
         abort_unless(Storage::disk('local')->exists($document->file_path), 404);
+
         return response()->download(Storage::disk('local')->path($document->file_path), $document->file_name);
     }
 
@@ -77,6 +78,7 @@ class EnvironmentDocumentController extends Controller
     {
         Storage::disk('local')->delete($document->file_path);
         $document->delete();
+
         return response()->json(['message' => 'Document deleted.']);
     }
 }
