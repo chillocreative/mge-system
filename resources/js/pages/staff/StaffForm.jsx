@@ -333,9 +333,11 @@ export default function StaffForm() {
                         <Field label="Marital Status" name="marital_status" errors={errors}>
                             <select value={form.marital_status} onChange={(e) => set('marital_status', e.target.value)} className={inputClass}>
                                 <option value="">Select</option>
-                                <option value="single">Belum Berkahwin</option>
+                                <option value="single">Bujang</option>
                                 <option value="married">Berkahwin</option>
-                                <option value="divorced">Bercerai</option>
+                                <option value="duda">Duda</option>
+                                <option value="janda">Janda</option>
+                                <option value="balu">Balu</option>
                             </select>
                         </Field>
                         <Field label="Number of Children" name="number_of_children" errors={errors}>

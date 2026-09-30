@@ -17,7 +17,7 @@ const statusColors = {
 
 const labelize = (v) => (v ? String(v).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '-');
 
-const maritalStatusLabels = { single: 'Belum Berkahwin', married: 'Berkahwin', divorced: 'Bercerai' };
+const maritalStatusLabels = { single: 'Bujang', married: 'Berkahwin', duda: 'Duda', janda: 'Janda', balu: 'Balu' };
 
 function Row({ label, value }) {
     return (
