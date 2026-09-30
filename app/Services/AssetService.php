@@ -26,6 +26,9 @@ class AssetService
         if (! empty($filters['type'])) {
             $query->byType($filters['type']);
         }
+        if (! empty($filters['custom_type'])) {
+            $query->byCustomType($filters['custom_type']);
+        }
         if (! empty($filters['category'])) {
             $query->byCategory($filters['category']);
         }

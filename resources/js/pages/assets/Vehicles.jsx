@@ -6,6 +6,7 @@ import assetService from '@/services/assetService';
 import projectService from '@/services/projectService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import useDragScroll from '@/hooks/useDragScroll';
+import { MACHINERY_TYPES } from '@/constants/machineryTypes';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus,
@@ -22,14 +23,12 @@ const statusColors = {
     disposed: 'bg-red-100 text-red-700',
 };
 
-const types = ['car', 'van', 'truck', 'lorry', 'machinery', 'other'];
-
 function cap(s) {
     return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 }
 
 function typeLabel(v) {
-    return v.type === 'other' && v.custom_type ? v.custom_type : cap(v.type);
+    return v.custom_type || cap(v.type);
 }
 
 export default function Vehicles({ category = 'vehicle' }) {
@@ -50,6 +49,7 @@ export default function Vehicles({ category = 'vehicle' }) {
     const [editingId, setEditingId] = useState(null);
     const [projects, setProjects] = useState([]);
     const [saving, setSaving] = useState(false);
+    const [legacyCustomType, setLegacyCustomType] = useState('');
     const [dashboard, setDashboard] = useState(null);
     const [form, setForm] = useState({
         registration_no: '',
@@ -59,7 +59,7 @@ export default function Vehicles({ category = 'vehicle' }) {
         make: '',
         model: '',
         year: '',
-        type: 'car',
+        type: 'machinery',
         purchase_date: '',
         current_value: '',
         project_id: '',
@@ -74,7 +74,7 @@ export default function Vehicles({ category = 'vehicle' }) {
             const params = { page };
             if (search) params.search = search;
             if (statusFilter) params.status = statusFilter;
-            if (typeFilter) params.type = typeFilter;
+            if (typeFilter) params.custom_type = typeFilter;
             params.category = category;
             const res = await assetService.listVehicles(params);
             setVehicles(res.data?.data || []);
@@ -107,6 +107,7 @@ export default function Vehicles({ category = 'vehicle' }) {
     }, [category]);
 
     const openEdit = (vehicle) => {
+        const alignedType = MACHINERY_TYPES.includes(vehicle.custom_type) ? vehicle.custom_type : '';
         setForm({
             registration_no: vehicle.registration_no || '',
             chassis_no: vehicle.chassis_no || '',
@@ -121,8 +122,9 @@ export default function Vehicles({ category = 'vehicle' }) {
             project_id: vehicle.current_project_assignment?.project_id || '',
             status: vehicle.status || 'active',
             notes: vehicle.notes || '',
-            custom_type: vehicle.custom_type || '',
+            custom_type: alignedType,
         });
+        setLegacyCustomType(vehicle.custom_type && !alignedType ? vehicle.custom_type : '');
         setEditingId(vehicle.id);
         setShowForm(true);
     };
@@ -136,7 +138,7 @@ export default function Vehicles({ category = 'vehicle' }) {
             make: '',
             model: '',
             year: '',
-            type: 'car',
+            type: 'machinery',
             purchase_date: '',
             current_value: '',
             project_id: '',
@@ -144,6 +146,7 @@ export default function Vehicles({ category = 'vehicle' }) {
             notes: '',
             custom_type: '',
         });
+        setLegacyCustomType('');
         setEditingId(null);
         setShowForm(true);
     };
@@ -151,6 +154,7 @@ export default function Vehicles({ category = 'vehicle' }) {
     const closeForm = () => {
         setShowForm(false);
         setEditingId(null);
+        setLegacyCustomType('');
     };
 
     const handleSubmit = async (e) => {
@@ -158,6 +162,7 @@ export default function Vehicles({ category = 'vehicle' }) {
         setSaving(true);
         try {
             const payload = { ...form, category };
+            if (legacyCustomType && !payload.custom_type) delete payload.custom_type;
             if (payload.status === '' || payload.status === null) delete payload.status;
 
             if (editingId) {
@@ -267,7 +272,7 @@ export default function Vehicles({ category = 'vehicle' }) {
                     className="rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 >
                     <option value="">All Types</option>
-                    {types.map((t) => <option key={t} value={t}>{cap(t)}</option>)}
+                    {MACHINERY_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
                 </select>
             </div>
 
@@ -370,24 +375,15 @@ export default function Vehicles({ category = 'vehicle' }) {
                                 </div>
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Type</label>
-                                    <select value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
-                                        {types.map((t) => <option key={t} value={t}>{cap(t)}</option>)}
+                                    <select value={form.custom_type} onChange={(e) => setForm((p) => ({ ...p, custom_type: e.target.value }))} required={!legacyCustomType} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                                        <option value="">Select Type</option>
+                                        {MACHINERY_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
                                     </select>
+                                    {legacyCustomType && !form.custom_type && (
+                                        <p className="mt-1 text-xs text-amber-600">Legacy type “{legacyCustomType}” will be retained unless a new type is selected.</p>
+                                    )}
                                 </div>
                             </div>
-                            {form.type === 'other' && (
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">Specify Type *</label>
-                                    <input
-                                        type="text"
-                                        value={form.custom_type}
-                                        onChange={(e) => setForm((p) => ({ ...p, custom_type: e.target.value }))}
-                                        required
-                                        placeholder="e.g. Concrete Pump, Piling Rig"
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                                    />
-                                </div>
-                            )}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Make *</label>

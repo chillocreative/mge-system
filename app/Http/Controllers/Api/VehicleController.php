@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Concerns\NormalizesNullableColumns;
 use App\Http\Controllers\Controller;
 use App\Services\AssetService;
+use App\Support\MachineryTypes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class VehicleController extends Controller
 {
@@ -19,7 +21,10 @@ class VehicleController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $filters = $request->only(['status', 'type', 'category', 'search']);
+        $request->validate([
+            'custom_type' => ['nullable', Rule::in(MachineryTypes::VALUES)],
+        ]);
+        $filters = $request->only(['status', 'type', 'custom_type', 'category', 'search']);
         $perPage = min($request->integer('per_page', 15), 100);
 
         return $this->success($this->assetService->listVehicles($filters, $perPage));
@@ -37,7 +42,7 @@ class VehicleController extends Controller
             'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
             'type' => ['required', 'in:car,van,truck,lorry,machinery,other'],
             'category' => ['nullable', 'in:vehicle,machine'],
-            'custom_type' => ['nullable', 'string', 'max:255', 'required_if:type,other'],
+            'custom_type' => ['nullable', Rule::in(MachineryTypes::VALUES)],
             'purchase_date' => ['nullable', 'date'],
             'current_value' => ['nullable', 'numeric', 'min:0'],
             'assigned_to' => ['nullable', 'exists:employees,id'],
@@ -78,7 +83,7 @@ class VehicleController extends Controller
             'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
             'type' => ['sometimes', 'in:car,van,truck,lorry,machinery,other'],
             'category' => ['nullable', 'in:vehicle,machine'],
-            'custom_type' => ['nullable', 'string', 'max:255', 'required_if:type,other'],
+            'custom_type' => ['nullable', Rule::in(MachineryTypes::VALUES)],
             'purchase_date' => ['nullable', 'date'],
             'current_value' => ['nullable', 'numeric', 'min:0'],
             'assigned_to' => ['nullable', 'exists:employees,id'],

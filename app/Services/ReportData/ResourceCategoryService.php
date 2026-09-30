@@ -3,12 +3,13 @@
 namespace App\Services\ReportData;
 
 use App\Models\ProjectResourceCategory;
+use App\Support\MachineryTypes;
 
 class ResourceCategoryService
 {
     public const DEFAULT_WORKERS = ['General Worker', 'Operator', 'Bar Bender', 'Carpenter', 'Steel Fixer', 'Mason', 'Electrician', 'Plumber', 'Welder', 'Supervisor', 'Other'];
 
-    public const DEFAULT_MACHINERY = ['Excavator', 'Bulldozer', 'Crane', 'Compactor', 'Loader', 'Dump Truck', 'Generator', 'Other'];
+    public const DEFAULT_MACHINERY = MachineryTypes::VALUES;
 
     /** @return array<int, string> */
     public function namesFor(int $projectId, string $kind): array

@@ -10,6 +10,7 @@ import ProjectDiscussions from '@/components/ProjectDiscussions';
 import ReportDataTab from './report-data/ReportDataTab';
 import reportDataService from '@/services/reportDataService';
 import ProjectSitesPanel from '@/components/ProjectSitesPanel';
+import { MACHINERY_TYPES } from '@/constants/machineryTypes';
 import { useAuth } from '@/context/AuthContext';
 import { useConfirm } from '@/context/ConfirmContext';
 import toast from 'react-hot-toast';
@@ -738,7 +739,6 @@ function TimelineTab({ project }) {
 }
 
 // ─── Site Logs Tab ─────────────────────────────────────────────
-const MACHINERY_TYPES = ['Excavator', 'Bulldozer', 'Crane', 'Compactor', 'Loader', 'Dump Truck', 'Generator', 'Other'];
 const WORKER_TYPES = ['General Worker', 'Operator', 'Bar Bender', 'Carpenter', 'Steel Fixer', 'Mason', 'Electrician', 'Plumber', 'Welder', 'Supervisor', 'Other'];
 const WEATHER_CONDITIONS = [
     { value: 'rain_start', label: 'Rain Start' },

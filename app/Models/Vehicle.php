@@ -72,6 +72,11 @@ class Vehicle extends Model
         return $q->where('type', $t);
     }
 
+    public function scopeByCustomType($q, string $type)
+    {
+        return $q->where('custom_type', $type);
+    }
+
     public function scopeByCategory($q, string $c)
     {
         return $q->where('category', $c);
