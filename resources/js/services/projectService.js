@@ -58,6 +58,14 @@ const projectService = {
         const response = await apiClient.post(`/projects/${projectId}/site-logs`, data);
         return response.data;
     },
+    async getSiteLogEngineers(projectId) {
+        const response = await apiClient.get(`/projects/${projectId}/site-logs/engineers`);
+        return response.data;
+    },
+    async approveSiteLog(projectId, logId) {
+        const response = await apiClient.post(`/projects/${projectId}/site-logs/${logId}/approve`);
+        return response.data;
+    },
     async updateSiteLog(projectId, logId, data) {
         const response = await apiClient.put(`/projects/${projectId}/site-logs/${logId}`, data);
         return response.data;

@@ -22,6 +22,10 @@ class SiteLog extends Model
         'safety_notes',
         'issues',
         'logged_by',
+        'site_engineer_id',
+        'approval_status',
+        'approved_by',
+        'approved_at',
     ];
 
     protected function casts(): array
@@ -29,6 +33,7 @@ class SiteLog extends Model
         return [
             'log_date' => 'date:Y-m-d',
             'workers_count' => 'integer',
+            'approved_at' => 'datetime',
         ];
     }
 
@@ -45,6 +50,16 @@ class SiteLog extends Model
     public function logger(): BelongsTo
     {
         return $this->belongsTo(User::class, 'logged_by');
+    }
+
+    public function siteEngineer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'site_engineer_id');
+    }
+
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function machinery(): HasMany

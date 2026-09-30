@@ -32,6 +32,7 @@ import {
     HiOutlineChatAlt2,
     HiOutlineX,
     HiOutlineSearch,
+    HiOutlineCheckCircle,
 } from 'react-icons/hi';
 
 const statusColors = {
@@ -749,6 +750,7 @@ const weatherConditionLabel = (v) => WEATHER_CONDITIONS.find((c) => c.value === 
 const emptySiteLogForm = () => ({
     log_date: new Date().toISOString().split('T')[0],
     site_id: '',
+    site_engineer_id: '',
     weather: '',
     work_performed: '', materials_used: '', issues: '', safety_notes: '',
     workers: [],
@@ -758,6 +760,7 @@ const emptySiteLogForm = () => ({
 
 export function SiteLogsTab({ project, canEdit, onRefresh }) {
     const confirm = useConfirm();
+    const { user } = useAuth();
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [form, setForm] = useState(emptySiteLogForm());
@@ -765,6 +768,7 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
     const [pendingFiles, setPendingFiles] = useState([]);
     const [editingAttachments, setEditingAttachments] = useState([]);
     const [sites, setSites] = useState([]);
+    const [siteEngineers, setSiteEngineers] = useState([]);
     const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
     const [uploadingLogId, setUploadingLogId] = useState(null);
 
@@ -773,6 +777,9 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
 
     useEffect(() => {
         projectSiteService.list(project.id, true).then((r) => setSites(r.data || [])).catch(() => setSites([]));
+        projectService.getSiteLogEngineers(project.id)
+            .then((res) => setSiteEngineers(res.data || []))
+            .catch(() => setSiteEngineers([]));
         reportDataService.getCategories(project.id, 'worker')
             .then((res) => { if (res?.data?.effective) setWorkerTypes(res.data.effective); })
             .catch(() => {});
@@ -831,6 +838,7 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
         setForm({
             log_date: log.log_date ? String(log.log_date).slice(0, 10) : '',
             site_id: log.site_id || '',
+            site_engineer_id: log.site_engineer_id || '',
             weather: log.weather || '',
             workers: (log.workers || []).map((w) => ({ worker_type: w.worker_type, count: w.count })),
             work_performed: log.work_performed || '',
@@ -851,6 +859,7 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
         const payload = {
             ...form,
             site_id: form.site_id || null,
+            site_engineer_id: form.site_engineer_id || null,
         };
         try {
             let savedLogId = editingId;
@@ -913,6 +922,23 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
         }
     };
 
+    const handleApprove = async (log) => {
+        if (!(await confirm({
+            title: 'Approve site log?',
+            message: `Approve the site log dated ${formatDate(log.log_date)}?`,
+            confirmText: 'Approve',
+            danger: false,
+        }))) return;
+
+        try {
+            await projectService.approveSiteLog(project.id, log.id);
+            toast.success('Site log approved');
+            onRefresh();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to approve site log');
+        }
+    };
+
     const logs = project.site_logs || [];
 
     return (
@@ -964,6 +990,19 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
                                 {sites.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
                             </select>
                         )}
+                        <select
+                            value={form.site_engineer_id}
+                            onChange={(e) => setForm({ ...form, site_engineer_id: e.target.value })}
+                            required
+                            className="sm:col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        >
+                            <option value="">Select Site Engineer</option>
+                            {siteEngineers.map((engineer) => (
+                                <option key={engineer.user_id} value={engineer.user_id}>
+                                    {engineer.name}{engineer.employee_no ? ` (${engineer.employee_no})` : ''}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
@@ -1094,6 +1133,9 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
                                     {log.weather && <span>{weatherIcons[log.weather] || ''} {log.weather}</span>}
                                     {log.workers_count > 0 && <span>{log.workers_count} workers</span>}
                                     {log.site?.name && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-700">{log.site.name}</span>}
+                                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${log.approval_status === 'approved' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+                                        {log.approval_status === 'approved' ? 'Approved' : 'Pending approval'}
+                                    </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs text-gray-400">
@@ -1106,6 +1148,26 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
                                         </>
                                     )}
                                 </div>
+                            </div>
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                                <span>
+                                    Site Engineer: {log.site_engineer ? `${log.site_engineer.first_name} ${log.site_engineer.last_name}` : 'Not assigned'}
+                                </span>
+                                {log.approval_status === 'approved' && log.approver && (
+                                    <span>
+                                        Approved by {log.approver.first_name} {log.approver.last_name}
+                                        {log.approved_at ? ` on ${new Date(log.approved_at).toLocaleString()}` : ''}
+                                    </span>
+                                )}
+                                {log.approval_status !== 'approved' && Number(log.site_engineer_id) === Number(user?.id) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleApprove(log)}
+                                        className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-2.5 py-1.5 font-medium text-white hover:bg-green-700"
+                                    >
+                                        <HiOutlineCheckCircle className="h-4 w-4" /> Approve
+                                    </button>
+                                )}
                             </div>
                             {log.weather_events?.length > 0 && (
                                 <div className="mt-2 flex flex-wrap gap-1.5">

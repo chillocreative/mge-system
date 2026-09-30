@@ -14,8 +14,7 @@ import {
     HiOutlineEye,
     HiOutlinePencil,
     HiOutlineTrash,
-    HiOutlineSortAscending,
-    HiOutlineSortDescending,
+    HiSelector,
 } from 'react-icons/hi';
 
 const statusColors = {
@@ -159,7 +158,10 @@ export default function StaffList() {
                             <thead className="bg-gray-50">
                                 <tr>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Employee</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+                                    <th
+                                        className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500"
+                                        aria-sort={employeeNoSort === 'asc' ? 'ascending' : employeeNoSort === 'desc' ? 'descending' : 'none'}
+                                    >
                                         <button
                                             type="button"
                                             onClick={() => setEmployeeNoSort((current) => current === 'asc' ? 'desc' : 'asc')}
@@ -167,9 +169,7 @@ export default function StaffList() {
                                             aria-label={`Sort employee number ${employeeNoSort === 'asc' ? 'descending' : 'ascending'}`}
                                         >
                                             Emp. No
-                                            {employeeNoSort === 'desc'
-                                                ? <HiOutlineSortDescending className="h-4 w-4" />
-                                                : <HiOutlineSortAscending className={`h-4 w-4 ${employeeNoSort ? '' : 'text-gray-300'}`} />}
+                                            <HiSelector className={`h-4 w-4 ${employeeNoSort ? 'text-gray-900' : 'text-gray-400'}`} aria-hidden="true" />
                                         </button>
                                     </th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Department</th>

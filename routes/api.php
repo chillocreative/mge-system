@@ -260,11 +260,13 @@ Route::middleware('auth:sanctum')->group(function () {
         // Site Logs — nested under projects
         Route::prefix('{project}/site-logs')->middleware('permission:projects.view')->group(function () {
             Route::get('/', [SiteLogController::class, 'index']);
+            Route::get('/engineers', [SiteLogController::class, 'engineers']);
             Route::post('/', [SiteLogController::class, 'store'])
                 ->middleware('permission:projects.edit');
             Route::get('/report/pdf', [SiteLogController::class, 'monthlyReportPdf']);
             Route::get('/report/machinery', [SiteLogController::class, 'machineryReport']);
             Route::get('/{siteLog}', [SiteLogController::class, 'show']);
+            Route::post('/{siteLog}/approve', [SiteLogController::class, 'approve']);
             Route::put('/{siteLog}', [SiteLogController::class, 'update'])
                 ->middleware('permission:projects.edit');
             Route::delete('/{siteLog}', [SiteLogController::class, 'destroy'])
