@@ -87,7 +87,7 @@ class ProjectFinanceService
                 $x->where('subcontractor', 'like', '%'.$filters['vendor'].'%');
             }
 
-return $x->selectRaw("DATE_FORMAT($dateColumn,'%Y-%m') as month, SUM($sumColumn) as total")->groupBy('month')->orderBy('month')->pluck('total', 'month');
+            return $x->selectRaw("DATE_FORMAT($dateColumn,'%Y-%m') as month, SUM($sumColumn) as total")->groupBy('month')->orderBy('month')->pluck('total', 'month');
         };
         $budget = $q(ProjectBudget::class, 'month', 'budgeted_cost');
         $actual = $q(ProjectExpense::class, 'expense_date', 'amount');
@@ -171,7 +171,7 @@ return $x->selectRaw("DATE_FORMAT($dateColumn,'%Y-%m') as month, SUM($sumColumn)
             }
         }
 
-return $hits >= 2;
+        return $hits >= 2;
     }
 
     private function findHeaderRow(array $rows): int
@@ -184,7 +184,7 @@ return $hits >= 2;
             }
         }
 
-return 0;
+        return 0;
     }
 
     private function value(array $r, array $keys): string
@@ -207,7 +207,7 @@ return 0;
             }
         }
 
-return '';
+        return '';
     }
 
     private function number(string $v): float
@@ -230,13 +230,13 @@ return '';
     {
         $s = strtolower($title.' '.implode(' ', array_keys($r)));
 
-        return str_contains($s,'claim') || str_contains($s,'subcont');
+        return str_contains($s, 'claim') || str_contains($s, 'subcont');
     }
 
-    private function looksLikePayment(array $r,string $title): bool
+    private function looksLikePayment(array $r, string $title): bool
     {
-        $s = strtolower($title.' '.implode(' ',array_keys($r)));
+        $s = strtolower($title.' '.implode(' ', array_keys($r)));
 
-        return str_contains($s,'vendor') || str_contains($s,'payment');
+        return str_contains($s, 'vendor') || str_contains($s, 'payment');
     }
 }

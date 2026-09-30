@@ -63,13 +63,13 @@ class ProjectFinanceController extends Controller
                 return Pdf::loadView('pdf.project-finance', ['resource' => 'reports', 'rows' => collect($rows)])->download($name.'.pdf');
             }
 
-return Excel::download(new ProjectFinanceReportExport($rows), $name.'.xlsx');
+            return Excel::download(new ProjectFinanceReportExport($rows), $name.'.xlsx');
         }$rows = $this->service->list($resource, $filters, 10000)->getCollection();
         if ($format === 'pdf') {
             return Pdf::loadView('pdf.project-finance', ['resource' => $resource, 'rows' => $rows])->download($name.'.pdf');
         }
 
-return Excel::download(new ProjectFinanceExport($resource, $rows), $name.'.xlsx');
+        return Excel::download(new ProjectFinanceExport($resource, $rows), $name.'.xlsx');
     }
 
     private function validateData(Request $request, string $resource, bool $update = false): array
@@ -88,6 +88,6 @@ return Excel::download(new ProjectFinanceExport($resource, $rows), $name.'.xlsx'
             $data['month'] .= '-01';
         }
 
-return $data;
+        return $data;
     }
 }
