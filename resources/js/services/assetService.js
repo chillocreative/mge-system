@@ -55,6 +55,14 @@ const assetService = {
         const response = await apiClient.get('/assets/expiring', { params: { days, category } });
         return response.data;
     },
+    async usageReport(params = {}) {
+        const response = await apiClient.get('/assets/usage-report', { params });
+        return response.data;
+    },
+    usageReportExportUrl(params = {}, format = 'xlsx') {
+        const query = new URLSearchParams({ ...params, format }).toString();
+        return `/api/assets/usage-report/export?${query}`;
+    },
 };
 
 export default assetService;

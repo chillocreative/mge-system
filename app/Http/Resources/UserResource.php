@@ -20,6 +20,8 @@ class UserResource extends JsonResource
             'emergency_contact_name' => $this->emergency_contact_name,
             'emergency_contact_phone' => $this->emergency_contact_phone,
             'emergency_contact_relationship' => $this->emergency_contact_relationship,
+            'marital_status' => $this->marital_status,
+            'number_of_children' => $this->number_of_children,
             'avatar' => $this->avatar,
             'status' => $this->status,
             'is_manager' => (bool) $this->is_manager,

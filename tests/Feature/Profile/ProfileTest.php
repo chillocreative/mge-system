@@ -50,6 +50,53 @@ class ProfileTest extends TestCase
         $this->assertSame('980101-10-1234', $updated->ic_number);
     }
 
+    public function test_authenticated_user_can_update_family_and_emergency_contact_fields(): void
+    {
+        $user = $this->user();
+
+        $response = $this->actingAs($user)
+            ->putJson('/api/profile', [
+                'full_name' => 'Test User',
+                'email' => $user->email,
+                'emergency_contact_name' => 'Jane User',
+                'emergency_contact_phone' => '012-3456789',
+                'emergency_contact_relationship' => 'Spouse',
+                'marital_status' => 'married',
+                'number_of_children' => 2,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.emergency_contact_name', 'Jane User')
+            ->assertJsonPath('data.emergency_contact_phone', '012-3456789')
+            ->assertJsonPath('data.emergency_contact_relationship', 'Spouse')
+            ->assertJsonPath('data.marital_status', 'married')
+            ->assertJsonPath('data.number_of_children', 2);
+
+        $this->assertNotNull($response->json('data'));
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'emergency_contact_name' => 'Jane User',
+            'emergency_contact_phone' => '012-3456789',
+            'emergency_contact_relationship' => 'Spouse',
+            'marital_status' => 'married',
+            'number_of_children' => 2,
+        ]);
+    }
+
+    public function test_invalid_family_details_are_rejected(): void
+    {
+        $user = $this->user();
+
+        $this->actingAs($user)
+            ->putJson('/api/profile', [
+                'full_name' => 'Test User',
+                'email' => $user->email,
+                'marital_status' => 'unknown',
+                'number_of_children' => -1,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['marital_status', 'number_of_children']);
+    }
+
     /**
      * Case 2: Updating profile fields WITHOUT uploading a new avatar file
      * does NOT clear an existing avatar (regression test for the

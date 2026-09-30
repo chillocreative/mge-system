@@ -26,6 +26,8 @@ class User extends Authenticatable
         'emergency_contact_name',
         'emergency_contact_phone',
         'emergency_contact_relationship',
+        'marital_status',
+        'number_of_children',
         'avatar',
         'department_id',
         'designation_id',
@@ -61,6 +63,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_manager' => 'boolean',
             'is_director' => 'boolean',
+            'number_of_children' => 'integer',
         ];
     }
 

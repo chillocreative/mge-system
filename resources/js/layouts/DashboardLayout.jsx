@@ -111,6 +111,7 @@ const navigation = [
             { name: 'Vehicles', href: '/assets/vehicles', icon: HiOutlineTruck, permission: 'assets.view' },
             { name: 'Machine', href: '/assets/machines', icon: HiOutlineCube, permission: 'assets.view' },
             { name: 'Maintenance', href: '/assets/maintenance', icon: HiOutlineCog, permission: 'maintenance.view' },
+            { name: 'Reports', href: '/assets/reports', icon: HiOutlineDocumentReport, permission: 'assets.view' },
         ],
     },
     { name: 'Meetings', href: '/meetings', icon: HiOutlineClipboardList, permission: 'meetings.view' },

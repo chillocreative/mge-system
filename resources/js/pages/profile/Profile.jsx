@@ -8,7 +8,11 @@ import { HiOutlineUserCircle } from 'react-icons/hi';
 export default function Profile() {
     const { user, loading, refreshUser } = useAuth();
 
-    const [form, setForm] = useState({ full_name: '', email: '', phone: '', ic_number: '' });
+    const [form, setForm] = useState({
+        full_name: '', email: '', phone: '', ic_number: '',
+        emergency_contact_name: '', emergency_contact_phone: '', emergency_contact_relationship: '',
+        marital_status: '', number_of_children: 0,
+    });
     const [avatarFile, setAvatarFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState('');
     const [avatarError, setAvatarError] = useState(false);
@@ -29,6 +33,11 @@ export default function Profile() {
                 email: user.email || '',
                 phone: user.phone || '',
                 ic_number: user.ic_number || '',
+                emergency_contact_name: user.emergency_contact_name || '',
+                emergency_contact_phone: user.emergency_contact_phone || '',
+                emergency_contact_relationship: user.emergency_contact_relationship || '',
+                marital_status: user.marital_status || '',
+                number_of_children: user.number_of_children ?? 0,
             });
         }
     }, [user]);
@@ -68,6 +77,11 @@ export default function Profile() {
             formData.append('email', form.email);
             formData.append('phone', form.phone || '');
             formData.append('ic_number', form.ic_number || '');
+            formData.append('emergency_contact_name', form.emergency_contact_name || '');
+            formData.append('emergency_contact_phone', form.emergency_contact_phone || '');
+            formData.append('emergency_contact_relationship', form.emergency_contact_relationship || '');
+            formData.append('marital_status', form.marital_status || '');
+            formData.append('number_of_children', String(form.number_of_children ?? 0));
 
             if (emailChanged && currentPassword) {
                 formData.append('current_password', currentPassword);
@@ -209,6 +223,64 @@ export default function Profile() {
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                             />
                             {errors.ic_number && <p className="mt-1 text-xs text-red-500">{errors.ic_number[0]}</p>}
+                        </div>
+
+                        <div>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">Marital Status</label>
+                            <select
+                                value={form.marital_status}
+                                onChange={(e) => setForm((p) => ({ ...p, marital_status: e.target.value }))}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                            >
+                                <option value="">Select status</option>
+                                <option value="single">Single</option>
+                                <option value="married">Married</option>
+                                <option value="duda">Duda</option>
+                                <option value="janda">Janda</option>
+                                <option value="balu">Balu</option>
+                            </select>
+                            {errors.marital_status && <p className="mt-1 text-xs text-red-500">{errors.marital_status[0]}</p>}
+                        </div>
+                        <div>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">Number of Children</label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={form.number_of_children}
+                                onChange={(e) => setForm((p) => ({ ...p, number_of_children: e.target.value }))}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                            />
+                            {errors.number_of_children && <p className="mt-1 text-xs text-red-500">{errors.number_of_children[0]}</p>}
+                        </div>
+                        <div>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">Emergency Contact Name</label>
+                            <input
+                                type="text"
+                                value={form.emergency_contact_name}
+                                onChange={(e) => setForm((p) => ({ ...p, emergency_contact_name: e.target.value }))}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                            />
+                            {errors.emergency_contact_name && <p className="mt-1 text-xs text-red-500">{errors.emergency_contact_name[0]}</p>}
+                        </div>
+                        <div>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">Emergency Contact Phone</label>
+                            <input
+                                type="tel"
+                                value={form.emergency_contact_phone}
+                                onChange={(e) => setForm((p) => ({ ...p, emergency_contact_phone: e.target.value }))}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                            />
+                            {errors.emergency_contact_phone && <p className="mt-1 text-xs text-red-500">{errors.emergency_contact_phone[0]}</p>}
+                        </div>
+                        <div className="sm:col-span-2">
+                            <label className="mb-1 block text-sm font-medium text-gray-700">Emergency Contact Relationship</label>
+                            <input
+                                type="text"
+                                value={form.emergency_contact_relationship}
+                                onChange={(e) => setForm((p) => ({ ...p, emergency_contact_relationship: e.target.value }))}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                            />
+                            {errors.emergency_contact_relationship && <p className="mt-1 text-xs text-red-500">{errors.emergency_contact_relationship[0]}</p>}
                         </div>
 
                         {emailChanged && (

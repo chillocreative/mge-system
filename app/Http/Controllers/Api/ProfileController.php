@@ -31,6 +31,11 @@ class ProfileController extends Controller
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($request->user()->id)],
             'phone' => ['nullable', 'string', 'max:20'],
             'ic_number' => ['nullable', 'string', 'max:50'],
+            'emergency_contact_name' => ['nullable', 'string', 'max:255'],
+            'emergency_contact_phone' => ['nullable', 'string', 'max:20'],
+            'emergency_contact_relationship' => ['nullable', 'string', 'max:100'],
+            'marital_status' => ['nullable', 'in:single,married,duda,janda,balu'],
+            'number_of_children' => ['nullable', 'integer', 'min:0'],
             'avatar' => ['nullable', 'image', 'max:5120'],
             'current_password' => [Rule::requiredIf(fn () => $request->input('email') !== $request->user()->email), 'current_password'],
         ]);

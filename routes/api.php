@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AssetUsageReportController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CalendarController;
@@ -1121,6 +1122,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{vehicle}/documents/{document}/download', [VehicleController::class, 'downloadDocument'])->middleware('permission:assets.view');
     });
     Route::get('assets/expiring', [VehicleController::class, 'expiring'])->middleware('permission:assets.view');
+    Route::get('assets/usage-report', [AssetUsageReportController::class, 'index'])->middleware('permission:assets.view');
+    Route::get('assets/usage-report/export', [AssetUsageReportController::class, 'export'])->middleware('permission:assets.view');
     Route::prefix('inventory')->group(function () {
         Route::get('categories', [InventoryController::class, 'categories'])->middleware('permission:inventory.view');
         Route::post('categories', [InventoryController::class, 'storeCategory'])->middleware('permission:inventory.manage');

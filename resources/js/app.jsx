@@ -75,6 +75,7 @@ import VehicleDetail from '@/pages/assets/VehicleDetail';
 import Inventory from '@/pages/assets/Inventory';
 import ItemDetail from '@/pages/assets/ItemDetail';
 import Maintenance from '@/pages/assets/Maintenance';
+import AssetUsageReport from '@/pages/assets/AssetUsageReport';
 import Meetings from '@/pages/meetings/Meetings';
 import MeetingForm from '@/pages/meetings/MeetingForm';
 import MeetingDetail from '@/pages/meetings/MeetingDetail';
@@ -255,6 +256,7 @@ function AppRoutes() {
                         <Route path="/assets/vehicles" element={<Vehicles category="vehicle" />} />
                         <Route path="/assets/vehicles/:id" element={<VehicleDetail />} />
                         <Route path="/assets/machines" element={<Vehicles category="machine" />} />
+                        <Route path="/assets/reports" element={<AssetUsageReport />} />
                     </Route>
                     <Route element={<PermissionGate permission="inventory.view" />}>
                         <Route path="/assets/inventory" element={<Inventory />} />
