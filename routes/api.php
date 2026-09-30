@@ -41,6 +41,7 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectDocumentController;
 use App\Http\Controllers\Api\ProjectInvoiceController;
+use App\Http\Controllers\Api\ProjectFinanceController;
 use App\Http\Controllers\Api\ProjectPartyController;
 use App\Http\Controllers\Api\ProjectSiteController;
 use App\Http\Controllers\Api\QcController;
@@ -358,6 +359,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/files', [ProjectInvoiceController::class, 'storeFiles'])->middleware('permission:projects.edit');
         Route::post('/{id}/payments', [ProjectInvoiceController::class, 'storePayment'])->middleware('permission:projects.edit');
         Route::delete('/payments/{paymentId}', [ProjectInvoiceController::class, 'destroyPayment'])->middleware('permission:projects.edit');
+    });
+
+    // Project Finance redesign — separate CRUD resources and filtered reporting.
+    Route::prefix('project-finance')->group(function () {
+        Route::get('/reports/chart', [ProjectFinanceController::class, 'chart'])->middleware('permission:projects.view');
+        Route::post('/import', [ProjectFinanceController::class, 'import'])->middleware('permission:projects.edit');
+        Route::get('/{resource}/export', [ProjectFinanceController::class, 'export'])->middleware('permission:projects.view');
+        Route::get('/{resource}', [ProjectFinanceController::class, 'index'])->middleware('permission:projects.view');
+        Route::post('/{resource}', [ProjectFinanceController::class, 'store'])->middleware('permission:projects.edit');
+        Route::put('/{resource}/{id}', [ProjectFinanceController::class, 'update'])->middleware('permission:projects.edit');
+        Route::delete('/{resource}/{id}', [ProjectFinanceController::class, 'destroy'])->middleware('permission:projects.edit');
     });
 
     // Admin-managed correspondence types (drives the dynamic tabs)

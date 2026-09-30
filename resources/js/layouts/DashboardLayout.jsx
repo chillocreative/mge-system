@@ -55,7 +55,17 @@ const navigation = [
             { name: 'All Projects', href: '/projects', icon: HiOutlineBriefcase, permission: 'projects.view' },
             { name: 'Tasks', href: '/tasks', icon: HiOutlineClipboardList, permission: 'tasks.view' },
             { name: 'Milestones', href: '/projects/milestones', icon: HiOutlineFlag, permission: 'projects.view' },
-            { name: 'Project Finances', href: '/projects/invoices', icon: HiOutlineDocumentText, permission: 'projects.view' },
+            {
+                name: 'Project Finances', icon: HiOutlineDocumentText,
+                children: [
+                    { name: 'Expenses', href: '/projects/finance/expenses', icon: HiOutlineDocumentText, permission: 'projects.view' },
+                    { name: 'Vendor Payments', href: '/projects/finance/vendor-payments', icon: HiOutlineCash, permission: 'projects.view' },
+                    { name: 'Subcontractor Claims', href: '/projects/finance/subcontractor-claims', icon: HiOutlineClipboardCheck, permission: 'projects.view' },
+                    { name: 'Budget', href: '/projects/finance/budgets', icon: HiOutlineCurrencyDollar, permission: 'projects.view' },
+                    { name: 'Reports', href: '/projects/finance/reports', icon: HiOutlineDocumentReport, permission: 'projects.view' },
+                    { name: 'Legacy Invoices', href: '/projects/invoices', icon: HiOutlineDocumentText, permission: 'projects.view' },
+                ],
+            },
             { name: 'Correspondence', href: '/projects/correspondence', icon: HiOutlineDocumentDuplicate, permission: 'projects.view' },
             { name: 'Correspondence List', href: '/projects/correspondence-list', icon: HiOutlineViewList, permission: 'projects.view' },
             { name: 'Discussions', href: '/projects/discussions', icon: HiOutlineChatAlt2, permission: 'projects.view' },
