@@ -18,7 +18,6 @@ import ProjectCreate from '@/pages/projects/ProjectCreate';
 import ProjectDetail from '@/pages/projects/ProjectDetail';
 import Tasks from '@/pages/tasks/Tasks';
 import Milestones from '@/pages/projects/milestones/Milestones';
-import ProjectInvoices from '@/pages/projects/invoices/ProjectInvoices';
 import ProjectFinance from '@/pages/projects/ProjectFinance';
 import Correspondence from '@/pages/projects/correspondence/Correspondence';
 import CorrespondenceList from '@/pages/projects/correspondence/CorrespondenceList';
@@ -118,7 +117,6 @@ function AppRoutes() {
                         <Route path="/projects" element={<Projects />} />
                         <Route path="/projects/create" element={<ProjectCreate />} />
                         <Route path="/projects/milestones" element={<Milestones />} />
-                        <Route path="/projects/invoices" element={<ProjectInvoices />} />
                         <Route path="/projects/finance/:resource" element={<ProjectFinance />} />
                         <Route path="/projects/correspondence" element={<Correspondence />} />
                         <Route path="/projects/correspondence-list" element={<CorrespondenceList />} />

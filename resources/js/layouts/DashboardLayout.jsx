@@ -63,7 +63,6 @@ const navigation = [
                     { name: 'Subcontractor Claims', href: '/projects/finance/subcontractor-claims', icon: HiOutlineClipboardCheck, permission: 'projects.view' },
                     { name: 'Budget', href: '/projects/finance/budgets', icon: HiOutlineCurrencyDollar, permission: 'projects.view' },
                     { name: 'Reports', href: '/projects/finance/reports', icon: HiOutlineDocumentReport, permission: 'projects.view' },
-                    { name: 'Legacy Invoices', href: '/projects/invoices', icon: HiOutlineDocumentText, permission: 'projects.view' },
                 ],
             },
             { name: 'Correspondence', href: '/projects/correspondence', icon: HiOutlineDocumentDuplicate, permission: 'projects.view' },
