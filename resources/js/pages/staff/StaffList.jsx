@@ -14,6 +14,8 @@ import {
     HiOutlineEye,
     HiOutlinePencil,
     HiOutlineTrash,
+    HiOutlineSortAscending,
+    HiOutlineSortDescending,
 } from 'react-icons/hi';
 
 const statusColors = {
@@ -35,6 +37,7 @@ export default function StaffList() {
     const [statusFilter, setStatusFilter] = useState('');
     const [departments, setDepartments] = useState([]);
     const [pagination, setPagination] = useState({});
+    const [employeeNoSort, setEmployeeNoSort] = useState(null);
 
     const fetchStaff = async (page = 1) => {
         setLoading(true);
@@ -44,6 +47,10 @@ export default function StaffList() {
             if (departmentFilter) params.department_id = departmentFilter;
             if (categoryFilter) params.category = categoryFilter;
             if (statusFilter) params.status = statusFilter;
+            if (employeeNoSort) {
+                params.sort = 'employee_no';
+                params.direction = employeeNoSort;
+            }
             const res = await staffService.list(params);
             setStaff(res.data?.data || []);
             setPagination(res.data?.meta || res.data || {});
@@ -57,7 +64,7 @@ export default function StaffList() {
     useEffect(() => {
         const timer = setTimeout(() => fetchStaff(), 400);
         return () => clearTimeout(timer);
-    }, [search, departmentFilter, categoryFilter, statusFilter]);
+    }, [search, departmentFilter, categoryFilter, statusFilter, employeeNoSort]);
 
     useEffect(() => {
         apiClient
@@ -152,7 +159,19 @@ export default function StaffList() {
                             <thead className="bg-gray-50">
                                 <tr>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Employee</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Emp. No</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+                                        <button
+                                            type="button"
+                                            onClick={() => setEmployeeNoSort((current) => current === 'asc' ? 'desc' : 'asc')}
+                                            className="inline-flex items-center gap-1 hover:text-primary-600"
+                                            aria-label={`Sort employee number ${employeeNoSort === 'asc' ? 'descending' : 'ascending'}`}
+                                        >
+                                            Emp. No
+                                            {employeeNoSort === 'desc'
+                                                ? <HiOutlineSortDescending className="h-4 w-4" />
+                                                : <HiOutlineSortAscending className={`h-4 w-4 ${employeeNoSort ? '' : 'text-gray-300'}`} />}
+                                        </button>
+                                    </th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Department</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Designation</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Category</th>

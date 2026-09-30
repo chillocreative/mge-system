@@ -55,6 +55,7 @@ const navigation = [
             { name: 'All Projects', href: '/projects', icon: HiOutlineBriefcase, permission: 'projects.view' },
             { name: 'Tasks', href: '/tasks', icon: HiOutlineClipboardList, permission: 'tasks.view' },
             { name: 'Milestones', href: '/projects/milestones', icon: HiOutlineFlag, permission: 'projects.view' },
+            { name: 'Site Logs', href: '/projects/site-logs', icon: HiOutlineDocumentText, permission: 'projects.view' },
             {
                 name: 'Project Finances', icon: HiOutlineDocumentText,
                 children: [

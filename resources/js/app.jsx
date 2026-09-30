@@ -16,6 +16,7 @@ import Dashboard from '@/pages/Dashboard';
 import Projects from '@/pages/projects/Projects';
 import ProjectCreate from '@/pages/projects/ProjectCreate';
 import ProjectDetail from '@/pages/projects/ProjectDetail';
+import ProjectSiteLogs from '@/pages/projects/ProjectSiteLogs';
 import Tasks from '@/pages/tasks/Tasks';
 import Milestones from '@/pages/projects/milestones/Milestones';
 import ProjectFinance from '@/pages/projects/ProjectFinance';
@@ -118,6 +119,7 @@ function AppRoutes() {
                         <Route path="/projects" element={<Projects />} />
                         <Route path="/projects/create" element={<ProjectCreate />} />
                         <Route path="/projects/milestones" element={<Milestones />} />
+                        <Route path="/projects/site-logs" element={<ProjectSiteLogs />} />
                         <Route path="/projects/finance/:resource" element={<ProjectFinance />} />
                         <Route path="/projects/correspondence" element={<Correspondence />} />
                         <Route path="/projects/correspondence-list" element={<CorrespondenceList />} />

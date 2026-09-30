@@ -28,7 +28,10 @@ function cap(s) {
 function maintainableLabel(log) {
     const m = log.maintainable;
     if (!m) return '—';
-    if (m.registration_no) return `${m.registration_no}${m.make ? ` (${m.make})` : ''}`;
+    if (m.registration_no) {
+        const serialNo = log.serial_no || m.serial_no;
+        return `${m.registration_no}${serialNo ? ` · S/N ${serialNo}` : ''}${m.make ? ` (${m.make})` : ''}`;
+    }
     return m.name || `#${log.maintainable_id}`;
 }
 
@@ -152,7 +155,7 @@ export default function Maintenance() {
             <div className="mb-6 flex flex-col gap-3 sm:flex-row">
                 <div className="relative max-w-md flex-1">
                     <HiOutlineSearch className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                    <input type="text" placeholder="Search description or vendor..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                    <input type="text" placeholder="Search description, vendor or serial number..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                 </div>
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
                     <option value="">All Statuses</option>
@@ -223,7 +226,7 @@ export default function Maintenance() {
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Machinery *</label>
                                 <select value={form.vehicle_id} onChange={(e) => setForm((p) => ({ ...p, vehicle_id: e.target.value }))} required className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
                                     <option value="">Select machinery...</option>
-                                    {vehicles.map((v) => <option key={v.id} value={v.id}>{v.registration_no} — {v.make}{v.model ? ` ${v.model}` : ''}</option>)}
+                                    {vehicles.map((v) => <option key={v.id} value={v.id}>{v.registration_no}{v.serial_no ? ` · S/N ${v.serial_no}` : ''} — {v.make}{v.model ? ` ${v.model}` : ''}</option>)}
                                 </select>
                             </div>
                             <div className="grid grid-cols-2 gap-4">

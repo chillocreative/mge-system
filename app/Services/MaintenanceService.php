@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\MaintenanceLog;
+use App\Models\Vehicle;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -25,7 +26,8 @@ class MaintenanceService
         }
         if (! empty($filters['search'])) {
             $query->where(fn ($q) => $q->where('description', 'like', "%{$filters['search']}%")
-                ->orWhere('vendor', 'like', "%{$filters['search']}%"));
+                ->orWhere('vendor', 'like', "%{$filters['search']}%")
+                ->orWhere('serial_no', 'like', "%{$filters['search']}%"));
         }
 
         return $query->paginate($perPage);
@@ -41,6 +43,10 @@ class MaintenanceService
 
     public function create(array $data, int $userId): MaintenanceLog
     {
+        if (($data['maintainable_type'] ?? null) === Vehicle::class) {
+            $data['serial_no'] = Vehicle::findOrFail($data['maintainable_id'])->serial_no;
+        }
+
         $data['created_by'] = $userId;
         $log = MaintenanceLog::create($data);
 

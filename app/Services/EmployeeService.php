@@ -19,7 +19,7 @@ class EmployeeService
             'designation:id,name',
             'manager:id,first_name,last_name',
             'user:id,first_name,last_name,email',
-        ])->orderByDesc('created_at');
+        ]);
 
         if (! empty($filters['search'])) {
             $query->search($filters['search']);
@@ -32,6 +32,12 @@ class EmployeeService
         }
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
+        }
+
+        if (($filters['sort'] ?? null) === 'employee_no') {
+            $query->orderBy('employee_no', $filters['direction'] ?? 'asc')->orderBy('id');
+        } else {
+            $query->orderByDesc('created_at');
         }
 
         return $query->paginate($perPage);

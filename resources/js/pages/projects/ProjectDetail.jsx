@@ -62,7 +62,6 @@ const tabs = [
     { id: 'tasks', label: 'Tasks', icon: HiOutlineClipboardList },
     { id: 'milestones', label: 'Milestones', icon: HiOutlineFlag },
     { id: 'timeline', label: 'Timeline', icon: HiOutlineClock },
-    { id: 'site-logs', label: 'Site Logs', icon: HiOutlineDocumentText },
     { id: 'sites', label: 'Sites', icon: HiOutlineLocationMarker },
     { id: 'documents', label: 'Documents', icon: HiOutlineDocumentDownload },
     { id: 'calendar', label: 'Calendar', icon: HiOutlineCalendar },
@@ -184,7 +183,6 @@ export default function ProjectDetail() {
             {activeTab === 'tasks' && <TasksTab project={project} canEdit={canEdit} onRefresh={fetchProject} />}
             {activeTab === 'milestones' && <MilestonesTab project={project} canEdit={canEdit} onRefresh={fetchProject} />}
             {activeTab === 'timeline' && <TimelineTab project={project} />}
-            {activeTab === 'site-logs' && <SiteLogsTab project={project} canEdit={canEdit} onRefresh={fetchProject} />}
             {activeTab === 'sites' && <ProjectSitesPanel project={project} canEdit={canEdit} />}
             {activeTab === 'documents' && <DocumentsTab project={project} canEdit={canEdit} onRefresh={fetchProject} />}
             {activeTab === 'calendar' && <CalendarTab project={project} canEdit={canEdit} onRefresh={fetchProject} />}
@@ -758,7 +756,7 @@ const emptySiteLogForm = () => ({
     weather_events: [],
 });
 
-function SiteLogsTab({ project, canEdit, onRefresh }) {
+export function SiteLogsTab({ project, canEdit, onRefresh }) {
     const confirm = useConfirm();
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);

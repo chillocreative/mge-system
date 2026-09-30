@@ -10,6 +10,7 @@ class MaintenanceLog extends Model
 {
     protected $fillable = [
         'maintainable_type', 'maintainable_id', 'maintenance_type',
+        'serial_no',
         'performed_date', 'next_due_date', 'description', 'cost',
         'vendor', 'performed_by', 'status', 'created_by',
     ];

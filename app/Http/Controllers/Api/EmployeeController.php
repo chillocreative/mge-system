@@ -18,8 +18,12 @@ class EmployeeController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $request->validate([
+            'sort' => ['nullable', 'in:employee_no'],
+            'direction' => ['nullable', 'in:asc,desc'],
+        ]);
         $perPage = min($request->integer('per_page', 15), 100);
-        $filters = $request->only(['search', 'department_id', 'category', 'status']);
+        $filters = $request->only(['search', 'department_id', 'category', 'status', 'sort', 'direction']);
 
         return $this->success($this->employeeService->list($filters, $perPage));
     }
