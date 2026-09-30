@@ -162,22 +162,48 @@ export default function DashboardLayout() {
     // navigation, so moving between sections keeps exactly one group open and
     // never leaves the active page inside a collapsed menu.
     const { pathname } = useLocation();
-    const matchesPath = (href) => pathname === href || pathname.startsWith(href + '/');
+    const matchesPath = (href) => !!href && (pathname === href || pathname.startsWith(href + '/'));
     // Longest matching sibling wins, so /projects/contracts lights "Contracts"
     // rather than "All Projects", while /projects/12 still lights "All Projects".
-    const isChildActive = (child, siblings) =>
-        matchesPath(child.href)
-        && !siblings.some((s) => s.href !== child.href && s.href.length > child.href.length && matchesPath(s.href));
-    const isGroupActive = (item) => item.children?.some((c) => matchesPath(c.href)) ?? false;
+    const descendantLinks = (item) => item.children?.flatMap((child) => (
+        child.children ? descendantLinks(child) : [child]
+    )) ?? [];
+    const isChildActive = (child, siblings) => {
+        if (!child.href) return isGroupActive(child);
+
+        const siblingLinks = siblings.flatMap((sibling) => (
+            sibling.children ? descendantLinks(sibling) : [sibling]
+        ));
+
+        return matchesPath(child.href)
+            && !siblingLinks.some((sibling) => (
+                sibling.href
+                && sibling.href !== child.href
+                && sibling.href.length > child.href.length
+                && matchesPath(sibling.href)
+            ));
+    };
+    const isGroupActive = (item) => descendantLinks(item).some((child) => matchesPath(child.href));
+
+    const activeGroupNames = (items) => items.reduce((names, item) => {
+        if (!item.children || !isGroupActive(item)) return names;
+
+        names[item.name] = true;
+        return { ...names, ...activeGroupNames(item.children) };
+    }, {});
 
     useEffect(() => {
-        const owner = navigation.find((item) => isGroupActive(item));
-        if (owner) setOpenGroups({ [owner.name]: true });
+        const activeGroups = activeGroupNames(navigation);
+        if (Object.keys(activeGroups).length) setOpenGroups(activeGroups);
     }, [pathname]);
 
     // Accordion: only one submenu open at a time (plan Ciri 12). Replacing the
     // whole map — rather than spreading it — is what closes the others.
-    const toggleGroup = (name) => setOpenGroups((p) => (p[name] ? {} : { [name]: true }));
+    const toggleGroup = (name, depth = 0) => setOpenGroups((current) => {
+        if (depth === 0) return current[name] ? {} : { [name]: true };
+
+        return { ...current, [name]: !current[name] };
+    });
     const toggleCollapsed = () => setCollapsed((c) => {
         const next = !c;
         try { localStorage.setItem('sidebarCollapsed', next ? '1' : '0'); } catch { /* ignore */ }
@@ -195,17 +221,76 @@ export default function DashboardLayout() {
     };
 
     // Filter navigation items by user permissions
-    const visibleNavigation = navigation
+    const filterNavigation = (items) => items
         .map((item) => {
             if (item.children) {
-                const children = item.children.filter(
-                    (c) => c.permission == null || can(c.permission)
-                );
+                const children = filterNavigation(item.children);
                 return children.length ? { ...item, children } : null;
             }
+
             return item.permission == null || can(item.permission) ? item : null;
         })
         .filter(Boolean);
+    const visibleNavigation = filterNavigation(navigation);
+
+    const renderNavigationItem = (item, siblings, depth = 0) => {
+        if (item.children) {
+            const isOpen = !!openGroups[item.name];
+            const groupActive = isGroupActive(item);
+            const isTopLevel = depth === 0;
+
+            return (
+                <div key={item.name}>
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            if (isTopLevel && collapsed) setCollapsed(false);
+                            toggleGroup(item.name, depth);
+                            centerInSidebar(e);
+                        }}
+                        title={isTopLevel && collapsed ? item.name : undefined}
+                        className={`group flex w-full items-center rounded-lg font-medium transition-colors ${isTopLevel ? 'px-3 py-2.5 text-sm' : 'px-3 py-2 text-xs'} ${isTopLevel && collapsed ? 'lg:justify-center' : 'justify-between gap-3'} ${
+                            groupActive
+                                ? 'bg-white/10 text-white'
+                                : isTopLevel
+                                    ? 'text-primary-300 hover:bg-white/5 hover:text-white'
+                                    : 'text-primary-400 hover:bg-white/5 hover:text-white'
+                        }`}
+                    >
+                        <span className="flex items-center gap-3">
+                            <item.icon className={`${isTopLevel ? 'h-5 w-5' : 'h-4 w-4'} shrink-0`} />
+                            <span className={isTopLevel && collapsed ? 'lg:hidden' : ''}>{item.name}</span>
+                        </span>
+                        <HiOutlineChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''} ${isTopLevel && collapsed ? 'lg:hidden' : ''}`} />
+                    </button>
+                    {isOpen && !(isTopLevel && collapsed) && (
+                        <div className="mt-1 ml-3 space-y-1 border-l border-white/10 pl-3">
+                            {item.children.map((child) => renderNavigationItem(child, item.children, depth + 1))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        return (
+            <NavLink
+                key={item.name}
+                to={item.href}
+                title={depth === 0 && collapsed ? item.name : undefined}
+                className={`group flex items-center rounded-lg font-medium transition-colors ${depth === 0 ? 'px-3 py-2.5 text-sm' : 'px-3 py-2 text-xs'} ${depth === 0 && collapsed ? 'lg:justify-center gap-3' : 'gap-3'} ${
+                    isChildActive(item, siblings)
+                        ? 'bg-accent-400/10 text-accent-400'
+                        : depth === 0
+                            ? 'text-primary-300 hover:bg-white/5 hover:text-white'
+                            : 'text-primary-400 hover:bg-white/5 hover:text-white'
+                }`}
+                onClick={(e) => { setSidebarOpen(false); centerInSidebar(e); }}
+            >
+                <item.icon className={`${depth === 0 ? 'h-5 w-5' : 'h-4 w-4'} shrink-0`} />
+                <span className={depth === 0 && collapsed ? 'lg:hidden' : ''}>{item.name}</span>
+            </NavLink>
+        );
+    };
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -251,69 +336,7 @@ export default function DashboardLayout() {
                 </div>
 
                 <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
-                    {visibleNavigation.map((item) => {
-                        if (item.children) {
-                            const isOpen = !!openGroups[item.name];
-                            const groupActive = isGroupActive(item);
-                            return (
-                                <div key={item.name}>
-                                    <button
-                                        type="button"
-                                        onClick={(e) => { if (collapsed) setCollapsed(false); toggleGroup(item.name); centerInSidebar(e); }}
-                                        title={collapsed ? item.name : undefined}
-                                        className={`group flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${collapsed ? 'lg:justify-center' : 'justify-between gap-3'} ${
-                                            groupActive
-                                                ? 'bg-white/10 text-white'
-                                                : 'text-primary-300 hover:bg-white/5 hover:text-white'
-                                        }`}
-                                    >
-                                        <span className="flex items-center gap-3">
-                                            <item.icon className="h-5 w-5 shrink-0" />
-                                            <span className={collapsed ? 'lg:hidden' : ''}>{item.name}</span>
-                                        </span>
-                                        <HiOutlineChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''} ${collapsed ? 'lg:hidden' : ''}`} />
-                                    </button>
-                                    {isOpen && !collapsed && (
-                                        <div className="mt-1 ml-3 space-y-1 border-l border-white/10 pl-3">
-                                            {item.children.map((child) => (
-                                                <NavLink
-                                                    key={child.name}
-                                                    to={child.href}
-                                                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
-                                                        isChildActive(child, item.children)
-                                                            ? 'bg-accent-400/10 text-accent-400'
-                                                            : 'text-primary-400 hover:bg-white/5 hover:text-white'
-                                                    }`}
-                                                    onClick={(e) => { setSidebarOpen(false); centerInSidebar(e); }}
-                                                >
-                                                    <child.icon className="h-4 w-4 shrink-0" />
-                                                    {child.name}
-                                                </NavLink>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        }
-                        return (
-                            <NavLink
-                                key={item.name}
-                                to={item.href}
-                                title={collapsed ? item.name : undefined}
-                                className={({ isActive }) =>
-                                    `group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${collapsed ? 'lg:justify-center gap-3' : 'gap-3'} ${
-                                        isActive
-                                            ? 'bg-accent-400/10 text-accent-400'
-                                            : 'text-primary-300 hover:bg-white/5 hover:text-white'
-                                    }`
-                                }
-                                onClick={(e) => { setSidebarOpen(false); centerInSidebar(e); }}
-                            >
-                                <item.icon className="h-5 w-5 shrink-0" />
-                                <span className={collapsed ? 'lg:hidden' : ''}>{item.name}</span>
-                            </NavLink>
-                        );
-                    })}
+                    {visibleNavigation.map((item) => renderNavigationItem(item, visibleNavigation))}
                 </nav>
             </aside>
 
