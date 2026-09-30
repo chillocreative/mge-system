@@ -8,6 +8,7 @@ import clientService from '@/services/clientService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
 import useDragScroll from '@/hooks/useDragScroll';
+import { CONTRACT_CATEGORIES, contractCategoryLabel } from '@/constants/contractCategories';
 import toast from 'react-hot-toast';
 import {
     HiOutlineArrowLeft,
@@ -94,6 +95,11 @@ export default function ContractDetail() {
                             {contract.title}
                             {contract.is_main && (
                                 <span className="rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-700">MAIN</span>
+                            )}
+                            {contract.category && (
+                                <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+                                    {contractCategoryLabel(contract.category)}
+                                </span>
                             )}
                         </h1>
                         <p className="text-sm text-gray-500">
@@ -587,6 +593,7 @@ function EditContractModal({ contract, onClose, onSaved }) {
     const [form, setForm] = useState({
         title: contract.title || '',
         contract_no: contract.contract_no || '',
+        category: contract.category || '',
         contract_value: contract.contract_value ?? '',
         start_date: contract.start_date ? String(contract.start_date).split('T')[0] : '',
         end_date: contract.end_date ? String(contract.end_date).split('T')[0] : '',
@@ -616,6 +623,7 @@ function EditContractModal({ contract, onClose, onSaved }) {
             if (form.client_id) fd.append('client_id', form.client_id);
             fd.append('title', form.title);
             fd.append('status', form.status);
+            fd.append('category', form.category);
             if (form.contract_no) fd.append('contract_no', form.contract_no);
             if (form.contract_value !== '') fd.append('contract_value', form.contract_value);
             if (form.start_date) fd.append('start_date', form.start_date);
@@ -659,6 +667,13 @@ function EditContractModal({ contract, onClose, onSaved }) {
                             <label className="mb-1 block text-sm font-medium text-gray-700">Contract No</label>
                             <input type="text" value={form.contract_no} onChange={(e) => setForm((p) => ({ ...p, contract_no: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                         </div>
+                    </div>
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Category *</label>
+                        <select value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))} required className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                            <option value="">Select Category</option>
+                            {CONTRACT_CATEGORIES.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}
+                        </select>
                     </div>
                     <div>
                         <label className="mb-1 block text-sm font-medium text-gray-700">Client</label>

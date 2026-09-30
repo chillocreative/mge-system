@@ -11,11 +11,18 @@ class ProjectContract extends Model
 {
     use SoftDeletes;
 
+    public const CATEGORY_LABELS = [
+        'subcontractor' => 'MGE dengan Sub Contractor',
+        'client' => 'MGE dengan Client',
+        'vendor_third_party' => 'MGE dengan Vendor / 3rd Party',
+    ];
+
     protected $fillable = [
         'project_id',
         'client_id',
         'title',
         'contract_no',
+        'category',
         'contract_value',
         'start_date',
         'end_date',
@@ -41,6 +48,8 @@ class ProjectContract extends Model
         'insurances',
     ];
 
+    protected $appends = ['category_label'];
+
     protected function casts(): array
     {
         return [
@@ -57,6 +66,11 @@ class ProjectContract extends Model
     }
 
     // Relationships
+
+    public function getCategoryLabelAttribute(): ?string
+    {
+        return self::CATEGORY_LABELS[$this->category] ?? null;
+    }
 
     public function project(): BelongsTo
     {
@@ -98,5 +112,10 @@ class ProjectContract extends Model
     public function scopeByStatus($query, string $status)
     {
         return $query->where('status', $status);
+    }
+
+    public function scopeByCategory($query, string $category)
+    {
+        return $query->where('category', $category);
     }
 }

@@ -78,12 +78,14 @@ class ValidationHardeningTest extends TestCase
         $this->actingAs($this->editor)->postJson('/api/project-contracts', [
             'project_id' => $project->id,
             'title' => 'Contract A',
+            'category' => 'client',
             'is_main' => true,
         ])->assertCreated();
 
         $this->actingAs($this->editor)->postJson('/api/project-contracts', [
             'project_id' => $project->id,
             'title' => 'Contract B',
+            'category' => 'client',
             'is_main' => true,
         ])->assertCreated();
 

@@ -63,6 +63,7 @@ class ContractClientTest extends TestCase
                 'project_id' => $project->id,
                 'client_id' => $client->id,
                 'title' => 'Main Contract',
+                'category' => 'client',
                 'status' => 'active',
             ])
             ->assertCreated();
@@ -86,6 +87,7 @@ class ContractClientTest extends TestCase
             ->postJson('/api/project-contracts', [
                 'project_id' => $project->id,
                 'title' => 'No Explicit Client',
+                'category' => 'client',
                 'status' => 'active',
             ])
             ->assertCreated();
@@ -103,6 +105,7 @@ class ContractClientTest extends TestCase
                 'project_id' => $project->id,
                 'client_id' => 999999,
                 'title' => 'Bad Client',
+                'category' => 'client',
                 'status' => 'active',
             ])
             ->assertStatus(422);

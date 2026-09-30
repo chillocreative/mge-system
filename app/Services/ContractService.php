@@ -32,6 +32,9 @@ class ContractService
         if (! empty($filters['status'])) {
             $query->byStatus($filters['status']);
         }
+        if (! empty($filters['category'])) {
+            $query->byCategory($filters['category']);
+        }
         if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(fn ($q) => $q->where('title', 'like', "%{$search}%")

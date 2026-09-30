@@ -8,6 +8,7 @@ import clientService from '@/services/clientService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
 import useDragScroll from '@/hooks/useDragScroll';
+import { CONTRACT_CATEGORIES, contractCategoryLabel } from '@/constants/contractCategories';
 import toast from 'react-hot-toast';
 import {
     HiOutlinePlus,
@@ -54,6 +55,7 @@ function emptyForm() {
         client_id: '',
         title: '',
         contract_no: '',
+        category: '',
         contract_value: '',
         start_date: '',
         end_date: '',
@@ -75,6 +77,7 @@ export default function Contracts() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [projectFilter, setProjectFilter] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('');
     const [pagination, setPagination] = useState({});
     const [projects, setProjects] = useState([]);
     const [clients, setClients] = useState([]);
@@ -108,6 +111,7 @@ export default function Contracts() {
             if (search) params.search = search;
             if (statusFilter) params.status = statusFilter;
             if (projectFilter) params.project_id = projectFilter;
+            if (categoryFilter) params.category = categoryFilter;
             const res = await contractService.list(params);
             setContracts(res.data?.data || []);
             setPagination(res.data?.meta || res.data || {});
@@ -121,7 +125,7 @@ export default function Contracts() {
     useEffect(() => {
         const timer = setTimeout(() => fetchContracts(), 400);
         return () => clearTimeout(timer);
-    }, [search, statusFilter, projectFilter]);
+    }, [search, statusFilter, projectFilter, categoryFilter]);
 
     useEffect(() => {
         fetchContracts();
@@ -143,6 +147,7 @@ export default function Contracts() {
             client_id: c.client_id || c.client?.id || '',
             title: c.title || '',
             contract_no: c.contract_no || '',
+            category: c.category || '',
             contract_value: c.contract_value ?? '',
             start_date: c.start_date ? String(c.start_date).split('T')[0] : '',
             end_date: c.end_date ? String(c.end_date).split('T')[0] : '',
@@ -169,6 +174,7 @@ export default function Contracts() {
             if (form.client_id) fd.append('client_id', form.client_id);
             fd.append('title', form.title);
             fd.append('status', form.status);
+            fd.append('category', form.category);
             if (form.contract_no) fd.append('contract_no', form.contract_no);
             if (form.contract_value !== '') fd.append('contract_value', form.contract_value);
             if (form.start_date) fd.append('start_date', form.start_date);
@@ -254,6 +260,16 @@ export default function Contracts() {
                     ))}
                 </select>
                 <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                >
+                    <option value="">All Categories</option>
+                    {CONTRACT_CATEGORIES.map((category) => (
+                        <option key={category.value} value={category.value}>{category.label}</option>
+                    ))}
+                </select>
+                <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
@@ -280,6 +296,7 @@ export default function Contracts() {
                                 <tr>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Project</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Title / Contract No</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Category</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Value</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Start</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">End</th>
@@ -298,6 +315,11 @@ export default function Contracts() {
                                         <td className="px-4 py-3">
                                             <Link to={`/projects/contracts/${c.id}`} className="text-sm font-medium text-primary-700 hover:underline">{c.title}</Link>
                                             {c.contract_no && <p className="text-xs text-gray-500">{c.contract_no}</p>}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="inline-block rounded-full bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700">
+                                                {contractCategoryLabel(c.category)}
+                                            </span>
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-gray-900">
                                             {formatCurrency(c.contract_value)}
@@ -442,6 +464,20 @@ export default function Contracts() {
                                         className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                                     />
                                 </div>
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Category *</label>
+                                <select
+                                    value={form.category}
+                                    onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
+                                    required
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                >
+                                    <option value="">Select Category</option>
+                                    {CONTRACT_CATEGORIES.map((category) => (
+                                        <option key={category.value} value={category.value}>{category.label}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>

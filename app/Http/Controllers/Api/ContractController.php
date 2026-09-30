@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ProjectContract;
 use App\Services\ContractService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ContractController extends Controller
 {
@@ -14,7 +16,10 @@ class ContractController extends Controller
     public function index(Request $request): JsonResponse
     {
         $perPage = min($request->integer('per_page', 15), 100);
-        $filters = $request->only(['project_id', 'status', 'search']);
+        $request->validate([
+            'category' => ['nullable', Rule::in(array_keys(ProjectContract::CATEGORY_LABELS))],
+        ]);
+        $filters = $request->only(['project_id', 'status', 'category', 'search']);
 
         return $this->success($this->contractService->list($filters, $perPage));
     }
@@ -220,6 +225,7 @@ class ContractController extends Controller
             'client_id' => ['nullable', 'exists:clients,id'],
             'title' => [$required, 'string', 'max:255'],
             'contract_no' => ['nullable', 'string', 'max:255'],
+            'category' => [$required, Rule::in(array_keys(ProjectContract::CATEGORY_LABELS))],
             'contract_value' => ['nullable', 'numeric', 'min:0'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],
