@@ -61,7 +61,9 @@ return new class extends Migration
             });
         }
 
-        if (Schema::hasTable('correspondence_party_reviews') && ! collect(DB::select("SHOW INDEX FROM correspondence_party_reviews WHERE Key_name = 'corr_party_reviews_unique'"))->count()) {
+        if (Schema::hasTable('correspondence_party_reviews')
+            && DB::connection()->getDriverName() === 'mysql'
+            && ! collect(DB::select("SHOW INDEX FROM correspondence_party_reviews WHERE Key_name = 'corr_party_reviews_unique'"))->count()) {
             Schema::table('correspondence_party_reviews', function (Blueprint $table) {
                 $table->unique(['project_correspondence_id', 'party_role'], 'corr_party_reviews_unique');
             });
