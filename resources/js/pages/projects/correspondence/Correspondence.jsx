@@ -87,6 +87,8 @@ export default function Correspondence() {
     const [typeSaving, setTypeSaving] = useState(false);
 
     const activeTypes = types.filter((t) => t.is_active);
+    const selectedTabType = activeTypes.find((type) => type.code === typeFilter);
+    const isCreateTypeLocked = !editingId && Boolean(selectedTabType);
     const typeMap = Object.fromEntries(types.map((t) => [t.code, t]));
     const badgeClass = (code) => BADGE_COLORS[typeMap[code]?.color] || 'bg-gray-100 text-gray-600';
     const typeLabel = (code) => typeMap[code]?.name || code?.toUpperCase();
@@ -195,7 +197,7 @@ export default function Correspondence() {
 
     const openCreate = () => {
         setEditingId(null);
-        setForm(newForm({ type: activeTypes[0]?.code || '' }));
+        setForm(newForm({ type: selectedTabType?.code || activeTypes[0]?.code || '' }));
         setNewPartyField(null);
         setShowForm(true);
     };
@@ -514,10 +516,13 @@ export default function Correspondence() {
                                 </div>
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Type *</label>
-                                    <select value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value, document_subtype: '', detail: { ...DETAIL_DEFAULTS } }))} required className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                                    <select value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value, document_subtype: '', detail: { ...DETAIL_DEFAULTS } }))} required disabled={isCreateTypeLocked} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-700">
                                         <option value="">Select type</option>
                                         {activeTypes.map((t) => <option key={t.code} value={t.code}>{t.name}{t.full_name ? ` — ${t.full_name}` : ''}</option>)}
                                     </select>
+                                    {isCreateTypeLocked && (
+                                        <p className="mt-1 text-xs text-gray-500">Type follows the selected {selectedTabType.name} tab.</p>
+                                    )}
                                 </div>
                             </div>
 
