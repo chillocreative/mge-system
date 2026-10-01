@@ -10,11 +10,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('project_correspondences', function (Blueprint $table) {
-            $table->string('document_subtype', 60)->nullable()->after('type');
-            $table->boolean('reference_no_is_manual')->default(false)->after('reference_no');
+            if (! Schema::hasColumn('project_correspondences', 'document_subtype')) {
+                $table->string('document_subtype', 60)->nullable()->after('type');
+            }
+            if (! Schema::hasColumn('project_correspondences', 'reference_no_is_manual')) {
+                $table->boolean('reference_no_is_manual')->default(false)->after('reference_no');
+            }
         });
 
-        Schema::create('correspondence_details', function (Blueprint $table) {
+        if (! Schema::hasTable('correspondence_details')) Schema::create('correspondence_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_correspondence_id')->unique()->constrained('project_correspondences')->cascadeOnDelete();
             $table->string('category', 100)->nullable();
@@ -36,7 +40,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('correspondence_party_reviews', function (Blueprint $table) {
+        if (! Schema::hasTable('correspondence_party_reviews')) Schema::create('correspondence_party_reviews', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_correspondence_id')->constrained('project_correspondences')->cascadeOnDelete();
             $table->string('party_role', 30); // jpriz, jps, client, subcontractor
@@ -49,11 +53,17 @@ return new class extends Migration
             $table->unsignedSmallInteger('sequence')->default(0);
             $table->timestamps();
 
-            $table->unique(['project_correspondence_id', 'party_role']);
+            $table->unique(['project_correspondence_id', 'party_role'], 'corr_party_reviews_unique');
             $table->index(['party_role', 'status_normalized']);
         });
 
-        Schema::create('correspondence_links', function (Blueprint $table) {
+        if (Schema::hasTable('correspondence_party_reviews') && ! collect(DB::select("SHOW INDEX FROM correspondence_party_reviews WHERE Key_name = 'corr_party_reviews_unique'"))->count()) {
+            Schema::table('correspondence_party_reviews', function (Blueprint $table) {
+                $table->unique(['project_correspondence_id', 'party_role'], 'corr_party_reviews_unique');
+            });
+        }
+
+        if (! Schema::hasTable('correspondence_links')) Schema::create('correspondence_links', function (Blueprint $table) {
             $table->id();
             $table->foreignId('source_correspondence_id')->constrained('project_correspondences')->cascadeOnDelete();
             $table->foreignId('target_correspondence_id')->constrained('project_correspondences')->cascadeOnDelete();
@@ -65,7 +75,7 @@ return new class extends Migration
             $table->unique(['source_correspondence_id', 'target_correspondence_id', 'relation_type'], 'correspondence_links_unique');
         });
 
-        Schema::create('correspondence_number_rules', function (Blueprint $table) {
+        if (! Schema::hasTable('correspondence_number_rules')) Schema::create('correspondence_number_rules', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->constrained('projects')->cascadeOnDelete();
             $table->string('correspondence_type', 50);
