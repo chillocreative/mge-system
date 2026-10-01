@@ -18,44 +18,48 @@ return new class extends Migration
             }
         });
 
-        if (! Schema::hasTable('correspondence_details')) Schema::create('correspondence_details', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('project_correspondence_id')->unique()->constrained('project_correspondences')->cascadeOnDelete();
-            $table->string('category', 100)->nullable();
-            $table->string('discipline', 100)->nullable();
-            $table->string('document_reference')->nullable();
-            $table->string('request_kind', 100)->nullable();
-            $table->string('work_scope')->nullable();
-            $table->string('work_category', 100)->nullable();
-            $table->string('inspection_type', 100)->nullable();
-            $table->date('inspection_date')->nullable();
-            $table->string('location')->nullable();
-            $table->string('criticality', 60)->nullable();
-            $table->foreignId('subcontractor_party_id')->nullable()->constrained('project_parties')->nullOnDelete();
-            $table->date('compliance_due_date')->nullable();
-            $table->date('complied_date')->nullable();
-            $table->text('action_required')->nullable();
-            $table->string('memo_nature', 100)->nullable();
-            $table->json('metadata')->nullable();
-            $table->timestamps();
-        });
+        if (! Schema::hasTable('correspondence_details')) {
+            Schema::create('correspondence_details', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('project_correspondence_id')->unique()->constrained('project_correspondences')->cascadeOnDelete();
+                $table->string('category', 100)->nullable();
+                $table->string('discipline', 100)->nullable();
+                $table->string('document_reference')->nullable();
+                $table->string('request_kind', 100)->nullable();
+                $table->string('work_scope')->nullable();
+                $table->string('work_category', 100)->nullable();
+                $table->string('inspection_type', 100)->nullable();
+                $table->date('inspection_date')->nullable();
+                $table->string('location')->nullable();
+                $table->string('criticality', 60)->nullable();
+                $table->foreignId('subcontractor_party_id')->nullable()->constrained('project_parties')->nullOnDelete();
+                $table->date('compliance_due_date')->nullable();
+                $table->date('complied_date')->nullable();
+                $table->text('action_required')->nullable();
+                $table->string('memo_nature', 100)->nullable();
+                $table->json('metadata')->nullable();
+                $table->timestamps();
+            });
+        }
 
-        if (! Schema::hasTable('correspondence_party_reviews')) Schema::create('correspondence_party_reviews', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('project_correspondence_id')->constrained('project_correspondences')->cascadeOnDelete();
-            $table->string('party_role', 30); // jpriz, jps, client, subcontractor
-            $table->foreignId('project_party_id')->nullable()->constrained('project_parties')->nullOnDelete();
-            $table->string('status_raw', 100)->nullable();
-            $table->string('status_normalized', 30)->nullable();
-            $table->date('decision_date')->nullable();
-            $table->date('closed_date')->nullable();
-            $table->text('remarks')->nullable();
-            $table->unsignedSmallInteger('sequence')->default(0);
-            $table->timestamps();
+        if (! Schema::hasTable('correspondence_party_reviews')) {
+            Schema::create('correspondence_party_reviews', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('project_correspondence_id')->constrained('project_correspondences')->cascadeOnDelete();
+                $table->string('party_role', 30); // jpriz, jps, client, subcontractor
+                $table->foreignId('project_party_id')->nullable()->constrained('project_parties')->nullOnDelete();
+                $table->string('status_raw', 100)->nullable();
+                $table->string('status_normalized', 30)->nullable();
+                $table->date('decision_date')->nullable();
+                $table->date('closed_date')->nullable();
+                $table->text('remarks')->nullable();
+                $table->unsignedSmallInteger('sequence')->default(0);
+                $table->timestamps();
 
-            $table->unique(['project_correspondence_id', 'party_role'], 'corr_party_reviews_unique');
-            $table->index(['party_role', 'status_normalized']);
-        });
+                $table->unique(['project_correspondence_id', 'party_role'], 'corr_party_reviews_unique');
+                $table->index(['party_role', 'status_normalized']);
+            });
+        }
 
         if (Schema::hasTable('correspondence_party_reviews') && ! collect(DB::select("SHOW INDEX FROM correspondence_party_reviews WHERE Key_name = 'corr_party_reviews_unique'"))->count()) {
             Schema::table('correspondence_party_reviews', function (Blueprint $table) {
@@ -63,32 +67,36 @@ return new class extends Migration
             });
         }
 
-        if (! Schema::hasTable('correspondence_links')) Schema::create('correspondence_links', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('source_correspondence_id')->constrained('project_correspondences')->cascadeOnDelete();
-            $table->foreignId('target_correspondence_id')->constrained('project_correspondences')->cascadeOnDelete();
-            $table->string('relation_type', 30); // response_to, resubmission_of, supersedes, closes, related
-            $table->text('note')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamps();
+        if (! Schema::hasTable('correspondence_links')) {
+            Schema::create('correspondence_links', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('source_correspondence_id')->constrained('project_correspondences')->cascadeOnDelete();
+                $table->foreignId('target_correspondence_id')->constrained('project_correspondences')->cascadeOnDelete();
+                $table->string('relation_type', 30); // response_to, resubmission_of, supersedes, closes, related
+                $table->text('note')->nullable();
+                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->timestamps();
 
-            $table->unique(['source_correspondence_id', 'target_correspondence_id', 'relation_type'], 'correspondence_links_unique');
-        });
+                $table->unique(['source_correspondence_id', 'target_correspondence_id', 'relation_type'], 'correspondence_links_unique');
+            });
+        }
 
-        if (! Schema::hasTable('correspondence_number_rules')) Schema::create('correspondence_number_rules', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('project_id')->constrained('projects')->cascadeOnDelete();
-            $table->string('correspondence_type', 50);
-            $table->string('document_subtype', 60)->default('');
-            $table->string('pattern')->default('MGE/{project}/{type}/{yy}-{sequence}');
-            $table->unsignedSmallInteger('padding')->default(3);
-            $table->unsignedInteger('next_number')->default(1);
-            $table->boolean('reset_annually')->default(true);
-            $table->unsignedSmallInteger('sequence_year')->nullable();
-            $table->timestamps();
+        if (! Schema::hasTable('correspondence_number_rules')) {
+            Schema::create('correspondence_number_rules', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('project_id')->constrained('projects')->cascadeOnDelete();
+                $table->string('correspondence_type', 50);
+                $table->string('document_subtype', 60)->default('');
+                $table->string('pattern')->default('MGE/{project}/{type}/{yy}-{sequence}');
+                $table->unsignedSmallInteger('padding')->default(3);
+                $table->unsignedInteger('next_number')->default(1);
+                $table->boolean('reset_annually')->default(true);
+                $table->unsignedSmallInteger('sequence_year')->nullable();
+                $table->timestamps();
 
-            $table->unique(['project_id', 'correspondence_type', 'document_subtype'], 'correspondence_number_rules_scope_unique');
-        });
+                $table->unique(['project_id', 'correspondence_type', 'document_subtype'], 'correspondence_number_rules_scope_unique');
+            });
+        }
 
         $now = now();
         foreach ([
