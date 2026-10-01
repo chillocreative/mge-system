@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProjectCorrespondence extends Model
@@ -12,7 +13,7 @@ class ProjectCorrespondence extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'project_id', 'site_id', 'type', 'reference_no', 'title', 'description',
+        'project_id', 'site_id', 'type', 'document_subtype', 'reference_no', 'reference_no_is_manual', 'title', 'description',
         'status', 'raised_date', 'due_date', 'response', 'created_by',
         'current_party_id', 'expected_close_date', 'actual_close_date', 'closing_reference', 'closed_by',
         'other_status_text', 'client_closed_date', 'consultant_closed_date',
@@ -30,6 +31,7 @@ class ProjectCorrespondence extends Model
             'client_closed_date' => 'date:Y-m-d',
             'consultant_closed_date' => 'date:Y-m-d',
             'reminded_date' => 'date:Y-m-d',
+            'reference_no_is_manual' => 'boolean',
         ];
     }
 
@@ -71,6 +73,26 @@ class ProjectCorrespondence extends Model
     public function events(): HasMany
     {
         return $this->hasMany(CorrespondenceEvent::class)->orderBy('created_at');
+    }
+
+    public function detail(): HasOne
+    {
+        return $this->hasOne(CorrespondenceDetail::class);
+    }
+
+    public function partyReviews(): HasMany
+    {
+        return $this->hasMany(CorrespondencePartyReview::class)->orderBy('sequence')->orderBy('id');
+    }
+
+    public function outgoingLinks(): HasMany
+    {
+        return $this->hasMany(CorrespondenceLink::class, 'source_correspondence_id');
+    }
+
+    public function incomingLinks(): HasMany
+    {
+        return $this->hasMany(CorrespondenceLink::class, 'target_correspondence_id');
     }
 
     public function closer(): BelongsTo

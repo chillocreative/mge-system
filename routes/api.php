@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\CompanyDocumentController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\CorrespondenceController;
+use App\Http\Controllers\Api\CorrespondenceImportController;
 use App\Http\Controllers\Api\CorrespondenceRegisterController;
 use App\Http\Controllers\Api\CorrespondenceTypeController;
 use App\Http\Controllers\Api\DashboardController;
@@ -384,6 +385,8 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('correspondence')->group(function () {
+        Route::post('/import/preview', [CorrespondenceImportController::class, 'preview'])->middleware('permission:projects.edit');
+        Route::post('/import', [CorrespondenceImportController::class, 'import'])->middleware('permission:projects.edit');
         Route::get('/register', [CorrespondenceRegisterController::class, 'index'])->middleware('permission:projects.view');
         Route::get('/register/export', [CorrespondenceRegisterController::class, 'export'])->middleware('permission:projects.view');
         Route::get('/files/{fileId}/download', [CorrespondenceController::class, 'downloadFile'])->middleware('permission:projects.view');
@@ -399,6 +402,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/handover', [CorrespondenceController::class, 'handOver'])->middleware('permission:projects.edit');
         Route::post('/{id}/note', [CorrespondenceController::class, 'note'])->middleware('permission:projects.edit');
         Route::post('/{id}/status', [CorrespondenceController::class, 'changeStatus'])->middleware('permission:projects.edit');
+        Route::patch('/{id}/close-dates', [CorrespondenceController::class, 'updateCloseDates'])->middleware('permission:projects.edit');
         Route::post('/{id}/close', [CorrespondenceController::class, 'close'])->middleware('permission:projects.edit');
         Route::post('/{id}/reopen', [CorrespondenceController::class, 'reopen'])->middleware('permission:projects.edit');
     });

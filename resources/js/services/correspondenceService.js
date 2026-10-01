@@ -70,8 +70,8 @@ const correspondenceService = {
         const response = await apiClient.post(`/correspondence/${id}/note`, { note });
         return response.data;
     },
-    async changeStatus(id, status, note = null) {
-        const response = await apiClient.post(`/correspondence/${id}/status`, { status, note });
+    async changeStatus(id, status, note = null, other_status_text = null) {
+        const response = await apiClient.post(`/correspondence/${id}/status`, { status, note, other_status_text });
         return response.data;
     },
     async close(id, closing_reference, note = null) {
@@ -79,10 +79,11 @@ const correspondenceService = {
         return response.data;
     },
     async updateCloseDates(id, { client_closed_date, consultant_closed_date }) {
-        const formData = new FormData();
-        if (client_closed_date !== undefined) formData.append('client_closed_date', client_closed_date || '');
-        if (consultant_closed_date !== undefined) formData.append('consultant_closed_date', consultant_closed_date || '');
-        return this.update(id, formData);
+        const payload = {};
+        if (client_closed_date !== undefined) payload.client_closed_date = client_closed_date || null;
+        if (consultant_closed_date !== undefined) payload.consultant_closed_date = consultant_closed_date || null;
+        const response = await apiClient.patch(`/correspondence/${id}/close-dates`, payload);
+        return response.data;
     },
     async reopen(id, note = null) {
         const response = await apiClient.post(`/correspondence/${id}/reopen`, { note });

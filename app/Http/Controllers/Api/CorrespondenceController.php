@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\AssertsSiteInProject;
 use App\Http\Controllers\Controller;
+use App\Models\CorrespondenceLink;
+use App\Models\CorrespondencePartyReview;
 use App\Models\ProjectCorrespondence;
 use App\Services\CorrespondenceService;
 use App\Services\CorrespondenceWorkflowService;
@@ -35,7 +37,12 @@ class CorrespondenceController extends Controller
             'project_id' => ['required', 'exists:projects,id'],
             'site_id' => ['nullable', 'exists:project_sites,id'],
             'type' => ['required', 'exists:correspondence_types,code'],
-            'reference_no' => ['nullable', 'string', 'max:255'],
+            'document_subtype' => ['nullable', 'string', 'max:60'],
+            'reference_no' => [
+                'nullable', 'string', 'max:255',
+                Rule::unique('project_correspondences', 'reference_no')
+                    ->where('project_id', $request->input('project_id')),
+            ],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'status' => ['nullable', 'in:open,pending,declined,forwarded,others'],
@@ -52,8 +59,9 @@ class CorrespondenceController extends Controller
             'consultant_closed_date' => ['nullable', 'date'],
             'client_closed_date' => ['nullable', 'date'],
             'response' => ['nullable', 'string'],
+            ...$this->trackingRules((int) $request->input('project_id')),
             'files' => ['nullable', 'array', 'max:10'],
-            'files.*' => ['file', 'max:1048576', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
+            'files.*' => ['file', 'max:25600', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
         ]);
 
         $files = $request->file('files', []);
@@ -80,7 +88,13 @@ class CorrespondenceController extends Controller
             'project_id' => ['sometimes', 'exists:projects,id'],
             'site_id' => ['nullable', 'exists:project_sites,id'],
             'type' => ['sometimes', 'exists:correspondence_types,code'],
-            'reference_no' => ['nullable', 'string', 'max:255'],
+            'document_subtype' => ['nullable', 'string', 'max:60'],
+            'reference_no' => [
+                'nullable', 'string', 'max:255',
+                Rule::unique('project_correspondences', 'reference_no')
+                    ->where('project_id', $projectId)
+                    ->ignore($id),
+            ],
             'title' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'status' => ['sometimes', function ($attribute, $value, $fail) use ($id) {
@@ -109,8 +123,9 @@ class CorrespondenceController extends Controller
             'client_closed_date' => ['nullable', 'date'],
             'consultant_closed_date' => ['nullable', 'date'],
             'response' => ['nullable', 'string'],
+            ...$this->trackingRules((int) $projectId, $id),
             'files' => ['nullable', 'array', 'max:10'],
-            'files.*' => ['file', 'max:1048576', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
+            'files.*' => ['file', 'max:25600', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
         ]);
 
         $files = $request->file('files', []);
@@ -121,7 +136,7 @@ class CorrespondenceController extends Controller
             $validated['project_id'] ?? ProjectCorrespondence::whereKey($id)->value('project_id'),
         );
 
-        return $this->success($this->correspondenceService->update($id, $validated, $files), 'Correspondence updated successfully.');
+        return $this->success($this->correspondenceService->update($id, $validated, $files, $request->user()->id), 'Correspondence updated successfully.');
     }
 
     public function destroy(int $id): JsonResponse
@@ -135,7 +150,7 @@ class CorrespondenceController extends Controller
     {
         $request->validate([
             'files' => ['required', 'array', 'min:1', 'max:10'],
-            'files.*' => ['file', 'max:1048576', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
+            'files.*' => ['file', 'max:25600', 'extensions:pdf,doc,docx,xls,xlsx,png,jpg,jpeg'],
         ]);
 
         $correspondence = $this->correspondenceService->update($id, [], $request->file('files'));
@@ -197,6 +212,19 @@ class CorrespondenceController extends Controller
         return $this->success($this->workflow->changeStatus($c, $data['status'], $data['note'] ?? null, $request->user()->id, $data['other_status_text'] ?? null), 'Status updated.');
     }
 
+    public function updateCloseDates(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'client_closed_date' => ['sometimes', 'nullable', 'date'],
+            'consultant_closed_date' => ['sometimes', 'nullable', 'date'],
+        ]);
+
+        return $this->success(
+            $this->correspondenceService->updateCloseDates($id, $data),
+            'Close dates updated.',
+        );
+    }
+
     public function close(Request $request, int $id): JsonResponse
     {
         $data = $request->validate([
@@ -231,6 +259,59 @@ class CorrespondenceController extends Controller
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.correspondence', ['c' => $c]);
 
         return $pdf->download('correspondence-'.($c->reference_no ?: $c->id).'.pdf');
+    }
+
+    /**
+     * Workbook-compatible fields layered over the existing correspondence API.
+     * Keeping these nested prevents type-specific columns from bloating the
+     * base record while still allowing one multipart create/update request.
+     */
+    private function trackingRules(int $projectId, ?int $correspondenceId = null): array
+    {
+        $linkedRecordRule = Rule::exists('project_correspondences', 'id')
+            ->where(fn ($query) => $query->where('project_id', $projectId)->whereNull('deleted_at'));
+
+        return [
+            'detail' => ['sometimes', 'array'],
+            'detail.category' => ['nullable', 'string', 'max:100'],
+            'detail.discipline' => ['nullable', 'string', 'max:100'],
+            'detail.document_reference' => ['nullable', 'string', 'max:255'],
+            'detail.request_kind' => ['nullable', 'string', 'max:100'],
+            'detail.work_scope' => ['nullable', 'string', 'max:255'],
+            'detail.work_category' => ['nullable', 'string', 'max:100'],
+            'detail.inspection_type' => ['nullable', 'string', 'max:100'],
+            'detail.inspection_date' => ['nullable', 'date'],
+            'detail.location' => ['nullable', 'string', 'max:255'],
+            'detail.criticality' => ['nullable', 'string', 'max:60'],
+            'detail.subcontractor_party_id' => ['nullable', $this->partyInProject($projectId)],
+            'detail.compliance_due_date' => ['nullable', 'date'],
+            'detail.complied_date' => ['nullable', 'date'],
+            'detail.action_required' => ['nullable', 'string'],
+            'detail.memo_nature' => ['nullable', 'string', 'max:100'],
+            'detail.metadata' => ['nullable', 'array'],
+
+            'party_reviews' => ['sometimes', 'array', 'max:4'],
+            'party_reviews.*.party_role' => ['required', 'distinct', Rule::in(CorrespondencePartyReview::ROLES)],
+            'party_reviews.*.project_party_id' => ['nullable', $this->partyInProject($projectId)],
+            'party_reviews.*.status_raw' => ['nullable', 'string', 'max:100'],
+            'party_reviews.*.status_normalized' => ['nullable', Rule::in(CorrespondencePartyReview::NORMALIZED_STATUSES)],
+            'party_reviews.*.decision_date' => ['nullable', 'date'],
+            'party_reviews.*.closed_date' => ['nullable', 'date'],
+            'party_reviews.*.remarks' => ['nullable', 'string'],
+
+            'links_sync' => ['sometimes', 'boolean'],
+            'links' => ['sometimes', 'array', 'max:25'],
+            'links.*.target_correspondence_id' => [
+                'required', 'integer', $linkedRecordRule,
+                function (string $attribute, mixed $value, \Closure $fail) use ($correspondenceId) {
+                    if ($correspondenceId !== null && (int) $value === $correspondenceId) {
+                        $fail('A correspondence cannot be linked to itself.');
+                    }
+                },
+            ],
+            'links.*.relation_type' => ['required', Rule::in(CorrespondenceLink::RELATION_TYPES)],
+            'links.*.note' => ['nullable', 'string', 'max:1000'],
+        ];
     }
 
     /**

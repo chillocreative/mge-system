@@ -8,6 +8,7 @@ import ProjectFilesPanel from '@/components/ProjectFilesPanel';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
 import CorrespondenceWorkflowDrawer from './CorrespondenceWorkflowDrawer';
+import CorrespondenceTrackingFields, { DETAIL_DEFAULTS, REVIEW_DEFAULTS } from './CorrespondenceTrackingFields';
 import statusColors from './statusColors';
 import useDragScroll from '@/hooks/useDragScroll';
 import toast from 'react-hot-toast';
@@ -41,10 +42,13 @@ const dayDiff = (from, to) => {
 const baseForm = {
     project_id: '', site_id: '', type: '', reference_no: '', title: '', description: '',
     status: 'open', other_status_text: '', raised_date: new Date().toISOString().split('T')[0], due_date: '', response: '', files: [],
-    from_party_id: '', to_party_id: '',
-    reminded_date: '', consultant_status: '', consultant_closed_date: '', client_status: '', client_closed_date: '',
+    from_party_id: '', to_party_id: '', reminded_date: '', document_subtype: '',
 };
-const STATUS_SUGGESTIONS = ['Pending', 'Replied', 'Approved', 'Rejected', 'Forwarded'];
+const newForm = (values = {}) => ({
+    ...baseForm, detail: { ...DETAIL_DEFAULTS }, party_reviews: REVIEW_DEFAULTS(), links: [], ...values,
+});
+const dateValue = (value) => value ? String(value).split('T')[0] : '';
+const partyReview = (item, role) => item.party_reviews?.find((review) => review.party_role === role);
 const emptyTypeForm = { name: '', code: '', full_name: '', color: 'gray', sort_order: 0, is_active: true };
 
 export default function Correspondence() {
@@ -67,9 +71,10 @@ export default function Correspondence() {
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [saving, setSaving] = useState(false);
-    const [form, setForm] = useState(baseForm);
+    const [form, setForm] = useState(() => newForm());
     const [sites, setSites] = useState([]);
     const [parties, setParties] = useState([]);
+    const [linkCandidates, setLinkCandidates] = useState([]);
     const [newPartyField, setNewPartyField] = useState(null); // 'from_party_id' | 'to_party_id' | null
     const [newParty, setNewParty] = useState({ name: '', type: 'other' });
     const [addingParty, setAddingParty] = useState(false);
@@ -131,6 +136,13 @@ export default function Correspondence() {
         correspondenceService.listParties(form.project_id).then((r) => setParties(r.data || [])).catch(() => setParties([]));
     }, [form.project_id]);
 
+    useEffect(() => {
+        if (!form.project_id) { setLinkCandidates([]); return; }
+        correspondenceService.list({ project_id: form.project_id, per_page: 100 })
+            .then((r) => setLinkCandidates(r.data?.data || []))
+            .catch(() => setLinkCandidates([]));
+    }, [form.project_id]);
+
     const deleteParty = async (party) => {
         if (!(await confirm({
             message: `Permanently delete party "${party.name}"? This will clear this party from existing correspondence records.`,
@@ -183,28 +195,38 @@ export default function Correspondence() {
 
     const openCreate = () => {
         setEditingId(null);
-        setForm({ ...baseForm, type: activeTypes[0]?.code || '' });
+        setForm(newForm({ type: activeTypes[0]?.code || '' }));
         setNewPartyField(null);
         setShowForm(true);
     };
 
-    const openEdit = (item) => {
-        setEditingId(item.id);
-        setForm({
-            project_id: item.project_id || '', site_id: item.site_id || '', type: item.type || '', reference_no: item.reference_no || '',
-            title: item.title || '', description: item.description || '', status: item.status || 'open', other_status_text: item.other_status_text || '',
-            raised_date: item.raised_date ? String(item.raised_date).split('T')[0] : '',
-            due_date: item.due_date ? String(item.due_date).split('T')[0] : '',
-            response: item.response || '', files: [],
-            from_party_id: item.from_party_id || '', to_party_id: item.to_party_id || '',
-            reminded_date: item.reminded_date ? String(item.reminded_date).split('T')[0] : '',
-            consultant_status: item.consultant_status || '',
-            consultant_closed_date: item.consultant_closed_date ? String(item.consultant_closed_date).split('T')[0] : '',
-            client_status: item.client_status || '',
-            client_closed_date: item.client_closed_date ? String(item.client_closed_date).split('T')[0] : '',
-        });
-        setNewPartyField(null);
-        setShowForm(true);
+    const openEdit = async (item) => {
+        try {
+            const response = await correspondenceService.get(item.id);
+            const record = response.data;
+            const reviews = REVIEW_DEFAULTS().map((blank) => {
+                const stored = record.party_reviews?.find((review) => review.party_role === blank.party_role);
+                if (stored) return { ...blank, ...stored, decision_date: dateValue(stored.decision_date), closed_date: dateValue(stored.closed_date) };
+                if (blank.party_role === 'jpriz' && record.consultant_status) return { ...blank, status_raw: record.consultant_status, closed_date: dateValue(record.consultant_closed_date) };
+                if (blank.party_role === 'client' && record.client_status) return { ...blank, status_raw: record.client_status, closed_date: dateValue(record.client_closed_date) };
+                return blank;
+            });
+            setEditingId(record.id);
+            setForm(newForm({
+                project_id: record.project_id || '', site_id: record.site_id || '', type: record.type || '', document_subtype: record.document_subtype || '',
+                reference_no: record.reference_no || '', title: record.title || '', description: record.description || '',
+                status: record.status || 'open', other_status_text: record.other_status_text || '', raised_date: dateValue(record.raised_date),
+                due_date: dateValue(record.due_date), response: record.response || '', from_party_id: record.from_party_id || '',
+                to_party_id: record.to_party_id || '', reminded_date: dateValue(record.reminded_date), files: [],
+                detail: { ...DETAIL_DEFAULTS, ...(record.detail || {}), inspection_date: dateValue(record.detail?.inspection_date), compliance_due_date: dateValue(record.detail?.compliance_due_date), complied_date: dateValue(record.detail?.complied_date) },
+                party_reviews: reviews,
+                links: (record.outgoing_links || []).map((link) => ({ target_correspondence_id: link.target_correspondence_id, relation_type: link.relation_type, note: link.note || '' })),
+            }));
+            setNewPartyField(null);
+            setShowForm(true);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to load correspondence');
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -214,22 +236,31 @@ export default function Correspondence() {
             const fd = new FormData();
             fd.append('project_id', form.project_id);
             fd.append('type', form.type);
+            fd.append('document_subtype', form.document_subtype || '');
+            fd.append('reference_no', form.reference_no || '');
             fd.append('title', form.title);
             fd.append('status', form.status);
             fd.append('raised_date', form.raised_date);
             if (form.status === 'others' && form.other_status_text) fd.append('other_status_text', form.other_status_text);
             if (form.site_id) fd.append('site_id', form.site_id);
-            if (form.reference_no) fd.append('reference_no', form.reference_no);
             if (form.description) fd.append('description', form.description);
             if (form.due_date) fd.append('due_date', form.due_date);
             if (form.response) fd.append('response', form.response);
             if (form.from_party_id) fd.append('from_party_id', form.from_party_id);
             if (form.to_party_id) fd.append('to_party_id', form.to_party_id);
             if (form.reminded_date) fd.append('reminded_date', form.reminded_date);
-            if (form.consultant_status) fd.append('consultant_status', form.consultant_status);
-            if (form.consultant_closed_date) fd.append('consultant_closed_date', form.consultant_closed_date);
-            if (form.client_status) fd.append('client_status', form.client_status);
-            if (form.client_closed_date) fd.append('client_closed_date', form.client_closed_date);
+            Object.entries(form.detail).forEach(([key, value]) => fd.append(`detail[${key}]`, value ?? ''));
+            form.party_reviews.forEach((review, index) => {
+                Object.entries(review).forEach(([key, value]) => {
+                    if (key !== 'id' && key !== 'project_correspondence_id' && key !== 'party') fd.append(`party_reviews[${index}][${key}]`, value ?? '');
+                });
+            });
+            fd.append('links_sync', '1');
+            form.links.forEach((link, index) => {
+                fd.append(`links[${index}][target_correspondence_id]`, link.target_correspondence_id);
+                fd.append(`links[${index}][relation_type]`, link.relation_type);
+                fd.append(`links[${index}][note]`, link.note || '');
+            });
             form.files.forEach((f) => fd.append('files[]', f));
 
             if (editingId) { await correspondenceService.update(editingId, fd); toast.success('Correspondence updated'); }
@@ -370,10 +401,10 @@ export default function Correspondence() {
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">From → To</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Date Issued</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Date Reminded</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status (Consultant)</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Date Approved</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status (Client)</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Date Approved</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">JPRIZ</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">JPS</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Client</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Subcontractor</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Actions</th>
                                 </tr>
                             </thead>
@@ -408,10 +439,17 @@ export default function Correspondence() {
                                         <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-600">{item.from_party?.name || '—'} → {item.to_party?.name || '—'}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(item.raised_date)}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{item.reminded_date ? formatDate(item.reminded_date) : '—'}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{item.consultant_status ? item.consultant_status.toUpperCase() : '—'}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{item.consultant_closed_date ? formatDate(item.consultant_closed_date) : '—'}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{item.client_status ? item.client_status.toUpperCase() : '—'}</td>
-                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{item.client_closed_date ? formatDate(item.client_closed_date) : '—'}</td>
+                                        {['jpriz', 'jps', 'client', 'subcontractor'].map((role) => {
+                                            const review = partyReview(item, role);
+                                            const legacyStatus = role === 'jpriz' ? item.consultant_status : role === 'client' ? item.client_status : null;
+                                            const legacyDate = role === 'jpriz' ? item.consultant_closed_date : role === 'client' ? item.client_closed_date : null;
+                                            return (
+                                                <td key={role} className="min-w-[9rem] px-4 py-3 text-xs text-gray-600">
+                                                    <p className="font-medium uppercase">{review?.status_raw || legacyStatus || '—'}</p>
+                                                    {(review?.closed_date || legacyDate) && <p className="mt-0.5 text-gray-400">{formatDate(review?.closed_date || legacyDate)}</p>}
+                                                </td>
+                                            );
+                                        })}
                                         <td className="whitespace-nowrap px-4 py-3 text-right">
                                             <div className="flex items-center justify-end gap-1">
                                                 {item.files?.length > 0 && (
@@ -456,7 +494,7 @@ export default function Correspondence() {
             {/* Create / Edit Modal */}
             {showForm && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowForm(false)}>
-                    <div className="mx-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="mx-4 max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
                         <h3 className="mb-4 text-lg font-semibold text-gray-900">{editingId ? 'Edit Correspondence' : 'New Correspondence'}</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -476,7 +514,7 @@ export default function Correspondence() {
                                 </div>
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Type *</label>
-                                    <select value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))} required className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                                    <select value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value, document_subtype: '', detail: { ...DETAIL_DEFAULTS } }))} required className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
                                         <option value="">Select type</option>
                                         {activeTypes.map((t) => <option key={t.code} value={t.code}>{t.name}{t.full_name ? ` — ${t.full_name}` : ''}</option>)}
                                     </select>
@@ -540,6 +578,7 @@ export default function Correspondence() {
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Reference No</label>
                                     <input type="text" value={form.reference_no} onChange={(e) => setForm((p) => ({ ...p, reference_no: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                    <p className="mt-1 text-xs text-gray-400">Leave blank to generate automatically. You can edit it later.</p>
                                 </div>
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
@@ -579,43 +618,13 @@ export default function Correspondence() {
                                 </div>
                             </div>
 
-                            <datalist id="correspondence-status-suggestions">
-                                {STATUS_SUGGESTIONS.map((s) => <option key={s} value={s} />)}
-                            </datalist>
-
-                            <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                                <p className="mb-2 text-xs font-bold uppercase text-gray-500">Consultant</p>
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                    <div>
-                                        <label className="mb-1 block text-sm font-medium text-gray-700">Status (Consultant)</label>
-                                        <input type="text" list="correspondence-status-suggestions" value={form.consultant_status}
-                                            onChange={(e) => setForm((p) => ({ ...p, consultant_status: e.target.value }))}
-                                            placeholder="e.g. Pending, Forward to JPRiZ"
-                                            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                                    </div>
-                                    <div>
-                                        <label className="mb-1 block text-sm font-medium text-gray-700">Date Approved (Consultant)</label>
-                                        <input type="date" value={form.consultant_closed_date} onChange={(e) => setForm((p) => ({ ...p, consultant_closed_date: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                                <p className="mb-2 text-xs font-bold uppercase text-gray-500">Client</p>
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                    <div>
-                                        <label className="mb-1 block text-sm font-medium text-gray-700">Status (Client)</label>
-                                        <input type="text" list="correspondence-status-suggestions" value={form.client_status}
-                                            onChange={(e) => setForm((p) => ({ ...p, client_status: e.target.value }))}
-                                            placeholder="e.g. Pending, Forward to JPRiZ"
-                                            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                                    </div>
-                                    <div>
-                                        <label className="mb-1 block text-sm font-medium text-gray-700">Date Approved (Client)</label>
-                                        <input type="date" value={form.client_closed_date} onChange={(e) => setForm((p) => ({ ...p, client_closed_date: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
-                                    </div>
-                                </div>
-                            </div>
+                            <CorrespondenceTrackingFields
+                                form={form}
+                                setForm={setForm}
+                                parties={parties}
+                                linkCandidates={linkCandidates}
+                                editingId={editingId}
+                            />
                             {form.raised_date && (
                                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
                                     <label className="mb-1 block text-xs font-bold uppercase text-gray-500">Duration</label>

@@ -17,6 +17,7 @@ const EVENT_LABEL = {
 };
 
 const PARTY_TYPES = ['client', 'consultant', 'main_contractor', 'subcontractor', 'supplier', 'authority', 'other'];
+const labelize = (value) => String(value || '').replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 export default function CorrespondenceWorkflowDrawer({ correspondence, canEdit, onClose, onChanged }) {
     const id = correspondence.id;
@@ -120,6 +121,60 @@ export default function CorrespondenceWorkflowDrawer({ correspondence, canEdit, 
                             </div>
                             {detail.closing_reference && <div className="col-span-2"><span className="text-xs uppercase text-gray-400">Closing ref</span><div>{detail.closing_reference}</div></div>}
                         </div>
+
+                        {detail.detail && Object.entries(detail.detail).some(([key, value]) => !['id', 'project_correspondence_id', 'created_at', 'updated_at', 'metadata', 'subcontractor_party'].includes(key) && value) && (
+                            <div>
+                                <h4 className="mb-2 text-sm font-semibold text-gray-700">Document details</h4>
+                                <dl className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg border border-gray-100 p-3 text-sm">
+                                    {Object.entries(detail.detail).filter(([key, value]) => !['id', 'project_correspondence_id', 'created_at', 'updated_at', 'metadata', 'subcontractor_party'].includes(key) && value).map(([key, value]) => (
+                                        <div key={key} className={key === 'action_required' ? 'col-span-2' : ''}>
+                                            <dt className="text-[11px] uppercase text-gray-400">{labelize(key)}</dt>
+                                            <dd className="text-gray-700">{String(value)}</dd>
+                                        </div>
+                                    ))}
+                                    {detail.detail.subcontractor_party && (
+                                        <div><dt className="text-[11px] uppercase text-gray-400">Subcontractor</dt><dd>{detail.detail.subcontractor_party.name}</dd></div>
+                                    )}
+                                </dl>
+                            </div>
+                        )}
+
+                        {(detail.party_reviews || []).length > 0 && (
+                            <div>
+                                <h4 className="mb-2 text-sm font-semibold text-gray-700">Party reviews</h4>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {detail.party_reviews.map((review) => (
+                                        <div key={review.id} className="rounded-lg border border-gray-100 p-3 text-sm">
+                                            <p className="text-xs font-bold uppercase text-gray-500">{labelize(review.party_role)}</p>
+                                            <p className="mt-1 font-medium text-gray-800">{review.status_raw || review.status_normalized || '—'}</p>
+                                            {review.party?.name && <p className="text-xs text-gray-500">{review.party.name}</p>}
+                                            {review.closed_date && <p className="text-xs text-gray-400">Closed: {review.closed_date}</p>}
+                                            {review.remarks && <p className="mt-1 text-xs text-gray-600">{review.remarks}</p>}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {((detail.outgoing_links || []).length > 0 || (detail.incoming_links || []).length > 0) && (
+                            <div>
+                                <h4 className="mb-2 text-sm font-semibold text-gray-700">Linked correspondence</h4>
+                                <div className="space-y-2">
+                                    {(detail.outgoing_links || []).map((link) => (
+                                        <div key={`out-${link.id}`} className="rounded-lg bg-gray-50 px-3 py-2 text-sm">
+                                            <span className="mr-2 text-xs font-semibold uppercase text-primary-600">{labelize(link.relation_type)}</span>
+                                            {link.target?.reference_no || `#${link.target_correspondence_id}`} — {link.target?.title}
+                                        </div>
+                                    ))}
+                                    {(detail.incoming_links || []).map((link) => (
+                                        <div key={`in-${link.id}`} className="rounded-lg bg-gray-50 px-3 py-2 text-sm">
+                                            <span className="mr-2 text-xs font-semibold uppercase text-gray-500">Linked from</span>
+                                            {link.source?.reference_no || `#${link.source_correspondence_id}`} — {link.source?.title}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Timeline */}
                         <div>
