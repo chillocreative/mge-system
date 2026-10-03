@@ -89,7 +89,6 @@ class TrainingController extends Controller
     public function storeRequest(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'employee_id' => ['required', 'exists:employees,id'],
             'title' => ['required', 'string', 'max:255'],
             'category' => ['nullable', 'string', 'max:100'],
             'reason' => ['nullable', 'string'],
@@ -98,7 +97,7 @@ class TrainingController extends Controller
         ]);
 
         return $this->created(
-            $this->trainingService->createRequest($validated, $request->user()->id),
+            $this->trainingService->createRequest($validated, $request->user()),
             'Training request submitted.'
         );
     }

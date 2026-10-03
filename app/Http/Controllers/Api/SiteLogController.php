@@ -36,7 +36,7 @@ class SiteLogController extends Controller
     public function index(int $projectId, Request $request): JsonResponse
     {
         $logs = SiteLog::where('project_id', $projectId)
-            ->with(['logger:id,first_name,last_name', 'siteEngineer:id,first_name,last_name', 'approver:id,first_name,last_name', 'site:id,name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'attachments', 'workers'])
+            ->with(['logger:id,first_name,last_name', 'siteEngineers:id,first_name,last_name', 'approver:id,first_name,last_name', 'site:id,name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'attachments', 'workers'])
             ->when($request->date_from && $request->date_to, fn ($q) => $q->forPeriod($request->date_from, $request->date_to))
             ->orderByDesc('log_date')
             ->paginate($request->integer('per_page', 15));
@@ -49,12 +49,13 @@ class SiteLogController extends Controller
         $project = Project::findOrFail($projectId);
 
         $validated = $this->validatePayload($request, true, $projectId);
-        $this->approvals->validateEngineer($validated['site_engineer_id'] ?? null);
+        $engineerIds = $validated['site_engineer_ids'] ?? [];
+        $this->approvals->validateEngineers($engineerIds);
         $validated = $this->dropNullColumns($validated, ['workers_count']);
         $machinery = $validated['machinery'] ?? [];
         $workers = $validated['workers'] ?? [];
         $weatherEvents = $validated['weather_events'] ?? [];
-        unset($validated['machinery'], $validated['workers'], $validated['weather_events']);
+        unset($validated['machinery'], $validated['workers'], $validated['weather_events'], $validated['site_engineer_ids']);
 
         $this->assertSiteInProject($validated['site_id'] ?? null, $project->id);
         $validated['project_id'] = $project->id;
@@ -69,15 +70,15 @@ class SiteLogController extends Controller
         $this->syncMachinery($log, $machinery, $request->user()->id);
         $this->syncWorkers($log, $workers);
         $this->syncWeatherEvents($log, $weatherEvents);
-        $this->approvals->assignmentChanged($log, null, true);
+        $this->approvals->syncAssignments($log, $engineerIds, true);
 
-        return $this->created($log->load(['logger:id,first_name,last_name', 'siteEngineer:id,first_name,last_name', 'approver:id,first_name,last_name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'workers']), 'Site log created.');
+        return $this->created($log->load(['logger:id,first_name,last_name', 'siteEngineers:id,first_name,last_name', 'approver:id,first_name,last_name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'workers']), 'Site log created.');
     }
 
     public function show(int $projectId, int $logId): JsonResponse
     {
         $log = SiteLog::where('project_id', $projectId)
-            ->with(['logger:id,first_name,last_name', 'siteEngineer:id,first_name,last_name', 'approver:id,first_name,last_name', 'site:id,name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'attachments', 'workers'])
+            ->with(['logger:id,first_name,last_name', 'siteEngineers:id,first_name,last_name', 'approver:id,first_name,last_name', 'site:id,name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'attachments', 'workers'])
             ->findOrFail($logId);
 
         return $this->success($log);
@@ -124,16 +125,16 @@ class SiteLogController extends Controller
         $this->assertEditable($request, $log);
 
         $validated = $this->validatePayload($request, false, $projectId);
-        $previousEngineerId = $log->site_engineer_id;
-        $engineerWasProvided = array_key_exists('site_engineer_id', $validated);
-        if ($engineerWasProvided) {
-            $this->approvals->validateEngineer($validated['site_engineer_id']);
+        $engineersWereProvided = array_key_exists('site_engineer_ids', $validated);
+        $engineerIds = $validated['site_engineer_ids'] ?? [];
+        if ($engineersWereProvided) {
+            $this->approvals->validateEngineers($engineerIds);
         }
         $validated = $this->dropNullColumns($validated, ['workers_count']);
         $machinery = $validated['machinery'] ?? null;
         $workers = $validated['workers'] ?? null;
         $weatherEvents = $validated['weather_events'] ?? null;
-        unset($validated['machinery'], $validated['workers'], $validated['weather_events']);
+        unset($validated['machinery'], $validated['workers'], $validated['weather_events'], $validated['site_engineer_ids']);
 
         if ($workers !== null && $workers !== []) {
             $validated['workers_count'] = collect($workers)->sum(fn ($w) => (int) ($w['count'] ?? 0));
@@ -153,13 +154,13 @@ class SiteLogController extends Controller
         if ($weatherEvents !== null) {
             $this->syncWeatherEvents($log, $weatherEvents);
         }
-        if ($engineerWasProvided) {
-            $this->approvals->assignmentChanged($log, $previousEngineerId);
+        if ($engineersWereProvided) {
+            $this->approvals->syncAssignments($log, $engineerIds);
         }
 
         $this->auditLog($request, $log, 'sitelog.updated');
 
-        return $this->success($log->fresh()->load(['logger:id,first_name,last_name', 'siteEngineer:id,first_name,last_name', 'approver:id,first_name,last_name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'workers']), 'Site log updated.');
+        return $this->success($log->fresh()->load(['logger:id,first_name,last_name', 'siteEngineers:id,first_name,last_name', 'approver:id,first_name,last_name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'workers']), 'Site log updated.');
     }
 
     public function engineers(int $projectId): JsonResponse
@@ -176,7 +177,7 @@ class SiteLogController extends Controller
         $this->auditLog($request, $log, 'sitelog.approved');
 
         return $this->success(
-            $log->load(['logger:id,first_name,last_name', 'siteEngineer:id,first_name,last_name', 'approver:id,first_name,last_name', 'site:id,name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'attachments', 'workers']),
+            $log->load(['logger:id,first_name,last_name', 'siteEngineers:id,first_name,last_name', 'approver:id,first_name,last_name', 'site:id,name', 'machinery.vehicle:id,registration_no,make,model', 'weatherEvents', 'attachments', 'workers']),
             'Site log approved.',
         );
     }
@@ -389,7 +390,8 @@ class SiteLogController extends Controller
             'equipment_used' => ['nullable', 'string'],
             'safety_notes' => ['nullable', 'string'],
             'issues' => ['nullable', 'string'],
-            'site_engineer_id' => ['nullable', 'integer', 'exists:users,id'],
+            'site_engineer_ids' => ['nullable', 'array'],
+            'site_engineer_ids.*' => ['integer', 'distinct', 'exists:users,id'],
             'machinery' => ['nullable', 'array'],
             'machinery.*.machinery_type' => ['required_with:machinery', Rule::in($this->categories->namesFor($projectId, 'machinery'))],
             'machinery.*.quantity' => ['nullable', 'integer', 'min:1'],

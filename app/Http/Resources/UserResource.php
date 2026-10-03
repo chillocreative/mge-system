@@ -26,6 +26,16 @@ class UserResource extends JsonResource
             'status' => $this->status,
             'is_manager' => (bool) $this->is_manager,
             'is_director' => (bool) $this->is_director,
+            'reports_to_id' => $this->reports_to_id,
+            'reports_to' => $this->whenLoaded('reportsTo', fn () => $this->reportsTo ? [
+                'id' => $this->reportsTo->id,
+                'full_name' => $this->reportsTo->full_name,
+                'email' => $this->reportsTo->email,
+                'designation' => $this->reportsTo->relationLoaded('designation') && $this->reportsTo->designation ? [
+                    'id' => $this->reportsTo->designation->id,
+                    'name' => $this->reportsTo->designation->name,
+                ] : null,
+            ] : null),
             'is_protected' => $this->email === config('app.super_admin_email', 'admin@mge-pms.test'),
             'department' => $this->whenLoaded('department', fn () => [
                 'id' => $this->department->id,

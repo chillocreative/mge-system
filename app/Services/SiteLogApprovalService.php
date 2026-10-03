@@ -18,6 +18,7 @@ class SiteLogApprovalService
             ->with(['designation:id,name', 'user:id,first_name,last_name,email'])
             ->where('status', 'active')
             ->whereNotNull('user_id')
+            ->whereHas('user', fn ($query) => $query->where('status', 'active'))
             ->whereHas('designation', fn ($query) => $query
                 ->whereRaw('LOWER(name) LIKE ?', ['%site engineer%']))
             ->orderBy('first_name')
@@ -32,34 +33,56 @@ class SiteLogApprovalService
             ]);
     }
 
-    public function validateEngineer(?int $userId): void
+    /**
+     * @param  array<int, int|string>  $userIds
+     */
+    public function validateEngineers(array $userIds): void
     {
-        if ($userId === null) {
+        $userIds = $this->normaliseIds($userIds);
+
+        if ($userIds === []) {
             return;
         }
 
-        $eligible = Employee::query()
-            ->where('user_id', $userId)
+        $eligibleIds = Employee::query()
+            ->whereIn('user_id', $userIds)
             ->where('status', 'active')
+            ->whereHas('user', fn ($query) => $query->where('status', 'active'))
             ->whereHas('designation', fn ($query) => $query
                 ->whereRaw('LOWER(name) LIKE ?', ['%site engineer%']))
-            ->exists();
+            ->pluck('user_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->all();
 
-        if (! $eligible) {
+        if (array_diff($userIds, $eligibleIds) !== []) {
             throw ValidationException::withMessages([
-                'site_engineer_id' => 'The selected user must be an active Site Engineer in the staff register.',
+                'site_engineer_ids' => 'Every selected user must be an active Site Engineer in the staff register.',
             ]);
         }
     }
 
-    public function assignmentChanged(SiteLog $log, ?int $previousEngineerId, bool $creating = false): void
+    /**
+     * Synchronise approvers, reset a prior approval when the assignment set
+     * changes, and notify only engineers newly added to that set.
+     *
+     * @param  array<int, int|string>  $engineerIds
+     */
+    public function syncAssignments(SiteLog $log, array $engineerIds, bool $creating = false): void
     {
-        $currentEngineerId = $log->site_engineer_id ? (int) $log->site_engineer_id : null;
-        $previousEngineerId = $previousEngineerId ? (int) $previousEngineerId : null;
+        $engineerIds = $this->normaliseIds($engineerIds);
+        $previousEngineerIds = $log->siteEngineers()
+            ->pluck('users.id')
+            ->map(fn ($id) => (int) $id)
+            ->sort()
+            ->values()
+            ->all();
 
-        if (! $creating && $currentEngineerId === $previousEngineerId) {
+        if ($engineerIds === $previousEngineerIds) {
             return;
         }
+
+        $log->siteEngineers()->sync($engineerIds);
 
         if (! $creating) {
             $log->forceFill([
@@ -69,12 +92,14 @@ class SiteLogApprovalService
             ])->save();
         }
 
-        if (! $currentEngineerId) {
+        $newEngineerIds = array_values(array_diff($engineerIds, $previousEngineerIds));
+
+        if ($newEngineerIds === []) {
             return;
         }
 
         $this->notifications->notifyUserIds(
-            [$currentEngineerId],
+            $newEngineerIds,
             'Site log awaiting approval',
             "You were assigned to approve the site log for {$log->project->name} dated {$log->log_date->format('d M Y')}.",
             'project',
@@ -86,7 +111,11 @@ class SiteLogApprovalService
 
     public function approve(SiteLog $log, User $user): SiteLog
     {
-        abort_unless((int) $log->site_engineer_id === (int) $user->id, 403, 'Only the assigned Site Engineer may approve this site log.');
+        abort_unless(
+            $log->siteEngineers()->whereKey($user->id)->exists(),
+            403,
+            'Only an assigned Site Engineer may approve this site log.',
+        );
 
         if ($log->approval_status !== 'approved') {
             $log->update([
@@ -97,5 +126,20 @@ class SiteLogApprovalService
         }
 
         return $log->fresh();
+    }
+
+    /**
+     * @param  array<int, int|string>  $ids
+     * @return array<int, int>
+     */
+    private function normaliseIds(array $ids): array
+    {
+        return collect($ids)
+            ->filter(fn ($id) => $id !== null && $id !== '')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
     }
 }

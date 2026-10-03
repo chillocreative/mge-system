@@ -18,7 +18,7 @@ class EmployeeService
             'department:id,name',
             'designation:id,name',
             'manager:id,first_name,last_name',
-            'user:id,first_name,last_name,email',
+            'user:id,first_name,last_name,email,status,reports_to_id',
         ]);
 
         if (! empty($filters['search'])) {
@@ -50,7 +50,7 @@ class EmployeeService
             'designation:id,name',
             'manager:id,first_name,last_name,employee_no',
             'creator:id,first_name,last_name',
-            'user:id,first_name,last_name,email',
+            'user:id,first_name,last_name,email,status,reports_to_id',
         ])->findOrFail($id);
     }
 

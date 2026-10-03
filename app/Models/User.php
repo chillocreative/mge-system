@@ -31,6 +31,7 @@ class User extends Authenticatable
         'avatar',
         'department_id',
         'designation_id',
+        'reports_to_id',
         'status',
         'is_manager',
         'is_director',
@@ -107,6 +108,16 @@ class User extends Authenticatable
     public function designation(): BelongsTo
     {
         return $this->belongsTo(Designation::class);
+    }
+
+    public function reportsTo(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reports_to_id');
+    }
+
+    public function directReports(): HasMany
+    {
+        return $this->hasMany(User::class, 'reports_to_id');
     }
 
     public function managedProjects(): HasMany

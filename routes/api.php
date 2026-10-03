@@ -510,6 +510,8 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middleware('permission:users.view');
         Route::put('/{user}', [UserController::class, 'update'])
             ->middleware('permission:users.edit');
+        Route::patch('/{user}/direct-reporting', [UserController::class, 'updateDirectReporting'])
+            ->middleware('permission:staff.edit');
         Route::delete('/{user}', [UserController::class, 'destroy'])
             ->middleware('permission:users.delete');
         Route::patch('/{user}/approve', [UserController::class, 'approve'])

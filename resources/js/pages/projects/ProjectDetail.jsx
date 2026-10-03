@@ -750,7 +750,7 @@ const weatherConditionLabel = (v) => WEATHER_CONDITIONS.find((c) => c.value === 
 const emptySiteLogForm = () => ({
     log_date: new Date().toISOString().split('T')[0],
     site_id: '',
-    site_engineer_id: '',
+    site_engineer_ids: [],
     weather: '',
     work_performed: '', materials_used: '', issues: '', safety_notes: '',
     workers: [],
@@ -824,6 +824,12 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
     const addWeatherEvent = () => setForm((p) => ({ ...p, weather_events: [...p.weather_events, { condition: WEATHER_CONDITIONS[0].value, event_time: '' }] }));
     const removeWeatherEvent = (idx) => setForm((p) => ({ ...p, weather_events: p.weather_events.filter((_, i) => i !== idx) }));
     const updateWeatherEvent = (idx, field, value) => setForm((p) => ({ ...p, weather_events: p.weather_events.map((w, i) => i === idx ? { ...w, [field]: value } : w) }));
+    const toggleSiteEngineer = (userId) => setForm((current) => ({
+        ...current,
+        site_engineer_ids: current.site_engineer_ids.includes(userId)
+            ? current.site_engineer_ids.filter((id) => id !== userId)
+            : [...current.site_engineer_ids, userId],
+    }));
 
     const openCreate = () => {
         setEditingId(null);
@@ -838,7 +844,7 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
         setForm({
             log_date: log.log_date ? String(log.log_date).slice(0, 10) : '',
             site_id: log.site_id || '',
-            site_engineer_id: log.site_engineer_id || '',
+            site_engineer_ids: (log.site_engineers || []).map((engineer) => engineer.id),
             weather: log.weather || '',
             workers: (log.workers || []).map((w) => ({ worker_type: w.worker_type, count: w.count })),
             work_performed: log.work_performed || '',
@@ -855,11 +861,15 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (form.site_engineer_ids.length === 0) {
+            toast.error('Select at least one Site Engineer');
+            return;
+        }
         setSaving(true);
         const payload = {
             ...form,
             site_id: form.site_id || null,
-            site_engineer_id: form.site_engineer_id || null,
+            site_engineer_ids: form.site_engineer_ids,
         };
         try {
             let savedLogId = editingId;
@@ -990,19 +1000,27 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
                                 {sites.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
                             </select>
                         )}
-                        <select
-                            value={form.site_engineer_id}
-                            onChange={(e) => setForm({ ...form, site_engineer_id: e.target.value })}
-                            required
-                            className="sm:col-span-2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                        >
-                            <option value="">Select Site Engineer</option>
-                            {siteEngineers.map((engineer) => (
-                                <option key={engineer.user_id} value={engineer.user_id}>
-                                    {engineer.name}{engineer.employee_no ? ` (${engineer.employee_no})` : ''}
-                                </option>
-                            ))}
-                        </select>
+                        <fieldset className="sm:col-span-2 rounded-lg border border-gray-300 bg-white p-3">
+                            <legend className="px-1 text-xs font-semibold uppercase text-gray-500">Site Engineers</legend>
+                            <p className="mb-2 text-[11px] text-gray-400">Select one or more engineers. Any assigned engineer may approve this log.</p>
+                            {siteEngineers.length === 0 ? (
+                                <p className="text-xs text-gray-400">No active Site Engineers available.</p>
+                            ) : (
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                    {siteEngineers.map((engineer) => (
+                                        <label key={engineer.user_id} className="flex cursor-pointer items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                            <input
+                                                type="checkbox"
+                                                checked={form.site_engineer_ids.includes(engineer.user_id)}
+                                                onChange={() => toggleSiteEngineer(engineer.user_id)}
+                                                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                            />
+                                            <span>{engineer.name}{engineer.employee_no ? ` (${engineer.employee_no})` : ''}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </fieldset>
                     </div>
 
                     <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
@@ -1151,7 +1169,9 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
                             </div>
                             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
                                 <span>
-                                    Site Engineer: {log.site_engineer ? `${log.site_engineer.first_name} ${log.site_engineer.last_name}` : 'Not assigned'}
+                                    Site Engineers: {log.site_engineers?.length > 0
+                                        ? log.site_engineers.map((engineer) => `${engineer.first_name} ${engineer.last_name}`).join(', ')
+                                        : 'Not assigned'}
                                 </span>
                                 {log.approval_status === 'approved' && log.approver && (
                                     <span>
@@ -1159,7 +1179,7 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
                                         {log.approved_at ? ` on ${new Date(log.approved_at).toLocaleString()}` : ''}
                                     </span>
                                 )}
-                                {log.approval_status !== 'approved' && Number(log.site_engineer_id) === Number(user?.id) && (
+                                {log.approval_status !== 'approved' && log.site_engineers?.some((engineer) => Number(engineer.id) === Number(user?.id)) && (
                                     <button
                                         type="button"
                                         onClick={() => handleApprove(log)}

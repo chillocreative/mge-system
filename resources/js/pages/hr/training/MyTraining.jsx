@@ -50,7 +50,6 @@ export default function MyTraining() {
         setErrors({});
         try {
             await trainingService.createRequest({
-                employee_id: employee.id,
                 title: form.title,
                 category: form.category || null,
                 reason: form.reason || null,

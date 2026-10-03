@@ -27,6 +27,7 @@ const emptyForm = {
     hire_date: '',
     resign_date: '',
     reporting_manager_id: '',
+    reports_to_id: '',
     bank_name: '',
     bank_account_no: '',
     epf_no: '',
@@ -62,6 +63,7 @@ export default function StaffForm() {
     const { can, user: authUser } = useAuth();
     const isEdit = !!id;
     const canCreateLogin = can('users.create');
+    const canManageDirectReporting = can('staff.edit');
 
     const [loading, setLoading] = useState(isEdit);
     const [saving, setSaving] = useState(false);
@@ -179,7 +181,11 @@ export default function StaffForm() {
                 setForm({
                     ...emptyForm,
                     ...Object.fromEntries(Object.keys(emptyForm).map((k) => [k, e[k] ?? ''])),
+                    reports_to_id: e.user?.reports_to_id ?? '',
                 });
+                if (e.user) {
+                    setUsers((prev) => (prev.some((u) => u.id === e.user.id) ? prev : [...prev, e.user]));
+                }
             } catch {
                 toast.error('Failed to load staff member');
                 navigate('/staff');
@@ -196,6 +202,7 @@ export default function StaffForm() {
         try {
             const fd = new FormData();
             Object.entries(form).forEach(([k, v]) => {
+                if (k === 'reports_to_id') return;
                 // Skip self as manager
                 if (k === 'reporting_manager_id' && String(v) === String(id)) return;
                 if (v === null || v === undefined) return;
@@ -214,6 +221,12 @@ export default function StaffForm() {
             } else {
                 await staffService.create(fd);
                 toast.success('Staff member created');
+            }
+
+            if (form.user_id && canManageDirectReporting) {
+                await apiClient.patch(`/users/${form.user_id}/direct-reporting`, {
+                    reports_to_id: form.reports_to_id || null,
+                });
             }
             navigate('/staff');
         } catch (err) {
@@ -510,6 +523,20 @@ export default function StaffForm() {
                                     <option key={m.id} value={m.id}>{m.full_name} ({m.employee_no})</option>
                                 ))}
                             </select>
+                        </Field>
+                        <Field label="Reports Directly To" name="reports_to_id" errors={errors}>
+                            <select
+                                value={form.reports_to_id}
+                                onChange={(e) => set('reports_to_id', e.target.value)}
+                                disabled={!form.user_id || !canManageDirectReporting}
+                                className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-100`}
+                            >
+                                <option value="">None</option>
+                                {users.filter((u) => u.status === 'active' && String(u.id) !== String(form.user_id)).map((u) => (
+                                    <option key={u.id} value={u.id}>{u.full_name}</option>
+                                ))}
+                            </select>
+                            {!form.user_id && <p className="mt-1 text-xs text-gray-400">Link a login account to assign direct reporting.</p>}
                         </Field>
                         <Field label="Status" name="status" errors={errors}>
                             <select value={form.status} onChange={(e) => set('status', e.target.value)} className={inputClass}>

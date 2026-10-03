@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
@@ -55,6 +56,12 @@ class SiteLog extends Model
     public function siteEngineer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'site_engineer_id');
+    }
+
+    public function siteEngineers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'site_log_engineers')
+            ->withTimestamps();
     }
 
     public function approver(): BelongsTo

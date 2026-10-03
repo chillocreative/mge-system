@@ -71,7 +71,7 @@ class ProfileController extends Controller
         $request->user()->update($validated);
 
         return $this->success(
-            new UserResource($request->user()->fresh()->load(['department', 'designation', 'roles', 'permissions'])),
+            new UserResource($request->user()->fresh()->load(['department', 'designation', 'reportsTo.designation', 'roles', 'permissions'])),
             'Profile updated successfully.'
         );
     }

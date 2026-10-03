@@ -29,7 +29,7 @@ class AuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         $user = $this->authService->login($request->validated());
-        $user->load(['department', 'designation', 'roles', 'permissions']);
+        $user->load(['department', 'designation', 'reportsTo.designation', 'roles', 'permissions']);
 
         Auth::login($user);
         $request->session()->regenerate();
@@ -50,7 +50,7 @@ class AuthController extends Controller
     public function user(Request $request): JsonResponse
     {
         $user = $request->user();
-        $user->load(['department', 'designation', 'roles', 'permissions']);
+        $user->load(['department', 'designation', 'reportsTo.designation', 'roles', 'permissions']);
 
         return $this->success(new UserResource($user));
     }
@@ -74,7 +74,7 @@ class AuthController extends Controller
 
         // Reuse the same credential + account-status checks as the SPA login.
         $user = $this->authService->login($validated);
-        $user->load(['department', 'designation', 'roles', 'permissions']);
+        $user->load(['department', 'designation', 'reportsTo.designation', 'roles', 'permissions']);
 
         $device = $validated['device_name'] ?? ($request->userAgent() ?: 'mobile');
         $token = $user->createToken($device)->plainTextToken;
@@ -106,7 +106,7 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();
-        $user->load(['department', 'designation', 'roles', 'permissions']);
+        $user->load(['department', 'designation', 'reportsTo.designation', 'roles', 'permissions']);
 
         return $this->success(new UserResource($user));
     }

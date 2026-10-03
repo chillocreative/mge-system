@@ -182,6 +182,15 @@ export default function Profile() {
                     </div>
 
                     <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="sm:col-span-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Reports Directly To</p>
+                            <p className="mt-1 text-sm font-semibold text-gray-900">{user.reports_to?.full_name || 'Not assigned'}</p>
+                            {user.reports_to && (
+                                <p className="text-xs text-gray-500">
+                                    {[user.reports_to.designation?.name, user.reports_to.email].filter(Boolean).join(' · ')}
+                                </p>
+                            )}
+                        </div>
                         <div>
                             <label className="mb-1 block text-sm font-medium text-gray-700">Full Name *</label>
                             <input

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\User\UpdateDirectReportingRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\UserService;
@@ -136,6 +137,20 @@ class UserController extends Controller
         $user = $this->userService->updateUser($id, $validated);
 
         return $this->success(new UserResource($user), 'User updated successfully.');
+    }
+
+    public function updateDirectReporting(UpdateDirectReportingRequest $request, User $user): JsonResponse
+    {
+        if ($resp = $this->guardProtected($user->id)) {
+            return $resp;
+        }
+
+        $updated = $this->userService->updateDirectReporting(
+            $user,
+            $request->validated('reports_to_id'),
+        );
+
+        return $this->success(new UserResource($updated), 'Direct reporting updated successfully.');
     }
 
     public function approve(Request $request, int $id): JsonResponse

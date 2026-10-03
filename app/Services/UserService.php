@@ -23,7 +23,7 @@ class UserService
     public function getUser(int $id): User
     {
         $user = $this->userRepository->findOrFail($id);
-        $user->load(['department', 'designation', 'roles']);
+        $user->load(['department', 'designation', 'reportsTo.designation', 'roles']);
 
         return $user;
     }
@@ -49,7 +49,7 @@ class UserService
         $this->applyOrgRoleFlags($user, $data['role']);
         $this->applyRolePreset($user, $data['role']);
 
-        return $user->load(['department', 'designation', 'roles']);
+        return $user->load(['department', 'designation', 'reportsTo.designation', 'roles']);
     }
 
     /**
@@ -90,7 +90,34 @@ class UserService
             }
         }
 
-        return $user->load(['department', 'designation', 'roles']);
+        return $user->load(['department', 'designation', 'reportsTo.designation', 'roles']);
+    }
+
+    public function updateDirectReporting(User $user, ?int $reportsToId): User
+    {
+        if ($reportsToId !== null) {
+            $manager = User::query()->active()->findOrFail($reportsToId);
+            $seen = [];
+
+            while ($manager) {
+                if ($manager->id === $user->id) {
+                    throw ValidationException::withMessages([
+                        'reports_to_id' => ['This direct-reporting relationship would create a reporting cycle.'],
+                    ]);
+                }
+
+                if (isset($seen[$manager->id])) {
+                    break;
+                }
+
+                $seen[$manager->id] = true;
+                $manager = $manager->reportsTo;
+            }
+        }
+
+        $user->update(['reports_to_id' => $reportsToId]);
+
+        return $user->fresh()->load(['department', 'designation', 'reportsTo.designation', 'roles']);
     }
 
     public function approveUser(int $id, string $role): User
@@ -116,7 +143,7 @@ class UserService
             '/dashboard',
         );
 
-        return $user->load(['department', 'designation', 'roles']);
+        return $user->load(['department', 'designation', 'reportsTo.designation', 'roles']);
     }
 
     public function rejectUser(int $id): User

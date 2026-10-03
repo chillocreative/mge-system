@@ -7,6 +7,7 @@ use App\Models\TrainingRecord;
 use App\Models\TrainingRequest;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Validation\ValidationException;
 
 class TrainingService
 {
@@ -122,12 +123,31 @@ class TrainingService
         return $query->paginate($perPage);
     }
 
-    public function createRequest(array $data, int $userId): TrainingRequest
+    public function createRequest(array $data, User $requester): TrainingRequest
     {
-        $data['created_by'] = $userId;
+        $employee = Employee::where('user_id', $requester->id)->first();
+
+        if (! $employee) {
+            throw ValidationException::withMessages([
+                'employee' => 'No employee profile is linked to your account. Please ask HR to link your staff record.',
+            ]);
+        }
+
+        $data['employee_id'] = $employee->id;
+        $data['created_by'] = $requester->id;
         $data['status'] = 'pending';
         $request = TrainingRequest::create($data);
         $request->load('employee:id,employee_no,first_name,last_name');
+
+        $this->notifications->notify(
+            $requester,
+            'Training request submitted',
+            "Your training request \"{$request->title}\" has been submitted to HR.",
+            'training',
+            '/training/my',
+            ['training_request_id' => $request->id],
+            'training',
+        );
 
         $this->notifications->notifyByPermission(
             'training.approve',
@@ -136,6 +156,7 @@ class TrainingService
             'training',
             '/hr/training',
             ['training_request_id' => $request->id],
+            'training',
         );
 
         return $request;
