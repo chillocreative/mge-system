@@ -1,59 +1,118 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# MGE-PMS
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+MGE-PMS is a construction project management system for managing projects, site operations, finance, human resources, safety, environmental compliance, correspondence, and internal collaboration from one web application.
 
-## About Laravel
+## What it provides
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Project and client management, milestones, programmes, schedules, site logs, documents, events, contracts, parties, and progress reporting
+- Monthly progress reports with programme data, S-curves, Gantt information, report images, registers, and PDF/Word export
+- Project finance covering expenses, vendor payments, subcontractor claims, budgets, reports, invoices, and Excel import/export
+- HR operations including staff records, user approval, attendance, payroll, leave, training, emergency contacts, and employee access control
+- Safety workflows for HIRARC, permits, incidents, hazards, toolbox meetings, compliance checklists, and man-hours
+- Environmental workflows for waste, site inspections, audits, water quality, environmental documents, and reporting
+- Asset, vehicle, machinery, inventory, maintenance, and usage reporting
+- Correspondence, internal email/memos, real-time chat, notifications, and calendar features
+- Role- and permission-based access for Admin & HR, Finances & HR, Projects, and Employee users
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Technology
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Backend:** Laravel 12, PHP 8.2+, MySQL, Laravel Sanctum
+- **Frontend:** React 19, React Router 7, Vite 7, Tailwind CSS 4
+- **Authorization:** Spatie Laravel Permission
+- **Real-time features:** Laravel Broadcasting, Laravel Echo, and Pusher
+- **Documents and data:** Dompdf, PHPWord, FPDF/FPDI, and Laravel Excel
+- **Testing:** PHPUnit and Laravel feature tests
 
-## Learning Laravel
+## Architecture
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+The backend follows a Controller → Service → Repository → Model structure:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- Controllers handle HTTP concerns and authorization boundaries.
+- Services contain business rules and workflows.
+- Repositories abstract data access.
+- Models define persistence and relationships.
 
-## Laravel Sponsors
+The React frontend keeps API calls in feature services, authentication in `AuthContext`, permission checks in the permission hook and gates, and protected navigation in route guards.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Requirements
 
-### Premium Partners
+- PHP 8.2 or newer
+- Composer
+- Node.js and npm
+- MySQL
+- PHP extensions required by Laravel and the installed dependencies
+- Pusher credentials for real-time functionality when enabled
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Local setup
 
-## Contributing
+```bash
+git clone <repository-url>
+cd mge-system
+composer install
+cp .env.example .env
+php artisan key:generate
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Configure the database, application URL, mail, storage, broadcasting, and Pusher values in `.env`, then run:
 
-## Code of Conduct
+```bash
+php artisan migrate
+php artisan db:seed
+php artisan storage:link
+npm install
+npm run build
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+For development, start the backend and frontend separately:
 
-## Security Vulnerabilities
+```bash
+php artisan serve
+npm run dev
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+The application is normally available at `http://mge-system.test` when using the configured Herd link, or at the URL reported by `php artisan serve`.
+
+## Useful commands
+
+```bash
+# Run the automated test suite
+php artisan test
+
+# Format PHP files
+php vendor/bin/pint
+
+# Build production frontend assets
+npm run build
+
+# Seed roles and permissions
+php artisan db:seed --class=RolePermissionSeeder
+```
+
+Production tracks the generated files in `public/build`, so run `npm run build` and commit the resulting asset manifest and bundles whenever frontend code changes.
+
+## API
+
+The API is defined in `routes/api.php`. Login and registration are public; authenticated endpoints use Sanctum and feature permissions. The main API areas include projects, project finance, monthly reports, tasks, users, HR, attendance, payroll, safety, environmental compliance, assets, correspondence, chat, email, notifications, and roles/permissions.
+
+## Deployment
+
+Deployments use the repository's deployment workflow and cPanel configuration. On a cPanel terminal, use the repository wrapper for Artisan commands because it selects a verified CLI PHP binary:
+
+```bash
+git pull
+bash deploy.sh
+```
+
+Before deployment, verify the test suite, PHP formatting, frontend build, and migration status. Uploaded files require a working PHP `fileinfo` extension and a configured public storage link.
+
+## Security and access
+
+New registrations begin in a pending state and require administrator approval. Login is blocked for accounts that are not active. API authorization combines Sanctum authentication with Spatie roles and permissions, and resource-level checks are applied in the relevant controllers and services.
+
+## Project documentation
+
+Additional operational and feature documentation is available in `docs/`, including monthly report deployment guidance and the project development workflow.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is based on Laravel and its dependencies. Refer to the repository owner for the application's distribution and licensing terms.
