@@ -4,7 +4,6 @@ import { useConfirm } from '@/context/ConfirmContext';
 import correspondenceService from '@/services/correspondenceService';
 import projectService from '@/services/projectService';
 import projectSiteService from '@/services/projectSiteService';
-import ProjectFilesPanel from '@/components/ProjectFilesPanel';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatDate } from '@/utils/date';
 import CorrespondenceWorkflowDrawer from './CorrespondenceWorkflowDrawer';
@@ -653,13 +652,6 @@ export default function Correspondence() {
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Remarks</label>
                                 <textarea rows={2} value={form.response} onChange={(e) => setForm((p) => ({ ...p, response: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                             </div>
-                            {form.project_id && (
-                                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                                    <label className="mb-2 block text-xs font-bold uppercase text-gray-500">Project Files (reference)</label>
-                                    <ProjectFilesPanel projectId={form.project_id} readOnly />
-                                </div>
-                            )}
-
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Attachments</label>
                                 <input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" onChange={(e) => setForm((p) => ({ ...p, files: Array.from(e.target.files) }))}
