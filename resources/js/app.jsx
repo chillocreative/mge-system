@@ -30,6 +30,7 @@ import ContractDetail from '@/pages/projects/contracts/ContractDetail';
 import MonthlyReports from '@/pages/reports/MonthlyReports';
 import MonthlyReportEditor from '@/pages/reports/MonthlyReportEditor';
 import Clients from '@/pages/clients/Clients';
+import MasterData from '@/pages/master-data/MasterData';
 import Users from '@/pages/users/Users';
 import Roles from '@/pages/roles/Roles';
 import FinanceOverview from '@/pages/finance/FinanceOverview';
@@ -145,6 +146,10 @@ function AppRoutes() {
                     {/* Clients — requires clients.view */}
                     <Route element={<PermissionGate permission="clients.view" />}>
                         <Route path="/clients" element={<Clients />} />
+                    </Route>
+
+                    <Route element={<PermissionGate permission="master-data.manage" />}>
+                        <Route path="/master-data" element={<MasterData />} />
                     </Route>
 
                     {/* Users — requires users.view */}

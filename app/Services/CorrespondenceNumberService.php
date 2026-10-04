@@ -10,6 +10,8 @@ use RuntimeException;
 
 class CorrespondenceNumberService
 {
+    public function __construct(private readonly ProjectReferenceService $projectReferenceService) {}
+
     /**
      * Allocate the next reference inside a project/type/subtype scope.
      * Rules are data-driven so an imported Excel convention can be configured
@@ -18,6 +20,17 @@ class CorrespondenceNumberService
      */
     public function generate(int $projectId, string $type, ?string $subtype, ?int $year = null): string
     {
+        if ($referenceType = $this->referenceType($type, $subtype)) {
+            $date = now();
+            if ($year) {
+                $date = $date->setYear($year);
+            }
+
+            return $this->projectReferenceService
+                ->generate($projectId, $referenceType, $date, auth()->id())
+                ->reference_no;
+        }
+
         return DB::transaction(function () use ($projectId, $type, $subtype, $year) {
             $year ??= (int) now()->format('Y');
             $subtype = trim((string) $subtype);
@@ -76,5 +89,27 @@ class CorrespondenceNumberService
 
             throw new RuntimeException('Unable to allocate a unique correspondence reference number.');
         });
+    }
+
+    private function referenceType(string $type, ?string $subtype): ?string
+    {
+        $subtype = strtoupper(trim((string) $subtype));
+        if (in_array($subtype, ['MA', 'MS', 'DWG', 'REPORT', 'ADMIN', 'SUBCON'], true)) {
+            return $subtype;
+        }
+
+        $type = strtoupper(preg_replace('/[^A-Z0-9]+/i', '_', trim($type)));
+
+        return [
+            'RFI' => 'RFI',
+            'RFWI' => 'RFWI',
+            'SITE_MEMO' => 'SITE_MEMO',
+            'EI' => 'EI',
+            'PTW' => 'PTW',
+            'DRAWING' => 'DWG',
+            'REPORT' => 'REPORT',
+            'SUBCON' => 'SUBCON',
+            'ADMIN' => 'ADMIN',
+        ][$type] ?? null;
     }
 }

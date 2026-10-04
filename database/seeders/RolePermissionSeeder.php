@@ -76,6 +76,9 @@ class RolePermissionSeeder extends Seeder
             'clients.edit',
             'clients.delete',
 
+            // Master party database and project reference templates
+            'master-data.manage',
+
             // Finance / Budgets
             'finance.view',
             'finance.manage-budgets',

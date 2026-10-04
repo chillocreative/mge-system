@@ -17,13 +17,18 @@ class ProjectParty extends Model
 
     public const REPORT_ROLES = ['owner', 'superintending_officer', 'so_representative', 'district_engineer', 'quantity_surveyor', 'consultant', 'contractor', 'other'];
 
-    protected $fillable = ['project_id', 'name', 'type', 'contact_person', 'email', 'phone', 'is_active', 'report_role', 'role_label', 'address', 'logo_path', 'sort_order'];
+    protected $fillable = ['project_id', 'master_party_id', 'name', 'type', 'contact_person', 'email', 'phone', 'is_active', 'report_role', 'role_label', 'address', 'logo_path', 'sort_order'];
 
     protected $casts = ['is_active' => 'boolean'];
 
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function masterParty(): BelongsTo
+    {
+        return $this->belongsTo(MasterParty::class);
     }
 
     public function contacts(): HasMany

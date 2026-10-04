@@ -20,6 +20,7 @@ class ProjectContract extends Model
     protected $fillable = [
         'project_id',
         'client_id',
+        'master_party_id',
         'title',
         'contract_no',
         'category',
@@ -80,6 +81,11 @@ class ProjectContract extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function masterParty(): BelongsTo
+    {
+        return $this->belongsTo(MasterParty::class);
     }
 
     public function creator(): BelongsTo

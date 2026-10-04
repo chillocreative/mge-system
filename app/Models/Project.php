@@ -98,6 +98,16 @@ class Project extends Model
         return $this->hasMany(ProjectContract::class);
     }
 
+    public function referenceSetting(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(ProjectReferenceSetting::class);
+    }
+
+    public function referenceTemplates(): HasMany
+    {
+        return $this->hasMany(ProjectReferenceTemplate::class);
+    }
+
     // Scopes
 
     public function scopeActive($query)

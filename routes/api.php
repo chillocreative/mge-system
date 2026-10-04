@@ -33,12 +33,14 @@ use App\Http\Controllers\Api\LeaveController;
 use App\Http\Controllers\Api\LeavePolicyController;
 use App\Http\Controllers\Api\MailSettingController;
 use App\Http\Controllers\Api\MaintenanceController;
+use App\Http\Controllers\Api\MasterPartyController;
 use App\Http\Controllers\Api\MeetingController;
 use App\Http\Controllers\Api\MemoController;
 use App\Http\Controllers\Api\MilestoneController;
 use App\Http\Controllers\Api\MonthlyReportAssetController;
 use App\Http\Controllers\Api\MonthlyReportController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\PartyCategoryController;
 use App\Http\Controllers\Api\PayrollController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ProjectController;
@@ -46,6 +48,7 @@ use App\Http\Controllers\Api\ProjectDocumentController;
 use App\Http\Controllers\Api\ProjectFinanceController;
 use App\Http\Controllers\Api\ProjectInvoiceController;
 use App\Http\Controllers\Api\ProjectPartyController;
+use App\Http\Controllers\Api\ProjectReferenceController;
 use App\Http\Controllers\Api\ProjectSiteController;
 use App\Http\Controllers\Api\QcController;
 use App\Http\Controllers\Api\ReportData\ContractParticularsController;
@@ -137,6 +140,30 @@ Route::middleware('auth:sanctum')->group(function () {
     // Dashboard — all roles can view, stats scoped by permission in controller
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->middleware('permission:dashboard.view');
+
+    // Reusable master-party lookups expose company names only.
+    Route::get('/master-data/party-options', [MasterPartyController::class, 'options']);
+    Route::get('/master-data/categories', [PartyCategoryController::class, 'index']);
+
+    Route::middleware('permission:master-data.manage')->prefix('master-data')->group(function () {
+        Route::get('/parties', [MasterPartyController::class, 'index']);
+        Route::post('/parties', [MasterPartyController::class, 'store']);
+        Route::get('/parties/{party}', [MasterPartyController::class, 'show']);
+        Route::put('/parties/{party}', [MasterPartyController::class, 'update']);
+        Route::delete('/parties/{party}', [MasterPartyController::class, 'destroy']);
+        Route::post('/categories', [PartyCategoryController::class, 'store']);
+        Route::put('/categories/{category}', [PartyCategoryController::class, 'update']);
+        Route::delete('/categories/{category}', [PartyCategoryController::class, 'destroy']);
+    });
+
+    Route::get('/projects/{project}/reference-settings', [ProjectReferenceController::class, 'show'])
+        ->middleware('permission:projects.view');
+    Route::put('/projects/{project}/reference-settings', [ProjectReferenceController::class, 'update'])
+        ->middleware('permission:master-data.manage');
+    Route::get('/projects/{project}/document-references/preview', [ProjectReferenceController::class, 'preview'])
+        ->middleware('permission:projects.view');
+    Route::post('/projects/{project}/document-references/next', [ProjectReferenceController::class, 'generate'])
+        ->middleware('permission:projects.edit');
 
     /*
     |----------------------------------------------------------------------

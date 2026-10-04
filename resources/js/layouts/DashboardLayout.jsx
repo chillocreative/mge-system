@@ -87,6 +87,7 @@ const navigation = [
         ],
     },
     { name: 'Clients', href: '/clients', icon: HiOutlineOfficeBuilding, permission: 'clients.view' },
+    { name: 'Master Data', href: '/master-data', icon: HiOutlineOfficeBuilding, permission: 'master-data.manage' },
     { name: 'Finance', href: '/finance', icon: HiOutlineCurrencyDollar, permission: 'finance.view' },
     {
         name: 'HR', icon: HiOutlineUsers,
