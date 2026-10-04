@@ -57,6 +57,19 @@ const correspondenceService = {
         const response = await apiClient.delete(`/correspondence-types/${id}`);
         return response.data;
     },
+    // ── RFA subtypes ──
+    async rfaSubtypes() {
+        const response = await apiClient.get('/correspondence-rfa-subtypes');
+        return response.data;
+    },
+    async createRfaSubtype(data) {
+        const response = await apiClient.post('/correspondence-rfa-subtypes', data);
+        return response.data;
+    },
+    async deleteRfaSubtype(id) {
+        const response = await apiClient.delete(`/correspondence-rfa-subtypes/${id}`);
+        return response.data;
+    },
     // ── Workflow (Batch 7) ──
     async events(id) {
         const response = await apiClient.get(`/correspondence/${id}/events`);

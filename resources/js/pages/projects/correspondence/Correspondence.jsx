@@ -65,6 +65,9 @@ export default function Correspondence() {
     const [pagination, setPagination] = useState({});
     const [projects, setProjects] = useState([]);
     const [types, setTypes] = useState([]);
+    const [rfaSubtypes, setRfaSubtypes] = useState([]);
+    const [rfaSubtypeSaving, setRfaSubtypeSaving] = useState(false);
+    const [deletingRfaSubtypeId, setDeletingRfaSubtypeId] = useState(null);
 
     const [workflowItem, setWorkflowItem] = useState(null);
     const [showForm, setShowForm] = useState(false);
@@ -99,6 +102,15 @@ export default function Correspondence() {
         } catch { /* ignore */ }
     };
 
+    const fetchRfaSubtypes = async () => {
+        try {
+            const res = await correspondenceService.rfaSubtypes();
+            setRfaSubtypes(res.data || []);
+        } catch {
+            setRfaSubtypes([]);
+        }
+    };
+
     const fetchItems = async (page = 1) => {
         setLoading(true);
         try {
@@ -125,6 +137,7 @@ export default function Correspondence() {
     useEffect(() => {
         projectService.list({ per_page: 100 }).then((r) => setProjects(r.data?.data || [])).catch(() => {});
         fetchTypes();
+        fetchRfaSubtypes();
     }, []);
 
     useEffect(() => {
@@ -192,6 +205,41 @@ export default function Correspondence() {
             return;
         }
         setForm((p) => ({ ...p, [field]: value }));
+    };
+
+    const addRfaSubtype = async (data) => {
+        setRfaSubtypeSaving(true);
+        try {
+            const res = await correspondenceService.createRfaSubtype(data);
+            await fetchRfaSubtypes();
+            setForm((current) => ({ ...current, document_subtype: res.data.code }));
+            toast.success('RFA subtype added');
+            return true;
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to add RFA subtype');
+            return false;
+        } finally {
+            setRfaSubtypeSaving(false);
+        }
+    };
+
+    const deleteRfaSubtype = async (subtype) => {
+        if (!(await confirm({ message: `Delete RFA subtype "${subtype.code} — ${subtype.name}"? Subtypes used by existing correspondence cannot be deleted.` }))) return;
+
+        setDeletingRfaSubtypeId(subtype.id);
+        try {
+            await correspondenceService.deleteRfaSubtype(subtype.id);
+            setRfaSubtypes((current) => current.filter((item) => item.id !== subtype.id));
+            setForm((current) => ({
+                ...current,
+                document_subtype: current.document_subtype === subtype.code ? '' : current.document_subtype,
+            }));
+            toast.success('RFA subtype deleted');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to delete RFA subtype');
+        } finally {
+            setDeletingRfaSubtypeId(null);
+        }
     };
 
     const openCreate = () => {
@@ -628,6 +676,12 @@ export default function Correspondence() {
                                 parties={parties}
                                 linkCandidates={linkCandidates}
                                 editingId={editingId}
+                                rfaSubtypes={rfaSubtypes}
+                                canEditRfaSubtypes={canEdit}
+                                onAddRfaSubtype={addRfaSubtype}
+                                onDeleteRfaSubtype={deleteRfaSubtype}
+                                rfaSubtypeSaving={rfaSubtypeSaving}
+                                deletingRfaSubtypeId={deletingRfaSubtypeId}
                             />
                             {form.raised_date && (
                                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">

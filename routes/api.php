@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\CorrespondenceController;
 use App\Http\Controllers\Api\CorrespondenceImportController;
 use App\Http\Controllers\Api\CorrespondenceRegisterController;
+use App\Http\Controllers\Api\CorrespondenceRfaSubtypeController;
 use App\Http\Controllers\Api\CorrespondenceTypeController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DepartmentController;
@@ -382,6 +383,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [CorrespondenceTypeController::class, 'store'])->middleware('permission:projects.edit');
         Route::put('/{id}', [CorrespondenceTypeController::class, 'update'])->middleware('permission:projects.edit');
         Route::delete('/{id}', [CorrespondenceTypeController::class, 'destroy'])->middleware('permission:projects.edit');
+    });
+
+    Route::prefix('correspondence-rfa-subtypes')->group(function () {
+        Route::get('/', [CorrespondenceRfaSubtypeController::class, 'index'])->middleware('permission:projects.view');
+        Route::post('/', [CorrespondenceRfaSubtypeController::class, 'store'])->middleware('permission:projects.edit');
+        Route::delete('/{id}', [CorrespondenceRfaSubtypeController::class, 'destroy'])->middleware('permission:projects.edit');
     });
 
     Route::prefix('correspondence')->group(function () {

@@ -1,4 +1,6 @@
-import { HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi';
+import { useState } from 'react';
+import { HiOutlinePlus, HiOutlineTrash, HiOutlineX } from 'react-icons/hi';
+import { buildRfaSubtypeOptions } from './rfaSubtypeOptions';
 
 export const DETAIL_DEFAULTS = {
     category: '', discipline: '', document_reference: '', request_kind: '', work_scope: '',
@@ -26,11 +28,6 @@ const RELATION_TYPES = [
     ['response_to', 'Response to'], ['resubmission_of', 'Resubmission of'],
     ['supersedes', 'Supersedes'], ['closes', 'Closes'], ['related', 'Related'],
 ];
-const RFA_SUBTYPES = [
-    ['MA', 'Material Approval'], ['MS', 'Method Statement'], ['REPORT', 'Report'],
-    ['TEST', 'Test Result'], ['DWG', 'Shop Drawing'],
-];
-
 const inputClass = 'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500';
 
 function Field({ label, value, onChange, type = 'text', options, rows = 2 }) {
@@ -51,7 +48,79 @@ function Field({ label, value, onChange, type = 'text', options, rows = 2 }) {
     );
 }
 
-export default function CorrespondenceTrackingFields({ form, setForm, parties, linkCandidates, editingId }) {
+function RfaSubtypeField({ value, onChange, subtypes, canEdit, onAdd, onDelete, saving, deletingId }) {
+    const [managing, setManaging] = useState(false);
+    const [draft, setDraft] = useState({ code: '', name: '' });
+    const options = buildRfaSubtypeOptions(subtypes, value);
+
+    const submit = async (event) => {
+        event.preventDefault();
+        if (!draft.code.trim() || !draft.name.trim()) return;
+        if (await onAdd({ code: draft.code, name: draft.name })) {
+            setDraft({ code: '', name: '' });
+        }
+    };
+
+    return (
+        <div className={managing ? 'sm:col-span-2' : ''}>
+            <div className="mb-1 flex items-center justify-between gap-2">
+                <label className="block text-sm font-medium text-gray-700">RFA Subtype</label>
+                {canEdit && (
+                    <button type="button" onClick={() => setManaging((current) => !current)}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-primary-700 hover:text-primary-800">
+                        {managing && <HiOutlineX className="h-3.5 w-3.5" />}
+                        {managing ? 'Close' : '+ Add'}
+                    </button>
+                )}
+            </div>
+            <select value={value || ''} onChange={(event) => onChange(event.target.value)} className={inputClass}>
+                <option value="">Select…</option>
+                {options.map((option) => (
+                    <option key={`${option.legacy ? 'legacy' : option.id}-${option.code}`} value={option.code}>
+                        {option.code} — {option.name}{option.legacy ? ' (not in current list)' : ''}
+                    </option>
+                ))}
+            </select>
+
+            {managing && (
+                <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
+                    <form onSubmit={submit} className="grid grid-cols-1 gap-2 sm:grid-cols-[10rem_1fr_auto]">
+                        <input type="text" value={draft.code} maxLength={60} required placeholder="Code, e.g. CALCS"
+                            onChange={(event) => setDraft((current) => ({ ...current, code: event.target.value.toUpperCase() }))}
+                            className={inputClass} />
+                        <input type="text" value={draft.name} maxLength={255} required placeholder="Display name"
+                            onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+                            className={inputClass} />
+                        <button type="submit" disabled={saving}
+                            className="rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50">
+                            {saving ? 'Adding…' : 'Add'}
+                        </button>
+                    </form>
+
+                    <div className="mt-3 space-y-1 border-t border-gray-100 pt-3">
+                        {subtypes.map((subtype) => (
+                            <div key={subtype.id} className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 hover:bg-gray-50">
+                                <span className="min-w-0 text-sm text-gray-700">
+                                    <strong>{subtype.code}</strong> — {subtype.name}
+                                </span>
+                                <button type="button" onClick={() => onDelete(subtype)} disabled={deletingId !== null}
+                                    aria-label={`Delete ${subtype.code}`}
+                                    className="shrink-0 rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40">
+                                    {deletingId === subtype.id ? <span className="px-1 text-xs">Deleting…</span> : <HiOutlineTrash className="h-4 w-4" />}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+export default function CorrespondenceTrackingFields({
+    form, setForm, parties, linkCandidates, editingId, rfaSubtypes = [], canEditRfaSubtypes = false,
+    onAddRfaSubtype, onDeleteRfaSubtype, rfaSubtypeSaving = false, deletingRfaSubtypeId = null,
+}) {
     const type = String(form.type || '').toLowerCase();
     const detail = form.detail || DETAIL_DEFAULTS;
     const setDetail = (key, value) => setForm((current) => ({
@@ -91,7 +160,9 @@ export default function CorrespondenceTrackingFields({ form, setForm, parties, l
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {type === 'rfa' ? (
-                        <Field label="RFA Subtype" value={form.document_subtype} options={RFA_SUBTYPES}
+                        <RfaSubtypeField value={form.document_subtype} subtypes={rfaSubtypes} canEdit={canEditRfaSubtypes}
+                            saving={rfaSubtypeSaving} deletingId={deletingRfaSubtypeId}
+                            onAdd={onAddRfaSubtype} onDelete={onDeleteRfaSubtype}
                             onChange={(value) => setForm((current) => ({ ...current, document_subtype: value }))} />
                     ) : (
                         <Field label="Document Subtype" value={form.document_subtype}
