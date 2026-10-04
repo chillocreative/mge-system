@@ -12,56 +12,56 @@ return new class extends Migration
     {
         if (! Schema::hasTable('party_categories')) {
             Schema::create('party_categories', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('slug')->unique();
-            $table->boolean('is_system')->default(false);
-            $table->boolean('is_active')->default(true);
-            $table->unsignedSmallInteger('sort_order')->default(0);
-            $table->timestamps();
+                $table->id();
+                $table->string('name');
+                $table->string('slug')->unique();
+                $table->boolean('is_system')->default(false);
+                $table->boolean('is_active')->default(true);
+                $table->unsignedSmallInteger('sort_order')->default(0);
+                $table->timestamps();
             });
         }
 
         if (! Schema::hasTable('master_parties')) {
             Schema::create('master_parties', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('normalized_name')->unique();
-            $table->char('initial', 3);
-            $table->text('address')->nullable();
-            $table->string('city')->nullable();
-            $table->string('state')->nullable();
-            $table->string('country')->nullable();
-            $table->string('postcode', 20)->nullable();
-            $table->string('website')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
-            $table->softDeletes();
+                $table->id();
+                $table->string('name');
+                $table->string('normalized_name')->unique();
+                $table->char('initial', 3);
+                $table->text('address')->nullable();
+                $table->string('city')->nullable();
+                $table->string('state')->nullable();
+                $table->string('country')->nullable();
+                $table->string('postcode', 20)->nullable();
+                $table->string('website')->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+                $table->softDeletes();
 
-            $table->index(['is_active', 'name']);
+                $table->index(['is_active', 'name']);
             });
         }
 
         if (! Schema::hasTable('master_party_category')) {
             Schema::create('master_party_category', function (Blueprint $table) {
-            $table->foreignId('master_party_id')->constrained('master_parties')->cascadeOnDelete();
-            $table->foreignId('party_category_id')->constrained('party_categories')->restrictOnDelete();
-            $table->primary(['master_party_id', 'party_category_id']);
+                $table->foreignId('master_party_id')->constrained('master_parties')->cascadeOnDelete();
+                $table->foreignId('party_category_id')->constrained('party_categories')->restrictOnDelete();
+                $table->primary(['master_party_id', 'party_category_id']);
             });
         }
 
         if (! Schema::hasTable('master_party_contacts')) {
             Schema::create('master_party_contacts', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('master_party_id')->constrained('master_parties')->cascadeOnDelete();
-            $table->string('contact_type', 20); // main, additional
-            $table->string('name');
-            $table->string('position')->nullable();
-            $table->string('phone', 50)->nullable();
-            $table->string('email')->nullable();
-            $table->timestamps();
+                $table->id();
+                $table->foreignId('master_party_id')->constrained('master_parties')->cascadeOnDelete();
+                $table->string('contact_type', 20); // main, additional
+                $table->string('name');
+                $table->string('position')->nullable();
+                $table->string('phone', 50)->nullable();
+                $table->string('email')->nullable();
+                $table->timestamps();
 
-            $table->unique(['master_party_id', 'contact_type']);
+                $table->unique(['master_party_id', 'contact_type']);
             });
         }
 
@@ -83,63 +83,63 @@ return new class extends Migration
 
         if (! Schema::hasTable('project_reference_settings')) {
             Schema::create('project_reference_settings', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('project_id')->unique()->constrained('projects')->cascadeOnDelete();
-            $table->string('company_code', 20)->default('MGE');
-            $table->string('client_code', 20)->default('JPS');
-            $table->string('primary_project_code', 30)->default('TGOLAK');
-            $table->string('alternate_project_code', 30)->default('OLAK');
-            $table->string('volume_code', 20)->default('VOL1');
-            $table->timestamps();
+                $table->id();
+                $table->foreignId('project_id')->unique()->constrained('projects')->cascadeOnDelete();
+                $table->string('company_code', 20)->default('MGE');
+                $table->string('client_code', 20)->default('JPS');
+                $table->string('primary_project_code', 30)->default('TGOLAK');
+                $table->string('alternate_project_code', 30)->default('OLAK');
+                $table->string('volume_code', 20)->default('VOL1');
+                $table->timestamps();
             });
         }
 
         if (! Schema::hasTable('project_reference_templates')) {
             Schema::create('project_reference_templates', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('project_id')->constrained('projects')->cascadeOnDelete();
-            $table->string('code', 50);
-            $table->string('name');
-            $table->string('type_token', 50);
-            $table->string('pattern');
-            $table->unsignedSmallInteger('padding')->default(3);
-            $table->string('reset_period', 20)->default('annual');
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
+                $table->id();
+                $table->foreignId('project_id')->constrained('projects')->cascadeOnDelete();
+                $table->string('code', 50);
+                $table->string('name');
+                $table->string('type_token', 50);
+                $table->string('pattern');
+                $table->unsignedSmallInteger('padding')->default(3);
+                $table->string('reset_period', 20)->default('annual');
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
 
-            $table->unique(['project_id', 'code']);
+                $table->unique(['project_id', 'code']);
             });
         }
 
         if (! Schema::hasTable('project_reference_sequences')) {
             Schema::create('project_reference_sequences', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('project_reference_template_id');
-            $table->foreign('project_reference_template_id', 'prs_template_fk')
-                ->references('id')->on('project_reference_templates')->cascadeOnDelete();
-            $table->string('period_key', 20)->default('all');
-            $table->unsignedInteger('next_number')->default(1);
-            $table->timestamps();
+                $table->id();
+                $table->unsignedBigInteger('project_reference_template_id');
+                $table->foreign('project_reference_template_id', 'prs_template_fk')
+                    ->references('id')->on('project_reference_templates')->cascadeOnDelete();
+                $table->string('period_key', 20)->default('all');
+                $table->unsignedInteger('next_number')->default(1);
+                $table->timestamps();
 
-            $table->unique(['project_reference_template_id', 'period_key'], 'project_reference_sequence_scope_unique');
+                $table->unique(['project_reference_template_id', 'period_key'], 'project_reference_sequence_scope_unique');
             });
         }
 
         if (! Schema::hasTable('project_reference_allocations')) {
             Schema::create('project_reference_allocations', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('project_id')->constrained('projects')->cascadeOnDelete();
-            $table->unsignedBigInteger('project_reference_template_id');
-            $table->foreign('project_reference_template_id', 'pra_template_fk')
-                ->references('id')->on('project_reference_templates')->restrictOnDelete();
-            $table->string('period_key', 20);
-            $table->unsignedInteger('sequence_number');
-            $table->string('reference_no');
-            $table->foreignId('generated_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamps();
+                $table->id();
+                $table->foreignId('project_id')->constrained('projects')->cascadeOnDelete();
+                $table->unsignedBigInteger('project_reference_template_id');
+                $table->foreign('project_reference_template_id', 'pra_template_fk')
+                    ->references('id')->on('project_reference_templates')->restrictOnDelete();
+                $table->string('period_key', 20);
+                $table->unsignedInteger('sequence_number');
+                $table->string('reference_no');
+                $table->foreignId('generated_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->timestamps();
 
-            $table->unique(['project_id', 'reference_no'], 'project_reference_allocations_reference_unique');
-            $table->unique(['project_reference_template_id', 'period_key', 'sequence_number'], 'project_reference_allocations_sequence_unique');
+                $table->unique(['project_id', 'reference_no'], 'project_reference_allocations_reference_unique');
+                $table->unique(['project_reference_template_id', 'period_key', 'sequence_number'], 'project_reference_allocations_sequence_unique');
             });
         }
 
