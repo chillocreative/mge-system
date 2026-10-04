@@ -10,7 +10,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('party_categories', function (Blueprint $table) {
+        if (! Schema::hasTable('party_categories')) {
+            Schema::create('party_categories', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('slug')->unique();
@@ -18,9 +19,11 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->unsignedSmallInteger('sort_order')->default(0);
             $table->timestamps();
-        });
+            });
+        }
 
-        Schema::create('master_parties', function (Blueprint $table) {
+        if (! Schema::hasTable('master_parties')) {
+            Schema::create('master_parties', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('normalized_name')->unique();
@@ -36,15 +39,19 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index(['is_active', 'name']);
-        });
+            });
+        }
 
-        Schema::create('master_party_category', function (Blueprint $table) {
+        if (! Schema::hasTable('master_party_category')) {
+            Schema::create('master_party_category', function (Blueprint $table) {
             $table->foreignId('master_party_id')->constrained('master_parties')->cascadeOnDelete();
             $table->foreignId('party_category_id')->constrained('party_categories')->restrictOnDelete();
             $table->primary(['master_party_id', 'party_category_id']);
-        });
+            });
+        }
 
-        Schema::create('master_party_contacts', function (Blueprint $table) {
+        if (! Schema::hasTable('master_party_contacts')) {
+            Schema::create('master_party_contacts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('master_party_id')->constrained('master_parties')->cascadeOnDelete();
             $table->string('contact_type', 20); // main, additional
@@ -55,19 +62,27 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['master_party_id', 'contact_type']);
-        });
+            });
+        }
 
-        Schema::table('clients', function (Blueprint $table) {
-            $table->foreignId('master_party_id')->nullable()->after('id')->constrained('master_parties')->nullOnDelete();
-        });
-        Schema::table('project_parties', function (Blueprint $table) {
-            $table->foreignId('master_party_id')->nullable()->after('project_id')->constrained('master_parties')->nullOnDelete();
-        });
-        Schema::table('project_contracts', function (Blueprint $table) {
-            $table->foreignId('master_party_id')->nullable()->after('client_id')->constrained('master_parties')->nullOnDelete();
-        });
+        if (! Schema::hasColumn('clients', 'master_party_id')) {
+            Schema::table('clients', function (Blueprint $table) {
+                $table->foreignId('master_party_id')->nullable()->after('id')->constrained('master_parties')->nullOnDelete();
+            });
+        }
+        if (! Schema::hasColumn('project_parties', 'master_party_id')) {
+            Schema::table('project_parties', function (Blueprint $table) {
+                $table->foreignId('master_party_id')->nullable()->after('project_id')->constrained('master_parties')->nullOnDelete();
+            });
+        }
+        if (! Schema::hasColumn('project_contracts', 'master_party_id')) {
+            Schema::table('project_contracts', function (Blueprint $table) {
+                $table->foreignId('master_party_id')->nullable()->after('client_id')->constrained('master_parties')->nullOnDelete();
+            });
+        }
 
-        Schema::create('project_reference_settings', function (Blueprint $table) {
+        if (! Schema::hasTable('project_reference_settings')) {
+            Schema::create('project_reference_settings', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->unique()->constrained('projects')->cascadeOnDelete();
             $table->string('company_code', 20)->default('MGE');
@@ -76,9 +91,11 @@ return new class extends Migration
             $table->string('alternate_project_code', 30)->default('OLAK');
             $table->string('volume_code', 20)->default('VOL1');
             $table->timestamps();
-        });
+            });
+        }
 
-        Schema::create('project_reference_templates', function (Blueprint $table) {
+        if (! Schema::hasTable('project_reference_templates')) {
+            Schema::create('project_reference_templates', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->constrained('projects')->cascadeOnDelete();
             $table->string('code', 50);
@@ -91,22 +108,30 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['project_id', 'code']);
-        });
+            });
+        }
 
-        Schema::create('project_reference_sequences', function (Blueprint $table) {
+        if (! Schema::hasTable('project_reference_sequences')) {
+            Schema::create('project_reference_sequences', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('project_reference_template_id')->constrained('project_reference_templates')->cascadeOnDelete();
+            $table->unsignedBigInteger('project_reference_template_id');
+            $table->foreign('project_reference_template_id', 'prs_template_fk')
+                ->references('id')->on('project_reference_templates')->cascadeOnDelete();
             $table->string('period_key', 20)->default('all');
             $table->unsignedInteger('next_number')->default(1);
             $table->timestamps();
 
             $table->unique(['project_reference_template_id', 'period_key'], 'project_reference_sequence_scope_unique');
-        });
+            });
+        }
 
-        Schema::create('project_reference_allocations', function (Blueprint $table) {
+        if (! Schema::hasTable('project_reference_allocations')) {
+            Schema::create('project_reference_allocations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->constrained('projects')->cascadeOnDelete();
-            $table->foreignId('project_reference_template_id')->constrained('project_reference_templates')->restrictOnDelete();
+            $table->unsignedBigInteger('project_reference_template_id');
+            $table->foreign('project_reference_template_id', 'pra_template_fk')
+                ->references('id')->on('project_reference_templates')->restrictOnDelete();
             $table->string('period_key', 20);
             $table->unsignedInteger('sequence_number');
             $table->string('reference_no');
@@ -115,7 +140,8 @@ return new class extends Migration
 
             $table->unique(['project_id', 'reference_no'], 'project_reference_allocations_reference_unique');
             $table->unique(['project_reference_template_id', 'period_key', 'sequence_number'], 'project_reference_allocations_sequence_unique');
-        });
+            });
+        }
 
         $this->seedCategories();
         $this->backfillParties();
@@ -131,7 +157,7 @@ return new class extends Migration
             ['name' => 'Subcontractor', 'slug' => 'subcontractor', 'sort_order' => 30],
             ['name' => 'Vendor', 'slug' => 'vendor', 'sort_order' => 40],
         ] as $category) {
-            DB::table('party_categories')->insert($category + [
+            DB::table('party_categories')->insertOrIgnore($category + [
                 'is_system' => true,
                 'is_active' => true,
                 'created_at' => $now,
@@ -270,7 +296,7 @@ return new class extends Migration
     {
         DB::table('projects')->orderBy('id')->chunkById(200, function ($projects) {
             foreach ($projects as $project) {
-                DB::table('project_reference_settings')->insert([
+                DB::table('project_reference_settings')->insertOrIgnore([
                     'project_id' => $project->id,
                     'company_code' => 'MGE',
                     'client_code' => 'JPS',
@@ -281,7 +307,7 @@ return new class extends Migration
                     'updated_at' => now(),
                 ]);
                 foreach ($this->defaultTemplates() as $template) {
-                    DB::table('project_reference_templates')->insert($template + [
+                    DB::table('project_reference_templates')->insertOrIgnore($template + [
                         'project_id' => $project->id,
                         'created_at' => now(),
                         'updated_at' => now(),
