@@ -38,6 +38,7 @@ import Invoices from '@/pages/finance/Invoices';
 import InvoiceCreate from '@/pages/finance/InvoiceCreate';
 import InvoiceDetail from '@/pages/finance/InvoiceDetail';
 import Expenses from '@/pages/finance/Expenses';
+import Materials from '@/pages/projects/Materials';
 import BudgetVsActual from '@/pages/finance/BudgetVsActual';
 import MonthlySummary from '@/pages/finance/MonthlySummary';
 import Safety from '@/pages/safety/Safety';
@@ -121,6 +122,7 @@ function AppRoutes() {
                         <Route path="/projects/create" element={<ProjectCreate />} />
                         <Route path="/projects/milestones" element={<Milestones />} />
                         <Route path="/projects/site-logs" element={<ProjectSiteLogs />} />
+                        <Route path="/projects/finance/materials" element={<Materials />} />
                         <Route path="/projects/finance/:resource" element={<ProjectFinance />} />
                         <Route path="/projects/correspondence" element={<Correspondence />} />
                         <Route path="/projects/correspondence-list" element={<CorrespondenceList />} />

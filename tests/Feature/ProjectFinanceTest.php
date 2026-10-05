@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Project;
 use App\Models\ProjectExpense;
+use App\Models\Material;
 use App\Models\ProjectSubcontractorClaim;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -61,9 +62,10 @@ class ProjectFinanceTest extends TestCase
     {
         $project = $this->project();
         $user = $this->actor();
+        Material::create(['category' => 'Materials', 'description' => 'Sand']);
         $response = $this->actingAs($user)->postJson('/api/project-finance/expenses', [
             'project_id' => $project->id, 'expense_date' => '2026-10-01', 'quantity' => 2.5,
-            'unit' => 'm3', 'unit_price' => 12.40, 'amount' => 999, 'payment_method' => 'Bank Transfer',
+            'category' => 'Materials', 'description' => 'Sand', 'unit' => 'm3', 'unit_price' => 12.40, 'amount' => 999, 'payment_method' => 'Bank Transfer',
         ])->assertCreated()->assertJsonPath('data.amount', '31.00')->assertJsonPath('data.amount_calculated', 31)->assertJsonPath('data.amount_source_mismatch', false);
         $id = $response->json('data.id');
 

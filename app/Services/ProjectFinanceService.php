@@ -16,6 +16,8 @@ class ProjectFinanceService
 {
     private array $map = ['expenses' => ProjectExpense::class, 'budgets' => ProjectBudget::class, 'vendor-payments' => ProjectVendorPayment::class, 'subcontractor-claims' => ProjectSubcontractorClaim::class];
 
+    public function __construct(private MaterialService $materials) {}
+
     public function model(string $resource): string
     {
         return $this->map[$resource] ?? throw new \InvalidArgumentException('Unknown finance resource.');
@@ -61,6 +63,7 @@ class ProjectFinanceService
     public function create(string $resource, array $data, int $userId)
     {
         if ($resource === 'expenses') {
+            $this->materials->assertActivePair($data['category'], $data['description']);
             $data = $this->calculateManualExpense($data);
         }
         $data['created_by'] = $userId;
@@ -72,6 +75,11 @@ class ProjectFinanceService
     {
         $m = $this->model($resource)::findOrFail($id);
         if ($resource === 'expenses') {
+            $category = $data['category'] ?? $m->category;
+            $description = $data['description'] ?? $m->description;
+            if ($category !== $m->category || $description !== $m->description) {
+                $this->materials->assertActivePair($category ?? '', $description ?? '');
+            }
             $quantity = $data['quantity'] ?? $m->quantity;
             $unitPrice = $data['unit_price'] ?? $m->unit_price;
             if ($quantity !== null || $unitPrice !== null) {

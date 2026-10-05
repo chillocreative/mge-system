@@ -394,6 +394,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Project Finance redesign — separate CRUD resources and filtered reporting.
+    Route::get('materials', [\App\Http\Controllers\Api\MaterialController::class, 'index'])->middleware('permission:projects.view');
+    Route::post('materials', [\App\Http\Controllers\Api\MaterialController::class, 'store'])->middleware('permission:projects.edit');
+    Route::put('materials/{id}', [\App\Http\Controllers\Api\MaterialController::class, 'update'])->middleware('permission:projects.edit');
     Route::prefix('project-finance')->group(function () {
         Route::get('/reports/chart', [ProjectFinanceController::class, 'chart'])->middleware('permission:projects.view');
         Route::post('/import', [ProjectFinanceController::class, 'import'])->middleware('permission:projects.edit');
