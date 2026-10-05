@@ -106,7 +106,7 @@ export function Field({ path, className = '', placeholder = '', type = 'text', a
     );
 }
 
-export function Area({ path, rows = 3, className = '' }) {
+export function Area({ path, rows = 3, className = '', bounded = false }) {
     const { get, set, readOnly, staticView } = useFormData();
     const value = get(path) ?? '';
     const filled = value !== '' && value !== null && value !== undefined;
@@ -123,7 +123,7 @@ export function Area({ path, rows = 3, className = '' }) {
         return (
             <div
                 style={{ minHeight: `${rows * 1.25}rem` }}
-                className={`whitespace-pre-wrap px-1 ${className}`}
+                className={`whitespace-pre-wrap px-1 ${bounded ? 'overflow-hidden' : ''} ${className}`}
             >
                 {value || ' '}
             </div>
@@ -138,7 +138,7 @@ export function Area({ path, rows = 3, className = '' }) {
             onChange={readOnly ? undefined : (e) => set(path, e.target.value)}
             readOnly={readOnly}
             tabIndex={readOnly ? -1 : undefined}
-            className={`${baseInputClass} resize-none overflow-hidden ${filled ? 'border-transparent' : 'border-b border-dotted border-gray-400'} ${readOnly ? 'cursor-default focus:bg-transparent' : ''} ${className}`}
+            className={`${baseInputClass} resize-none ${bounded ? 'overflow-y-auto' : 'overflow-hidden'} ${filled ? 'border-transparent' : 'border-b border-dotted border-gray-400'} ${readOnly ? 'cursor-default focus:bg-transparent' : ''} ${className}`}
         />
     );
 }
