@@ -123,11 +123,13 @@ export default function Training() {
         };
         try {
             if (editId) {
-                await trainingService.updateRecord(editId, payload);
-                toast.success('Training record updated');
+                const response = await trainingService.updateRecord(editId, payload);
+                if (response.message?.includes('Warning:')) toast(response.message, { icon: '⚠️' });
+                else toast.success('Training record updated');
             } else {
-                await trainingService.createRecord(payload);
-                toast.success('Training record added');
+                const response = await trainingService.createRecord(payload);
+                if (response.message?.includes('Warning:')) toast(response.message, { icon: '⚠️' });
+                else toast.success('Training record added');
             }
             setRecordModal(false);
             loadRecords();

@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\PublicHoliday;
+use App\Models\TrainingRecord;
 use App\Models\User;
 use App\Services\CalendarService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -25,6 +26,7 @@ class HrCalendarTest extends TestCase
     {
         parent::setUp();
         Permission::findOrCreate('leave.view', 'web');
+        Permission::findOrCreate('calendar.view', 'web');
     }
 
     private function service(): CalendarService
@@ -101,6 +103,49 @@ class HrCalendarTest extends TestCase
         $feed = $this->service()->aggregate(['start' => '2026-09-01', 'end' => '2026-09-30'], $anyone);
 
         $this->assertTrue(collect($feed)->contains(fn ($e) => $e['source'] === 'holiday' && $e['title'] === 'Malaysia Day'));
+    }
+
+    public function test_training_records_appear_in_calendar_aggregate_including_courses_crossing_range_start(): void
+    {
+        $viewer = $this->user(['calendar.view']);
+        $employee = Employee::create(['employee_no' => 'TR-1', 'first_name' => 'Siti', 'last_name' => 'Ali', 'category' => 'office']);
+        $record = TrainingRecord::create([
+            'employee_id' => $employee->id,
+            'title' => 'Safety Training',
+            'training_date' => '2026-09-30',
+            'end_date' => '2026-10-02',
+            'status' => 'scheduled',
+        ]);
+
+        $this->actingAs($viewer)->getJson('/api/calendar/aggregate?start=2026-10-01&end=2026-10-31')
+            ->assertOk()
+            ->assertJsonFragment([
+                'source' => 'training',
+                'type' => 'training',
+                'title' => 'Safety Training',
+                'staff_name' => 'Siti Ali',
+                'start' => '2026-09-30',
+                'end' => '2026-10-02',
+                'all_day' => true,
+                'ref_id' => $record->id,
+            ]);
+    }
+
+    public function test_two_training_records_for_the_same_staff_keep_their_own_calendar_dates(): void
+    {
+        $viewer = $this->user(['calendar.view']);
+        $employee = Employee::create(['employee_no' => 'TR-2', 'first_name' => 'Ali', 'category' => 'office']);
+        $first = TrainingRecord::create(['employee_id' => $employee->id, 'title' => 'Safety', 'training_date' => '2026-10-10']);
+        $second = TrainingRecord::create(['employee_id' => $employee->id, 'title' => 'First Aid', 'training_date' => '2026-10-20']);
+
+        $feed = $this->actingAs($viewer)->getJson('/api/calendar/aggregate?start=2026-10-01&end=2026-10-31')
+            ->assertOk()->json('data');
+        $trainings = collect($feed)->where('source', 'training')->keyBy('ref_id');
+
+        $this->assertCount(2, $trainings);
+        $this->assertSame('2026-10-10', $trainings[$first->id]['start']);
+        $this->assertNull($trainings[$first->id]['end']);
+        $this->assertSame('2026-10-20', $trainings[$second->id]['start']);
     }
 
     public function test_adding_attendees_to_an_event_notifies_them(): void

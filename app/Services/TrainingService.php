@@ -42,6 +42,7 @@ class TrainingService
     {
         $data['created_by'] = $userId;
         $record = TrainingRecord::create($data);
+        $this->notifyRecordEmployee($record, 'added');
 
         return $record->load('employee:id,employee_no,first_name,last_name');
     }
@@ -50,8 +51,48 @@ class TrainingService
     {
         $record = TrainingRecord::findOrFail($id);
         $record->update($data);
+        if ($this->hasRelevantRecordChanges($record)) {
+            $this->notifyRecordEmployee($record, 'updated');
+        }
 
         return $record->load('employee:id,employee_no,first_name,last_name');
+    }
+
+    public function recordNotificationWarning(TrainingRecord $record): ?string
+    {
+        if (! $record->wasRecentlyCreated && ! $this->hasRelevantRecordChanges($record)) {
+            return null;
+        }
+
+        return Employee::whereKey($record->employee_id)->whereNull('user_id')->exists()
+            ? 'Warning: the selected employee has no linked user account, so no training notification was sent. Link the staff record to a user account in HR.'
+            : null;
+    }
+
+    private function hasRelevantRecordChanges(TrainingRecord $record): bool
+    {
+        return $record->wasChanged([
+            'employee_id', 'training_date', 'end_date', 'title',
+            'provider', 'category', 'duration_days',
+        ]);
+    }
+
+    private function notifyRecordEmployee(TrainingRecord $record, string $action): void
+    {
+        $userId = Employee::whereKey($record->employee_id)->value('user_id');
+        if (! $userId) {
+            return;
+        }
+
+        $this->notifications->notify(
+            User::find($userId),
+            'Training record '.$action,
+            "Your training \"{$record->title}\" on {$record->training_date->format('d M Y')} was {$action} by HR.",
+            'training',
+            '/training/my',
+            ['training_record_id' => $record->id],
+            'training',
+        );
     }
 
     public function deleteRecord(int $id): void

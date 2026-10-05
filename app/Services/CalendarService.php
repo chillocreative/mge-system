@@ -6,6 +6,7 @@ use App\Models\CompanyEvent;
 use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\PublicHoliday;
+use App\Models\TrainingRecord;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -134,7 +135,7 @@ class CalendarService
 
     /**
      * Aggregated HR calendar (Ciri 13): company events + approved leave + public
-     * holidays merged into one feed for the range. The plan is emphatic that
+     * holidays + training records merged into one feed for the range. The plan is emphatic that
      * this AGGREGATES rather than copies (13.1) — nothing is duplicated into
      * company_events; each source is read live.
      *
@@ -210,6 +211,25 @@ class CalendarService
                 'start' => $holiday->date->toDateString(),
                 'all_day' => true,
                 'ref_id' => $holiday->id,
+            ];
+        }
+
+        // 4. Training records are read live, including courses spanning the range start.
+        foreach (TrainingRecord::with('employee:id,first_name,last_name')
+            ->whereDate('training_date', '<=', $end)
+            ->where(fn ($query) => $query->whereDate('training_date', '>=', $start)
+                ->orWhereDate('end_date', '>=', $start))
+            ->get() as $record) {
+            $name = $record->employee ? trim($record->employee->first_name.' '.$record->employee->last_name) : 'Staff';
+            $feed[] = [
+                'source' => 'training',
+                'type' => 'training',
+                'title' => $record->title,
+                'staff_name' => $name,
+                'start' => $record->training_date->toDateString(),
+                'end' => $record->end_date?->toDateString(),
+                'all_day' => true,
+                'ref_id' => $record->id,
             ];
         }
 

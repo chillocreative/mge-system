@@ -118,11 +118,11 @@ export default function Calendar() {
             setLoading(false);
         }
 
-        // Ciri 13: overlay approved leave + public holidays (privacy handled
+        // Ciri 13: overlay approved leave, public holidays and training (privacy handled
         // server-side — a non-HR viewer only ever gets their own leave back).
         try {
             const agg = await calendarService.aggregate({ start: toDateKey(rangeStart), end: toDateKey(rangeEnd) });
-            setOverlay((agg.data || []).filter((i) => i.source === 'leave' || i.source === 'holiday'));
+            setOverlay((agg.data || []).filter((i) => ['leave', 'holiday', 'training'].includes(i.source)));
         } catch {
             setOverlay([]);
         }
@@ -149,7 +149,7 @@ export default function Calendar() {
             const key = toDateKey(new Date(ev.start_datetime.replace(' ', 'T')));
             (map[key] ||= []).push(ev);
         }
-        // Read-only overlay (leave spans multiple days; holidays are single-day).
+        // Read-only overlay (leave and training may span multiple days).
         for (const item of overlay) {
             const startKey = String(item.start).slice(0, 10);
             const endKey = item.end ? String(item.end).slice(0, 10) : startKey;
@@ -157,7 +157,7 @@ export default function Calendar() {
                 const key = toDateKey(d);
                 (map[key] ||= []).push({
                     id: `${item.source}-${item.ref_id}-${key}`,
-                    title: item.title,
+                    title: item.source === 'training' ? `${item.title} — ${item.staff_name}` : item.title,
                     type: item.type,
                     _readonly: true,
                 });
@@ -263,7 +263,7 @@ export default function Calendar() {
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Calendar</h1>
-                    <p className="text-sm text-gray-500">Company events, holidays, leave and deadlines</p>
+                    <p className="text-sm text-gray-500">Company events, holidays, leave, training and deadlines</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     {/* Google Calendar */}

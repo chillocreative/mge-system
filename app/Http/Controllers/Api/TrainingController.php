@@ -29,10 +29,10 @@ class TrainingController extends Controller
         $validated = $this->validateRecord($request, true);
         $validated = $this->dropNullColumns($validated, ['cost', 'hrdf_claimable', 'status']);
 
-        return $this->created(
-            $this->trainingService->createRecord($validated, $request->user()->id),
-            'Training record added.'
-        );
+        $record = $this->trainingService->createRecord($validated, $request->user()->id);
+        $warning = $this->trainingService->recordNotificationWarning($record);
+
+        return $this->created($record, 'Training record added.'.($warning ? ' '.$warning : ''));
     }
 
     public function updateRecord(Request $request, int $id): JsonResponse
@@ -40,7 +40,10 @@ class TrainingController extends Controller
         $validated = $this->validateRecord($request, false);
         $validated = $this->dropNullColumns($validated, ['cost', 'hrdf_claimable', 'status']);
 
-        return $this->success($this->trainingService->updateRecord($id, $validated), 'Training record updated.');
+        $record = $this->trainingService->updateRecord($id, $validated);
+        $warning = $this->trainingService->recordNotificationWarning($record);
+
+        return $this->success($record, 'Training record updated.'.($warning ? ' '.$warning : ''));
     }
 
     public function destroyRecord(int $id): JsonResponse
