@@ -216,7 +216,6 @@ export default function CorrespondenceTrackingFields({
                                     <Field label="Party" value={review.project_party_id}
                                         options={parties.map((party) => [party.id, party.name])}
                                         onChange={(value) => setReview(index, 'project_party_id', value)} />
-                                    <Field label="Original Status" value={review.status_raw} onChange={(value) => setReview(index, 'status_raw', value)} />
                                     <Field label="Standard Status" value={review.status_normalized}
                                         options={NORMALIZED_STATUSES.map((status) => [status, status[0].toUpperCase() + status.slice(1)])}
                                         onChange={(value) => setReview(index, 'status_normalized', value)} />
