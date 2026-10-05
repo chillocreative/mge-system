@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Material;
 use App\Models\Project;
 use App\Models\ProjectExpense;
-use App\Models\Material;
 use App\Models\ProjectSubcontractorClaim;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
