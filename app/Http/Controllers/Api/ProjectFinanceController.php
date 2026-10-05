@@ -16,7 +16,13 @@ class ProjectFinanceController extends Controller
 
     public function index(Request $request, string $resource)
     {
-        return $this->success($this->service->list($resource, $request->only(['project_id', 'month', 'category', 'vendor']), min($request->integer('per_page', 20), 100)));
+        $filters = $request->validate(['project_id' => ['nullable', 'integer'], 'month' => ['nullable', 'date_format:Y-m'], 'category' => ['nullable', 'string'], 'vendor' => ['nullable', 'string'], 'payment_method' => ['nullable', 'string'], 'page' => ['nullable', 'integer', 'min:1'], 'per_page' => ['nullable', 'integer', 'min:1', 'max:100']]);
+        $rows = $this->service->list($resource, $filters, $filters['per_page'] ?? 20);
+        if ($resource !== 'expenses') {
+            return $this->success($rows);
+        }
+
+        return $this->success($rows->toArray() + ['summary' => $this->service->expenseSummary($filters)]);
     }
 
     public function store(Request $request, string $resource)
@@ -54,7 +60,7 @@ class ProjectFinanceController extends Controller
 
     public function export(Request $request, string $resource)
     {
-        $filters = $request->only(['project_id', 'month', 'category', 'vendor', 'from', 'to']);
+        $filters = $request->only(['project_id', 'month', 'category', 'vendor', 'payment_method', 'from', 'to']);
         $format = $request->get('format', 'xlsx');
         $name = 'project-finance-'.$resource.'-'.now()->format('Ymd');
         if ($resource === 'reports') {
@@ -66,7 +72,12 @@ class ProjectFinanceController extends Controller
             return Excel::download(new ProjectFinanceReportExport($rows), $name.'.xlsx');
         }$rows = $this->service->list($resource, $filters, 10000)->getCollection();
         if ($format === 'pdf') {
-            return Pdf::loadView('pdf.project-finance', ['resource' => $resource, 'rows' => $rows])->download($name.'.pdf');
+            $pdf = Pdf::loadView('pdf.project-finance', ['resource' => $resource, 'rows' => $rows]);
+            if ($resource === 'expenses') {
+                $pdf->setPaper('a3', 'landscape');
+            }
+
+            return $pdf->download($name.'.pdf');
         }
 
         return Excel::download(new ProjectFinanceExport($resource, $rows), $name.'.xlsx');
@@ -76,7 +87,7 @@ class ProjectFinanceController extends Controller
     {
         $rules = ['project_id' => [$update ? 'sometimes' : 'required', 'exists:projects,id'], 'amount' => ['nullable', 'numeric', 'min:0']];
         if ($resource === 'expenses') {
-            $rules += ['expense_date' => ['required', 'date'], 'category' => ['nullable', 'string', 'max:100'], 'description' => ['nullable', 'string'], 'vendor' => ['nullable', 'string', 'max:255'], 'invoice_no' => ['nullable', 'string', 'max:255'], 'do_no' => ['nullable', 'string', 'max:255'], 'status' => ['nullable', 'string', 'max:50'], 'notes' => ['nullable', 'string']];
+            $rules += ['expense_date' => ['required', 'date'], 'category' => ['nullable', 'string', 'max:100'], 'description' => ['nullable', 'string'], 'quantity' => [$update ? 'sometimes' : 'required', 'numeric', 'decimal:0,3', 'min:0'], 'unit' => ['nullable', 'string', 'max:255'], 'unit_price' => [$update ? 'sometimes' : 'required', 'numeric', 'decimal:0,2', 'min:0'], 'payment_method' => ['nullable', 'string', 'max:255'], 'vendor' => ['nullable', 'string', 'max:255'], 'invoice_no' => ['nullable', 'string', 'max:255'], 'do_no' => ['nullable', 'string', 'max:255'], 'status' => ['nullable', 'string', 'max:50'], 'notes' => ['nullable', 'string']];
         } elseif ($resource === 'budgets') {
             $rules += ['month' => ['required', 'date_format:Y-m'], 'category' => ['nullable', 'string', 'max:100'], 'budgeted_cost' => ['required', 'numeric', 'min:0'], 'notes' => ['nullable', 'string']];
         } elseif ($resource === 'vendor-payments') {
@@ -86,6 +97,9 @@ class ProjectFinanceController extends Controller
         } $data = $request->validate($rules);
         if ($resource === 'budgets' && isset($data['month'])) {
             $data['month'] .= '-01';
+        }
+        if ($resource === 'expenses') {
+            unset($data['amount']);
         }
 
         return $data;

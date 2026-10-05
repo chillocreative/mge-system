@@ -9,6 +9,7 @@ use App\Models\ProjectVendorPayment;
 use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ProjectFinanceService
@@ -22,8 +23,20 @@ class ProjectFinanceService
 
     public function list(string $resource, array $filters, int $perPage = 20)
     {
+        return $this->filteredQuery($resource, $filters)->with('project:id,name,code')->latest()->paginate($perPage);
+    }
+
+    public function expenseSummary(array $filters): array
+    {
+        $q = $this->filteredQuery('expenses', $filters);
+
+        return ['count' => (clone $q)->count(), 'total_amount' => (float) (clone $q)->sum('amount'), 'mismatch_count' => (clone $q)->where('amount_source_mismatch', true)->count()];
+    }
+
+    private function filteredQuery(string $resource, array $filters)
+    {
         $model = $this->model($resource);
-        $q = $model::with('project:id,name,code')->latest();
+        $q = $model::query();
         if (! empty($filters['project_id'])) {
             $q->where('project_id', $filters['project_id']);
         }
@@ -38,12 +51,18 @@ class ProjectFinanceService
         if (! empty($filters['vendor']) && in_array($resource, ['expenses', 'vendor-payments'], true)) {
             $q->where('vendor', 'like', '%'.$filters['vendor'].'%');
         }
+        if (! empty($filters['payment_method']) && $resource === 'expenses') {
+            $q->where('payment_method', $filters['payment_method']);
+        }
 
-        return $q->paginate($perPage);
+        return $q;
     }
 
     public function create(string $resource, array $data, int $userId)
     {
+        if ($resource === 'expenses') {
+            $data = $this->calculateManualExpense($data);
+        }
         $data['created_by'] = $userId;
 
         return $this->model($resource)::create($data)->load('project:id,name,code');
@@ -52,9 +71,27 @@ class ProjectFinanceService
     public function update(string $resource, int $id, array $data)
     {
         $m = $this->model($resource)::findOrFail($id);
+        if ($resource === 'expenses') {
+            $quantity = $data['quantity'] ?? $m->quantity;
+            $unitPrice = $data['unit_price'] ?? $m->unit_price;
+            if ($quantity !== null || $unitPrice !== null) {
+                $data = $this->calculateManualExpense($data + ['quantity' => $quantity, 'unit_price' => $unitPrice]);
+            }
+        }
         $m->update($data);
 
         return $m->fresh('project:id,name,code');
+    }
+
+    private function calculateManualExpense(array $data): array
+    {
+        if (! isset($data['quantity'], $data['unit_price'])) {
+            throw ValidationException::withMessages(['quantity' => 'Quantity and unit price are required to calculate the amount.']);
+        }
+        $data['amount'] = round((float) $data['quantity'] * (float) $data['unit_price'], 2);
+        $data['amount_source_mismatch'] = false;
+
+        return $data;
     }
 
     public function delete(string $resource, int $id): void
@@ -101,7 +138,8 @@ class ProjectFinanceService
     {
         $spreadsheet = IOFactory::load($file->getRealPath());
         $counts = ['expenses' => 0, 'vendor-payments' => 0, 'subcontractor-claims' => 0];
-        DB::transaction(function () use ($spreadsheet, $projectId, $userId, $resource, &$counts) {
+        $warnings = [];
+        DB::transaction(function () use ($spreadsheet, $projectId, $userId, $resource, &$counts, &$warnings) {
             foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
                 $rows = $sheet->toArray(null, true, true, true);
                 if (count($rows) < 2) {
@@ -122,7 +160,8 @@ class ProjectFinanceService
                     if ($second !== null) {
                         array_unshift($rows, $second);
                     } $headers = array_map(fn ($v) => $this->header((string) $v), array_values($headerRow ?? []));
-                } foreach ($rows as $row) {
+                } $rowNumber = $headerIndex + ($this->isHeaderRow($second) ? 3 : 2);
+                foreach ($rows as $row) {
                     $row = array_values($row);
                     $r = [];
                     foreach ($headers as $i => $h) {
@@ -130,13 +169,15 @@ class ProjectFinanceService
                             $r[$h] = trim((string) ($row[$i] ?? ''));
                         }
                     } if (! array_filter($r)) {
+                        $rowNumber++;
+
                         continue;
                     } $invoice = $this->value($r, ['invoice no', 'invoice number', 'invoice']);
                     $do = $this->value($r, ['do no', 'do number', 'do']);
                     $date = $this->date($this->value($r, ['date', 'date submitted invoice', 'invoice date', 'date payment', 'payment date', 'date of payment', 'claim date']));
                     $amount = $this->number($this->value($r, ['amount', 'claim amount', 'total', 'value', 'payment']));
                     $common = ['project_id' => $projectId, 'created_by' => $userId, 'invoice_no' => $invoice ?: null, 'do_no' => $do ?: null, 'amount' => $amount];
-                    $kind = $resource === 'auto' ? ($this->looksLikeClaim($r, $sheet->getTitle()) ? 'subcontractor-claims' : ($this->looksLikePayment($r, $sheet->getTitle()) ? 'vendor-payments' : 'expenses')) : $resource;
+                    $kind = $resource === 'auto' ? ($this->looksLikeClaim($r, $sheet->getTitle()) ? 'subcontractor-claims' : ($this->looksLikeExpense($r) ? 'expenses' : ($this->looksLikePayment($r, $sheet->getTitle()) ? 'vendor-payments' : 'expenses'))) : $resource;
                     if ($kind === 'subcontractor-claims') {
                         ProjectSubcontractorClaim::create($common + ['subcontractor' => $this->value($r, ['subcontractor', 'vendor', 'payee']), 'claim_no' => $this->value($r, ['claim no', 'claim number']), 'submitted_date' => $date, 'certified_amount' => $this->number($this->value($r, ['certified claims', 'certified amount', 'certified amt', 'certified']))]);
                         $counts['subcontractor-claims']++;
@@ -144,14 +185,30 @@ class ProjectFinanceService
                         ProjectVendorPayment::create($common + ['vendor' => $this->value($r, ['vendor', 'supplier', 'payee']), 'invoice_date' => $date, 'submitted_date' => $date, 'paid_date' => $this->date($this->value($r, ['paid date', 'date payment', 'payment date', 'date of payment']))]);
                         $counts['vendor-payments']++;
                     } else {
-                        ProjectExpense::create($common + ['expense_date' => $date ?: now()->toDateString(), 'category' => $this->value($r, ['category', 'type']), 'description' => $this->value($r, ['description', 'details', 'particulars']), 'vendor' => $this->value($r, ['vendor', 'supplier', 'payee'])]);
+                        if ($date === null || Carbon::parse($date)->year < 2000) {
+                            $warnings[] = ['sheet' => $sheet->getTitle(), 'row' => $rowNumber, 'type' => 'invalid_date', 'message' => 'Expense skipped: missing or invalid date.'];
+                            $rowNumber++;
+
+                            continue;
+                        }
+                        $quantityValue = $this->value($r, ['qty', 'quantity']);
+                        $priceValue = $this->value($r, ['price per unit', 'unit price', 'price unit']);
+                        $quantity = $quantityValue === '' ? null : round($this->number($quantityValue), 3);
+                        $unitPrice = $priceValue === '' ? null : round($this->number($priceValue), 2);
+                        $calculated = $quantity !== null && $unitPrice !== null ? round($quantity * $unitPrice, 2) : null;
+                        $mismatch = $calculated !== null && abs($amount - $calculated) >= 0.005;
+                        if ($mismatch) {
+                            $warnings[] = ['sheet' => $sheet->getTitle(), 'row' => $rowNumber, 'type' => 'amount_mismatch', 'message' => 'Source amount differs from quantity × unit price.'];
+                        }
+                        ProjectExpense::create($common + ['expense_date' => $date, 'category' => $this->value($r, ['category', 'type']), 'description' => $this->value($r, ['description', 'details', 'particulars']), 'quantity' => $quantity, 'unit' => $this->value($r, ['unit']) ?: null, 'unit_price' => $unitPrice, 'payment_method' => $this->value($r, ['payment method', 'method of payment']) ?: null, 'vendor' => $this->value($r, ['vendor', 'supplier', 'payee']), 'amount_source_mismatch' => $mismatch]);
                         $counts['expenses']++;
                     }
+                    $rowNumber++;
                 }
             }
         });
 
-        return $counts;
+        return $counts + ['warnings' => $warnings];
     }
 
     private function header(string $value): string
@@ -233,9 +290,14 @@ class ProjectFinanceService
         return str_contains($s, 'claim') || str_contains($s, 'subcont');
     }
 
+    private function looksLikeExpense(array $r): bool
+    {
+        return isset($r['qty']) || isset($r['quantity']) || isset($r['price per unit']) || isset($r['unit price']);
+    }
+
     private function looksLikePayment(array $r, string $title): bool
     {
-        $s = strtolower($title.' '.implode(' ', array_keys($r)));
+        $s = strtolower($title.' '.implode(' ', array_filter(array_keys($r), fn ($key) => $key !== 'payment method')));
 
         return str_contains($s, 'vendor') || str_contains($s, 'payment');
     }
