@@ -14,6 +14,9 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ProjectFinanceService
 {
+    // Dates before this are spreadsheet placeholders (e.g. 1900-01-01), never real finance dates.
+    private const MIN_VALID_DATE = '2000-01-01';
+
     private array $map = ['expenses' => ProjectExpense::class, 'budgets' => ProjectBudget::class, 'vendor-payments' => ProjectVendorPayment::class, 'subcontractor-claims' => ProjectSubcontractorClaim::class];
 
     public function __construct(private MaterialService $materials) {}
@@ -114,14 +117,15 @@ class ProjectFinanceService
             $filters['from'] = $month->copy()->startOfMonth()->toDateString();
             $filters['to'] = $month->copy()->endOfMonth()->toDateString();
         }
-        $q = function ($model, $dateColumn, $sumColumn) use ($filters) {
+        $isDateFiltered = ! empty($filters['from']) || ! empty($filters['to']);
+        $q = function ($model, $dateExpression, $sumColumn) use ($filters) {
             $x = $model::query();
             if (! empty($filters['project_id'])) {
                 $x->where('project_id', $filters['project_id']);
             } if (! empty($filters['from'])) {
-                $x->whereDate($dateColumn, '>=', $filters['from']);
+                $x->whereRaw("$dateExpression >= ?", [$filters['from']]);
             } if (! empty($filters['to'])) {
-                $x->whereDate($dateColumn, '<=', $filters['to']);
+                $x->whereRaw("$dateExpression <= ?", [$filters['to']]);
             } if ($model === ProjectExpense::class) {
                 if (! empty($filters['category'])) {
                     $x->where('category', $filters['category']);
@@ -132,14 +136,39 @@ class ProjectFinanceService
                 $x->where('subcontractor', 'like', '%'.$filters['vendor'].'%');
             }
 
-            return $x->selectRaw("DATE_FORMAT($dateColumn,'%Y-%m') as month, SUM($sumColumn) as total")->groupBy('month')->orderBy('month')->pluck('total', 'month');
+            // A row with no valid date lands in the '' bucket (NULL period); it is reported separately
+            // instead of being plotted as a fake month.
+            return $x->selectRaw($this->monthOf($dateExpression).' as period, SUM('.$sumColumn.') as total')
+                ->groupBy('period')->orderBy('period')->get()
+                ->mapWithKeys(fn ($row) => [(string) ($row->period ?? '') => (float) $row->total]);
         };
-        $budget = $q(ProjectBudget::class, 'month', 'budgeted_cost');
-        $actual = $q(ProjectExpense::class, 'expense_date', 'amount');
-        $claims = $q(ProjectSubcontractorClaim::class, 'submitted_date', 'certified_amount');
-        $months = collect($budget->keys())->merge($actual->keys())->merge($claims->keys())->unique()->sort()->values();
+        $budget = $q(ProjectBudget::class, $this->validDate('month'), 'budgeted_cost');
+        $actual = $q(ProjectExpense::class, $this->validDate('expense_date'), 'amount');
+        // A claim is placed by the date it was submitted; when that is missing or invalid
+        // (e.g. a 1900 placeholder from a spreadsheet) fall back to certified, then paid date.
+        $claims = $q(ProjectSubcontractorClaim::class, 'COALESCE('.implode(', ', array_map(fn ($c) => $this->validDate($c), ['submitted_date', 'certified_date', 'paid_date'])).')', 'certified_amount');
+        $months = collect($budget->keys())->merge($actual->keys())->merge($claims->keys())->reject(fn ($m) => $m === '')->unique()->sort()->values();
 
-        return $months->map(fn ($m) => ['month' => $m, 'budgeted_cost' => (float) ($budget[$m] ?? 0), 'actual_cost' => (float) ($actual[$m] ?? 0), 'certified_claims' => (float) ($claims[$m] ?? 0)])->all();
+        $rows = $months->map(fn ($m) => ['month' => $m, 'budgeted_cost' => $budget[$m] ?? 0.0, 'actual_cost' => $actual[$m] ?? 0.0, 'certified_claims' => $claims[$m] ?? 0.0])->all();
+
+        // Amounts that carry no usable date are still money: surface them as an explicit last row
+        // (only when the report is not narrowed to a date range, which they could never match).
+        $undated = ['budgeted_cost' => $budget[''] ?? 0.0, 'actual_cost' => $actual[''] ?? 0.0, 'certified_claims' => $claims[''] ?? 0.0];
+        if (! $isDateFiltered && array_sum($undated) > 0) {
+            $rows[] = ['month' => 'No date', 'undated' => true] + $undated;
+        }
+
+        return $rows;
+    }
+
+    private function validDate(string $column): string
+    {
+        return "CASE WHEN {$column} >= '".self::MIN_VALID_DATE."' THEN {$column} END";
+    }
+
+    private function monthOf(string $expression): string
+    {
+        return DB::getDriverName() === 'sqlite' ? "strftime('%Y-%m', {$expression})" : "DATE_FORMAT({$expression}, '%Y-%m')";
     }
 
     public function import(UploadedFile $file, int $projectId, int $userId, string $resource = 'auto'): array
