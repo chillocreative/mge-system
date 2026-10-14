@@ -68,7 +68,7 @@ export default function LeaveApproval() {
         <div>
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-900">Leave Approvals</h1>
-                <p className="text-sm text-gray-500">Pending leave requests awaiting your decision</p>
+                <p className="text-sm text-gray-500">Pending leave requests from the staff you approve for (your department) awaiting your decision</p>
             </div>
 
             {loading ? (

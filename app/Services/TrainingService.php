@@ -11,7 +11,10 @@ use Illuminate\Validation\ValidationException;
 
 class TrainingService
 {
-    public function __construct(private NotificationService $notifications) {}
+    public function __construct(
+        private NotificationService $notifications,
+        private ApprovalRouting $routing,
+    ) {}
 
     // ── Training Records ──
 
@@ -147,12 +150,18 @@ class TrainingService
 
     // ── Training Requests ──
 
-    public function requestsList(array $filters, int $perPage = 15): LengthAwarePaginator
+    public function requestsList(array $filters, int $perPage = 15, ?User $viewer = null): LengthAwarePaginator
     {
         $query = TrainingRequest::with([
-            'employee:id,employee_no,first_name,last_name',
+            'employee:id,employee_no,first_name,last_name,user_id,department_id',
             'reviewer:id,first_name,last_name',
         ])->orderByDesc('created_at');
+
+        // HR (training.manage) sees every request for information; anyone else only the
+        // requests they are the department manager (or fallback Director) for.
+        if ($viewer && ! $viewer->can('training.manage')) {
+            $query->whereIn('employee_id', $this->routing->employeeIdsDecidableBy($viewer));
+        }
 
         if (! empty($filters['employee_id'])) {
             $query->forEmployee((int) $filters['employee_id']);
@@ -161,7 +170,19 @@ class TrainingService
             $query->byStatus($filters['status']);
         }
 
-        return $query->paginate($perPage);
+        $page = $query->paginate($perPage);
+
+        if ($viewer) {
+            $roster = $this->routing->roster();
+            $page->getCollection()->transform(function (TrainingRequest $request) use ($viewer, $roster) {
+                $request->setAttribute('can_decide', $request->status === 'pending'
+                    && $this->routing->canDecide($viewer, $request->employee, $roster));
+
+                return $request;
+            });
+        }
+
+        return $page;
     }
 
     public function createRequest(array $data, User $requester): TrainingRequest
@@ -190,14 +211,22 @@ class TrainingService
             'training',
         );
 
-        $this->notifications->notifyByPermission(
-            'training.approve',
+        $approverIds = $this->routing->approversFor($employee)['ids'];
+        $this->notifications->notifyUserIds(
+            $approverIds,
             'New training request',
             "{$request->employee->full_name} requested training: {$request->title}",
             'training',
             '/hr/training',
             ['training_request_id' => $request->id],
             'training',
+        );
+
+        $this->notifyHr(
+            "{$request->employee->full_name} requested training: {$request->title}. It is awaiting their manager's decision (for your information).",
+            'Training request submitted',
+            $request,
+            array_merge($approverIds, [$requester->id]),
         );
 
         return $request;
@@ -215,8 +244,9 @@ class TrainingService
 
     private function decideRequest(int $id, User $actor, string $status, ?string $notes): TrainingRequest
     {
-        $request = TrainingRequest::with('employee:id,first_name,last_name,user_id')->findOrFail($id);
+        $request = TrainingRequest::with('employee:id,first_name,last_name,user_id,department_id')->findOrFail($id);
 
+        abort_unless($this->routing->canDecide($actor, $request->employee), 403, 'You are not allowed to decide this training request.');
         abort_if($request->status !== 'pending', 422, 'This request has already been reviewed.');
 
         $request->update([
@@ -236,10 +266,41 @@ class TrainingService
             ['training_request_id' => $request->id],
         );
 
+        $this->notifyHr(
+            "{$request->employee->full_name}'s training request \"{$request->title}\" was {$verb} by {$actor->full_name}.",
+            "Training request {$verb}",
+            $request,
+            [$actor->id],
+        );
+
         return $request->load([
             'employee:id,employee_no,first_name,last_name',
             'reviewer:id,first_name,last_name',
         ]);
+    }
+
+    /**
+     * HR is informed about training requests, never asked to decide them.
+     *
+     * @param  array<int, int|null>  $exclude
+     */
+    private function notifyHr(string $message, string $title, TrainingRequest $request, array $exclude = []): void
+    {
+        try {
+            $hrIds = User::permission('training.manage')->where('status', 'active')->pluck('users.id')->all();
+        } catch (\Throwable) {
+            return;
+        }
+
+        $this->notifications->notifyUserIds(
+            array_diff($hrIds, array_filter($exclude), [$request->employee?->user_id]),
+            $title,
+            $message,
+            'training',
+            '/hr/training',
+            ['training_request_id' => $request->id],
+            'training',
+        );
     }
 
     // ── Self-service ──

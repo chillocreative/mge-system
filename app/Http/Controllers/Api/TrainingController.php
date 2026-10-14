@@ -86,7 +86,7 @@ class TrainingController extends Controller
         $filters = $request->only(['employee_id', 'status']);
         $perPage = min($request->integer('per_page', 15), 100);
 
-        return $this->success($this->trainingService->requestsList($filters, $perPage));
+        return $this->success($this->trainingService->requestsList($filters, $perPage, $request->user()));
     }
 
     public function storeRequest(Request $request): JsonResponse

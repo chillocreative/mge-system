@@ -48,7 +48,7 @@ class DashboardService
     private function getDepartments(User $user, callable $can): array
     {
         $showsPeopleStats = $can('staff.view') || $can('dashboard.view-hr-stats')
-            || $can('training.view') || $this->canApproveLeave($user, $can);
+            || $can('training.view') || $this->canApproveLeave($user);
 
         if (! $showsPeopleStats) {
             return [];
@@ -111,14 +111,16 @@ class DashboardService
                 ->count();
         }
 
-        if ($this->canApproveLeave($user, $can)) {
-            $stats['pending_approvals'] = $this->pendingLeaveQuery($user, $can)
+        if ($this->canApproveLeave($user)) {
+            $stats['pending_approvals'] = $this->pendingLeaveQuery($user)
                 ->when($departmentId, $inDept)
                 ->count();
         }
 
         if ($can('training.view')) {
             $stats['training_pending'] = TrainingRequest::where('status', 'pending')
+                // HR counts every request; a department manager only those they can decide.
+                ->when(! $can('training.manage'), fn ($q) => $q->whereIn('employee_id', app(ApprovalRouting::class)->employeeIdsDecidableBy($user)))
                 ->when($departmentId, $inDept)
                 ->count();
         }
@@ -256,8 +258,8 @@ class DashboardService
             $lists['recent_projects'] = $this->getRecentProjects();
         }
 
-        if ($this->canApproveLeave($user, $can)) {
-            $lists['pending_approvals'] = $this->pendingLeaveQuery($user, $can)
+        if ($this->canApproveLeave($user)) {
+            $lists['pending_approvals'] = $this->pendingLeaveQuery($user)
                 ->with('employee:id,first_name,last_name', 'leaveType:id,name')
                 ->orderByDesc('created_at')
                 ->limit(6)
@@ -371,27 +373,15 @@ class DashboardService
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private function canApproveLeave(User $user, callable $can): bool
+    // Leave is decided by department managers (Directors as fallback); HR is only informed,
+    // so the "to approve" card appears for real approvers and counts only what they can decide.
+    private function canApproveLeave(User $user): bool
     {
-        return $can('leave.manage') || $can('leave.approve') || $user->isManagerApprover() || $user->isDirectorApprover();
+        return app(LeaveService::class)->isLeaveApprover($user);
     }
 
-    private function pendingLeaveQuery(User $user, callable $can)
+    private function pendingLeaveQuery(User $user)
     {
-        $query = LeaveRequest::where('status', 'pending');
-
-        if (! $can('leave.manage')) {
-            $query->where(function ($w) use ($user) {
-                $w->awaitingApprovalBy($user->id);
-                if ($user->isManagerApprover()) {
-                    $w->orWhere('current_approval_level', 'manager');
-                }
-                if ($user->isDirectorApprover()) {
-                    $w->orWhere('current_approval_level', 'director');
-                }
-            });
-        }
-
-        return $query;
+        return LeaveRequest::whereIn('id', app(LeaveService::class)->pendingApprovalIdsFor($user));
     }
 }

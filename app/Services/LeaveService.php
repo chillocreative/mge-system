@@ -19,7 +19,10 @@ use Illuminate\Support\Facades\Storage;
 
 class LeaveService
 {
-    public function __construct(private readonly LeaveEngine $engine) {}
+    public function __construct(
+        private readonly LeaveEngine $engine,
+        private readonly ApprovalRouting $routing,
+    ) {}
 
     // ── Leave Requests ──
 
@@ -99,7 +102,7 @@ class LeaveService
             }
 
             $request->load([
-                'employee:id,employee_no,first_name,last_name,user_id',
+                'employee:id,employee_no,first_name,last_name,user_id,department_id',
                 'leaveType:id,name,code,is_paid,requires_director_approval,manager_approver_id,director_approver_id',
             ]);
 
@@ -114,7 +117,7 @@ class LeaveService
         return DB::transaction(function () use ($id, $actor) {
             $request = LeaveRequest::with([
                 'leaveType',
-                'employee:id,employee_no,first_name,last_name,user_id',
+                'employee:id,employee_no,first_name,last_name,user_id,department_id',
             ])->findOrFail($id);
 
             abort_if($request->status !== 'pending', 422, 'This request is no longer pending approval.');
@@ -126,7 +129,7 @@ class LeaveService
                 $request->manager_approved_by = $actor->id;
                 $request->manager_approved_at = now();
 
-                if ($request->leaveType->requires_director_approval && $request->leaveType->director_approver_id) {
+                if ($request->leaveType->requires_director_approval && $request->leaveType->director_approver_id && ! $actor->isDirectorApprover()) {
                     $request->current_approval_level = 'director';
                     $request->save();
                     $this->notifyDirector($request);
@@ -152,7 +155,7 @@ class LeaveService
     {
         $request = LeaveRequest::with([
             'leaveType',
-            'employee:id,employee_no,first_name,last_name,user_id',
+            'employee:id,employee_no,first_name,last_name,user_id,department_id',
         ])->findOrFail($id);
 
         abort_if($request->status !== 'pending', 422, 'This request is no longer pending approval.');
@@ -177,6 +180,7 @@ class LeaveService
         }
 
         $this->notifyEmployee($request, 'rejected');
+        $this->notifyHrOfDecision($request, 'rejected', $actor);
 
         return $this->loadFull($request);
     }
@@ -207,6 +211,7 @@ class LeaveService
         }
 
         $this->notifyEmployee($request, 'approved');
+        $this->notifyHrOfDecision($request, 'approved', $actor);
     }
 
     /**
@@ -242,29 +247,112 @@ class LeaveService
     }
 
     /**
-     * Ensure the acting user is allowed to act on the current approval stage:
-     * the designated approver for that stage, or an admin (leave.manage). When
-     * no approver is configured for the stage, any leave.approve user may act.
+     * Whether the user may decide this request at the given stage.
+     *
+     * Manager stage: the manager of the employee's own department (or the Directors when
+     * the employee is a manager/director or the department has none), plus the leave type's
+     * explicitly designated approver. Director stage: any Director, or the designated one.
+     * HR (leave.manage) has no approval power; it is informed instead.
      */
-    private function authorizeStage(LeaveRequest $request, User $actor, string $level): void
+    public function isStageApprover(LeaveRequest $request, User $actor, string $level, ?array $roster = null): bool
     {
-        // HR managers can always act.
-        if ($actor->can('leave.manage')) {
-            return;
-        }
-
         $designated = $level === 'manager'
             ? $request->leaveType->manager_approver_id
             : $request->leaveType->director_approver_id;
 
-        // System-wide Manager / Director approvers can act on the matching stage.
-        $hasFlag = $level === 'manager' ? $actor->isManagerApprover() : $actor->isDirectorApprover();
+        if ($designated && (int) $actor->id === (int) $designated) {
+            return true;
+        }
 
-        $allowed = $hasFlag
-            || ($designated && $actor->id === $designated)
-            || (! $designated && $actor->can('leave.approve'));
+        if ($level === 'manager') {
+            return $this->routing->canDecide($actor, $request->employee, $roster);
+        }
 
-        abort_unless($allowed, 403, 'You are not allowed to approve this request at this stage.');
+        return $actor->isDirectorApprover();
+    }
+
+    private function authorizeStage(LeaveRequest $request, User $actor, string $level): void
+    {
+        abort_unless(
+            $this->isStageApprover($request, $actor, $level),
+            403,
+            'You are not allowed to approve this request at this stage.'
+        );
+    }
+
+    /**
+     * Pending requests this user can decide right now (own department's staff, or the
+     * Directors' share), newest first.
+     */
+    public function pendingApprovalsFor(User $actor, int $perPage = 15, int $page = 1): LengthAwarePaginator
+    {
+        $pending = $this->decidablePending($actor);
+
+        return new LengthAwarePaginator(
+            $pending->forPage($page, $perPage)->values(),
+            $pending->count(),
+            $perPage,
+            $page,
+            ['path' => request()->url()],
+        );
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    public function pendingApprovalIdsFor(User $actor): array
+    {
+        return $this->decidablePending($actor)->pluck('id')->map(fn ($id) => (int) $id)->all();
+    }
+
+    /**
+     * Whether this user ever decides leave: a manager, a director, or the designated
+     * approver of a leave type. HR alone is not an approver.
+     */
+    public function isLeaveApprover(User $actor): bool
+    {
+        return $actor->isManagerApprover()
+            || $actor->isDirectorApprover()
+            || LeaveType::where('manager_approver_id', $actor->id)->orWhere('director_approver_id', $actor->id)->exists();
+    }
+
+    private function decidablePending(User $actor): Collection
+    {
+        $roster = $this->routing->roster();
+
+        return LeaveRequest::with([
+            'employee:id,employee_no,first_name,last_name,user_id,department_id',
+            'leaveType:id,name,code,requires_director_approval,manager_approver_id,director_approver_id',
+            'managerApprover:id,first_name,last_name',
+        ])->where('status', 'pending')->orderByDesc('created_at')->get()
+            ->filter(fn (LeaveRequest $r) => (int) $r->employee?->user_id !== (int) $actor->id
+                && $this->isStageApprover($r, $actor, $r->current_approval_level ?: 'manager', $roster))
+            ->values();
+    }
+
+    /**
+     * Load a request for a viewer: HR (records), the employee, or someone who can decide it.
+     * Anyone else gets a 404 so request ids are not discoverable.
+     */
+    public function getForViewer(User $actor, int $id): LeaveRequest
+    {
+        $request = LeaveRequest::with([
+            'employee:id,employee_no,first_name,last_name,user_id,department_id',
+            'leaveType:id,name,code,is_paid,requires_attachment,requires_director_approval,manager_approver_id,director_approver_id',
+            'approver:id,first_name,last_name',
+            'creator:id,first_name,last_name',
+        ])->findOrFail($id);
+
+        $allowed = $actor->can('leave.manage')
+            || (int) $request->employee?->user_id === (int) $actor->id
+            || ((int) $request->employee?->user_id !== (int) $actor->id && (
+                $this->isStageApprover($request, $actor, 'manager')
+                || ($request->current_approval_level === 'director' && $this->isStageApprover($request, $actor, 'director'))
+            ));
+
+        abort_unless($allowed, 404);
+
+        return $request;
     }
 
     private function loadFull(LeaveRequest $request): LeaveRequest
@@ -282,8 +370,7 @@ class LeaveService
 
     private function notifyManager(LeaveRequest $request): void
     {
-        $ids = User::where('is_manager', true)->orWhereHas('roles', fn ($q) => $q->where('name', 'Managers'))
-            ->pluck('id')->all();
+        $ids = $this->routing->approversFor($request->employee)['ids'];
         $ids[] = $request->leaveType?->manager_approver_id;
 
         $this->sendLeaveNotificationToMany(
@@ -291,6 +378,46 @@ class LeaveService
             'New leave request',
             "{$request->employee?->full_name} submitted a {$request->leaveType?->name} request awaiting approval.",
             'leave_submitted',
+            $request->id,
+        );
+
+        $this->notifyHr(
+            $request,
+            'Leave request submitted',
+            "{$request->employee?->full_name} submitted a {$request->leaveType?->name} request. It is awaiting their manager's approval (for your information).",
+            'leave_info_submitted',
+            $ids,
+        );
+    }
+
+    private function notifyHrOfDecision(LeaveRequest $request, string $decision, User $actor): void
+    {
+        $this->notifyHr(
+            $request,
+            "Leave request {$decision}",
+            "{$request->employee?->full_name}'s {$request->leaveType?->name} request was {$decision} by {$actor->full_name}.",
+            "leave_info_{$decision}",
+        );
+    }
+
+    /**
+     * HR is informed of leave activity, never asked to act on it.
+     *
+     * @param  array<int, int|null>  $alreadyNotified
+     */
+    private function notifyHr(LeaveRequest $request, string $title, string $message, string $action, array $alreadyNotified = []): void
+    {
+        try {
+            $hrIds = User::permission('leave.manage')->where('status', 'active')->pluck('users.id')->all();
+        } catch (\Throwable) {
+            return;
+        }
+
+        $this->sendLeaveNotificationToMany(
+            array_diff($hrIds, array_filter($alreadyNotified), [$request->employee?->user_id]),
+            $title,
+            $message,
+            $action,
             $request->id,
         );
     }

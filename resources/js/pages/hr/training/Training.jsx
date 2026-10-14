@@ -56,7 +56,6 @@ export default function Training() {
     const { can } = useAuth();
     const confirm = useConfirm();
     const canManage = can('training.manage');
-    const canApprove = can('training.approve');
 
     const [tab, setTab] = useState('overview');
     const [overview, setOverview] = useState({ stats: {}, staff: [] });
@@ -65,6 +64,7 @@ export default function Training() {
     const dragScrollRef3 = useDragScroll();
     const [records, setRecords] = useState([]);
     const [requests, setRequests] = useState([]);
+    const canDecideAny = requests.some((r) => r.can_decide);
     const [employees, setEmployees] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -168,10 +168,12 @@ export default function Training() {
     };
 
     const s = overview.stats || {};
+    // HR sees the company-wide figure; a department manager only the requests they can see.
+    const pendingCount = canManage ? s.pending_requests : requests.filter((r) => r.status === 'pending').length;
     const tabs = [
         { id: 'overview', label: 'Overview' },
         { id: 'records', label: 'Records' },
-        { id: 'requests', label: `Requests${s.pending_requests ? ` (${s.pending_requests})` : ''}` },
+        { id: 'requests', label: `Requests${pendingCount ? ` (${pendingCount})` : ''}` },
     ];
 
     if (loading) return <LoadingSpinner />;
@@ -335,12 +337,12 @@ export default function Training() {
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Requested Training</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Preferred</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
-                                    {canApprove && <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Actions</th>}
+                                    {canDecideAny && <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Actions</th>}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {requests.length === 0 ? (
-                                    <tr><td colSpan={canApprove ? 5 : 4} className="px-4 py-10 text-center text-sm text-gray-400">No training requests</td></tr>
+                                    <tr><td colSpan={canDecideAny ? 5 : 4} className="px-4 py-10 text-center text-sm text-gray-400">No training requests</td></tr>
                                 ) : requests.map((req) => (
                                     <tr key={req.id} className="hover:bg-gray-50">
                                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
@@ -354,15 +356,15 @@ export default function Training() {
                                         <td className="px-4 py-3">
                                             <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[req.status]}`}>{req.status}</span>
                                         </td>
-                                        {canApprove && (
+                                        {canDecideAny && (
                                             <td className="whitespace-nowrap px-4 py-3 text-right">
-                                                {req.status === 'pending' ? (
+                                                {req.can_decide ? (
                                                     <div className="flex justify-end gap-1">
                                                         <button onClick={() => setReview({ open: true, request: req, action: 'approve', notes: '' })} className="rounded-lg bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 hover:bg-green-100">Approve</button>
                                                         <button onClick={() => setReview({ open: true, request: req, action: 'reject', notes: '' })} className="rounded-lg bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-100">Reject</button>
                                                     </div>
                                                 ) : (
-                                                    <span className="text-xs text-gray-400">Reviewed</span>
+                                                    <span className="text-xs text-gray-400">{req.status === 'pending' ? 'Awaiting manager' : 'Reviewed'}</span>
                                                 )}
                                             </td>
                                         )}

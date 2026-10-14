@@ -83,8 +83,9 @@ class RolePresets
             'attendance.view', 'attendance.upload', 'attendance.delete',
             'payroll.view', 'payroll.generate', 'payroll.approve', 'payroll.email', 'payroll.ea-form',
             'staff.view', 'staff.create', 'staff.edit', 'staff.delete',
-            'leave.view', 'leave.request', 'leave.approve', 'leave.manage',
-            'training.view', 'training.request', 'training.approve', 'training.manage',
+            // HR is informed of leave/training and keeps the records; deciding belongs to department managers.
+            'leave.view', 'leave.request', 'leave.manage',
+            'training.view', 'training.request', 'training.manage',
             'calendar.view', 'calendar.manage',
             'meetings.view', 'documents.view', 'drawings.view',
             'reports.view', 'reports.export',

@@ -1,0 +1,269 @@
+<?php
+
+namespace Tests\Feature\Leave;
+
+use App\Models\Department;
+use App\Models\Employee;
+use App\Models\LeaveRequest;
+use App\Models\LeaveType;
+use App\Models\User;
+use App\Notifications\LeaveStatusNotification;
+use App\Services\LeaveService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Tests\TestCase;
+
+/**
+ * Leave is decided by the manager of the employee's own department. A manager or a
+ * department without one falls back to the Directors. HR is informed, never the approver.
+ */
+class DepartmentApprovalTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Department $engineering;
+
+    private Department $finance;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['leave.engine_enabled' => false]);
+
+        foreach (['dashboard.view', 'leave.view', 'leave.request', 'leave.approve', 'leave.manage'] as $permission) {
+            Permission::findOrCreate($permission, 'web');
+        }
+        foreach (['Managers', 'Directors', 'Admin & HR'] as $role) {
+            Role::findOrCreate($role, 'web');
+        }
+
+        $this->engineering = Department::create(['name' => 'Engineering', 'code' => 'ENG']);
+        $this->finance = Department::create(['name' => 'Finance', 'code' => 'FIN']);
+    }
+
+    private function user(string $name, ?Department $department = null, ?string $role = null, array $permissions = ['leave.view']): User
+    {
+        $user = User::create([
+            'first_name' => $name,
+            'last_name' => 'User',
+            'email' => strtolower($name).'-'.uniqid().'@mge-eng.com',
+            'password' => bcrypt('secret'),
+            'status' => 'active',
+            'department_id' => $department?->id,
+        ]);
+        $role && $user->assignRole($role);
+        $user->givePermissionTo($permissions);
+
+        return $user;
+    }
+
+    private function employeeOf(User $user, ?Department $department = null): Employee
+    {
+        return Employee::create([
+            'employee_no' => 'E-'.uniqid(),
+            'first_name' => $user->first_name,
+            'last_name' => 'User',
+            'category' => 'office',
+            'hire_date' => '2020-01-01',
+            'user_id' => $user->id,
+            'department_id' => $department?->id ?? $user->department_id,
+        ]);
+    }
+
+    private function leaveType(bool $requiresDirector = false): LeaveType
+    {
+        return LeaveType::create([
+            'name' => 'Annual Test',
+            'code' => 'AT-'.uniqid(),
+            'default_days_per_year' => 14,
+            'is_paid' => true,
+            'requires_attachment' => false,
+            'is_active' => true,
+            'requires_director_approval' => $requiresDirector,
+        ]);
+    }
+
+    private function pending(Employee $employee, ?LeaveType $type = null): LeaveRequest
+    {
+        return LeaveRequest::create([
+            'employee_id' => $employee->id,
+            'leave_type_id' => ($type ?? $this->leaveType())->id,
+            'start_date' => '2026-10-01',
+            'end_date' => '2026-10-02',
+            'days_count' => 2,
+            'status' => 'pending',
+            'current_approval_level' => 'manager',
+            'created_by' => $employee->user_id,
+        ]);
+    }
+
+    private function pendingIdsFor(User $user): array
+    {
+        return collect($this->actingAs($user)->getJson('/api/leaves/pending-approvals')->assertOk()->json('data.data'))
+            ->pluck('id')->all();
+    }
+
+    public function test_the_manager_of_the_employees_own_department_can_see_and_approve(): void
+    {
+        $manager = $this->user('EngManager', $this->engineering, 'Managers');
+        $staff = $this->employeeOf($this->user('EngStaff', $this->engineering));
+        $request = $this->pending($staff);
+
+        $this->assertContains($request->id, $this->pendingIdsFor($manager));
+
+        $this->actingAs($manager)->postJson("/api/leaves/{$request->id}/approve")
+            ->assertOk()->assertJsonPath('data.status', 'approved');
+    }
+
+    public function test_a_manager_of_another_department_can_neither_see_nor_decide(): void
+    {
+        $financeManager = $this->user('FinManager', $this->finance, 'Managers');
+        $staff = $this->employeeOf($this->user('EngStaff', $this->engineering));
+        $this->user('EngManager', $this->engineering, 'Managers');
+        $request = $this->pending($staff);
+
+        $this->assertNotContains($request->id, $this->pendingIdsFor($financeManager));
+        $this->actingAs($financeManager)->postJson("/api/leaves/{$request->id}/approve")->assertForbidden();
+        $this->actingAs($financeManager)->postJson("/api/leaves/{$request->id}/reject")->assertForbidden();
+        $this->actingAs($financeManager)->getJson("/api/leaves/{$request->id}")->assertNotFound();
+        $this->assertSame('pending', $request->fresh()->status);
+    }
+
+    public function test_hr_cannot_approve_or_reject_even_with_every_leave_permission(): void
+    {
+        $hr = $this->user('Hr', $this->engineering, 'Admin & HR', ['leave.view', 'leave.approve', 'leave.manage']);
+        $this->user('EngManager', $this->engineering, 'Managers');
+        $request = $this->pending($this->employeeOf($this->user('EngStaff', $this->engineering)));
+
+        $this->assertNotContains($request->id, $this->pendingIdsFor($hr));
+        $this->actingAs($hr)->postJson("/api/leaves/{$request->id}/approve")->assertForbidden();
+        $this->actingAs($hr)->postJson("/api/leaves/{$request->id}/reject")->assertForbidden();
+        $this->assertSame('pending', $request->fresh()->status);
+
+        // ...but HR can still read it for its records.
+        $this->actingAs($hr)->getJson("/api/leaves/{$request->id}")->assertOk();
+    }
+
+    public function test_a_managers_own_leave_goes_to_the_directors_not_a_peer_manager(): void
+    {
+        $manager = $this->user('EngManager', $this->engineering, 'Managers');
+        $peer = $this->user('EngPeer', $this->engineering, 'Managers');
+        $director = $this->user('Director', null, 'Directors');
+        $request = $this->pending($this->employeeOf($manager));
+
+        $this->assertNotContains($request->id, $this->pendingIdsFor($peer));
+        $this->actingAs($peer)->postJson("/api/leaves/{$request->id}/approve")->assertForbidden();
+
+        $this->assertContains($request->id, $this->pendingIdsFor($director));
+        $this->actingAs($director)->postJson("/api/leaves/{$request->id}/approve")
+            ->assertOk()->assertJsonPath('data.status', 'approved');
+    }
+
+    public function test_a_department_without_a_manager_falls_back_to_the_directors(): void
+    {
+        $director = $this->user('Director', null, 'Directors');
+        $financeManager = $this->user('FinManager', $this->finance, 'Managers');
+        $request = $this->pending($this->employeeOf($this->user('EngStaff', $this->engineering)));
+
+        $this->assertContains($request->id, $this->pendingIdsFor($director));
+        $this->assertNotContains($request->id, $this->pendingIdsFor($financeManager));
+    }
+
+    public function test_directors_do_not_see_staff_requests_while_their_department_has_a_manager(): void
+    {
+        $director = $this->user('Director', null, 'Directors');
+        $this->user('EngManager', $this->engineering, 'Managers');
+        $request = $this->pending($this->employeeOf($this->user('EngStaff', $this->engineering)));
+
+        $this->assertNotContains($request->id, $this->pendingIdsFor($director));
+        $this->actingAs($director)->postJson("/api/leaves/{$request->id}/approve")->assertForbidden();
+    }
+
+    public function test_a_manager_cannot_approve_their_own_request(): void
+    {
+        $manager = $this->user('EngManager', $this->engineering, 'Managers');
+        $request = $this->pending($this->employeeOf($manager));
+
+        $this->actingAs($manager)->postJson("/api/leaves/{$request->id}/approve")->assertForbidden();
+    }
+
+    public function test_a_directors_decision_at_the_manager_stage_is_final(): void
+    {
+        $director = $this->user('Director', null, 'Directors');
+        $request = $this->pending($this->employeeOf($this->user('EngStaff', $this->engineering)), $this->leaveType(requiresDirector: true));
+
+        $this->actingAs($director)->postJson("/api/leaves/{$request->id}/approve")
+            ->assertOk()->assertJsonPath('data.status', 'approved');
+    }
+
+    public function test_a_department_manager_can_read_a_subordinates_request_but_not_another_departments(): void
+    {
+        $manager = $this->user('EngManager', $this->engineering, 'Managers');
+        $own = $this->pending($this->employeeOf($this->user('EngStaff', $this->engineering)));
+        $foreign = $this->pending($this->employeeOf($this->user('FinStaff', $this->finance)));
+
+        $this->actingAs($manager)->getJson("/api/leaves/{$own->id}")->assertOk();
+        $this->actingAs($manager)->getJson("/api/leaves/{$foreign->id}")->assertNotFound();
+    }
+
+    public function test_the_department_manager_is_asked_to_act_and_hr_is_only_informed(): void
+    {
+        Notification::fake();
+        $manager = $this->user('EngManager', $this->engineering, 'Managers');
+        $otherManager = $this->user('FinManager', $this->finance, 'Managers');
+        $hr = $this->user('Hr', null, null, ['leave.view', 'leave.manage']);
+        $staff = $this->employeeOf($this->user('EngStaff', $this->engineering));
+
+        $request = app(LeaveService::class)->apply([
+            'employee_id' => $staff->id,
+            'leave_type_id' => $this->leaveType()->id,
+            'start_date' => '2026-10-01',
+            'end_date' => '2026-10-02',
+        ], $staff->user_id);
+
+        Notification::assertSentTo($manager, LeaveStatusNotification::class, fn ($n) => $n->toArray($manager)['action_type'] === 'leave_submitted'
+            && $n->toArray($manager)['link'] === '/hr/leave/approvals');
+        Notification::assertNotSentTo($otherManager, LeaveStatusNotification::class);
+        Notification::assertSentTo($hr, LeaveStatusNotification::class, fn ($n) => $n->toArray($hr)['action_type'] === 'leave_info_submitted'
+            && $n->toArray($hr)['link'] === '/hr/leave');
+
+        $this->actingAs($manager)->postJson("/api/leaves/{$request->id}/approve")->assertOk();
+
+        Notification::assertSentTo($hr, LeaveStatusNotification::class, fn ($n) => $n->toArray($hr)['action_type'] === 'leave_info_approved');
+        Notification::assertSentTo($staff->user, LeaveStatusNotification::class, fn ($n) => $n->toArray($staff->user)['action_type'] === 'leave_approved');
+    }
+
+    public function test_the_approvals_count_only_covers_what_the_viewer_can_decide_and_hr_is_not_an_approver(): void
+    {
+        $manager = $this->user('EngManager', $this->engineering, 'Managers');
+        $hr = $this->user('Hr', null, null, ['leave.view', 'leave.manage']);
+        $mine = $this->pending($this->employeeOf($this->user('EngStaff', $this->engineering)));
+        $this->pending($this->employeeOf($this->user('FinStaff', $this->finance)));
+
+        $service = app(LeaveService::class);
+
+        // The dashboard "Leave to Approve" card is built from these two calls.
+        $this->assertTrue($service->isLeaveApprover($manager));
+        $this->assertSame([$mine->id], $service->pendingApprovalIdsFor($manager));
+
+        $this->assertFalse($service->isLeaveApprover($hr));
+        $this->assertSame([], $service->pendingApprovalIdsFor($hr));
+    }
+
+    public function test_the_audit_command_flags_departments_without_a_manager_and_staff_without_a_department(): void
+    {
+        $this->user('EngManager', $this->engineering, 'Managers');
+        $this->user('Director', null, 'Directors');
+        $this->employeeOf($this->user('EngStaff', $this->engineering));
+        $this->employeeOf($this->user('FinStaff', $this->finance));
+        $this->employeeOf($this->user('Floating'));
+
+        $this->artisan('approvals:audit')
+            ->expectsOutputToContain('Directors: 1 | Managers: 1')
+            ->expectsOutputToContain('NONE -> Directors decide')
+            ->expectsOutputToContain('1 staff record(s) have no department')
+            ->assertSuccessful();
+    }
+}

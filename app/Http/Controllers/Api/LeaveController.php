@@ -128,18 +128,8 @@ class LeaveController extends Controller
 
     public function show(Request $request, int $id): JsonResponse
     {
-        $user = $request->user();
-
-        // HR managers can view any request
-        if ($user->can('leave.manage')) {
-            return $this->success($this->leaveService->get($id));
-        }
-
-        // Regular users can only view their own linked employee's requests
-        $employeeId = Employee::where('user_id', $user->id)->value('id');
-        $leave = LeaveRequest::where('id', $id)->where('employee_id', $employeeId)->firstOrFail();
-
-        return $this->success($leave);
+        // HR (records), the employee themself, or whoever can decide the request.
+        return $this->success($this->leaveService->getForViewer($request->user(), $id));
     }
 
     public function approve(Request $request, int $id): JsonResponse
@@ -176,34 +166,18 @@ class LeaveController extends Controller
     }
 
     /**
-     * Requests awaiting the current user's approval. Admins (leave.manage) see all pending.
+     * Requests awaiting the current user's decision: their own department's staff (or the
+     * Directors' share). HR is informed about leave but has no approvals queue.
      */
     public function pendingApprovals(Request $request): JsonResponse
     {
-        $user = $request->user();
         $perPage = min($request->integer('per_page', 15), 100);
 
-        $query = LeaveRequest::with([
-            'employee:id,employee_no,first_name,last_name',
-            'leaveType:id,name,code,requires_director_approval,manager_approver_id,director_approver_id',
-            'managerApprover:id,first_name,last_name',
-        ])->where('status', 'pending')->orderByDesc('created_at');
-
-        if (! $user->can('leave.manage')) {
-            // Designated per-type approvers see their own; system-wide Manager/Director
-            // approvers see every request awaiting their stage.
-            $query->where(function ($q) use ($user) {
-                $q->awaitingApprovalBy($user->id);
-                if ($user->isManagerApprover()) {
-                    $q->orWhere('current_approval_level', 'manager');
-                }
-                if ($user->isDirectorApprover()) {
-                    $q->orWhere('current_approval_level', 'director');
-                }
-            });
-        }
-
-        return $this->success($query->paginate($perPage));
+        return $this->success($this->leaveService->pendingApprovalsFor(
+            $request->user(),
+            $perPage,
+            max($request->integer('page', 1), 1),
+        ));
     }
 
     /**
@@ -256,15 +230,8 @@ class LeaveController extends Controller
 
     public function downloadAttachment(Request $request, int $id)
     {
-        $user = $request->user();
-
-        if ($user->can('leave.manage')) {
-            return $this->leaveService->downloadAttachment($id);
-        }
-
-        // Restrict download to attachments belonging to the user's own leave request
-        $employeeId = Employee::where('user_id', $user->id)->value('id');
-        LeaveRequest::where('id', $id)->where('employee_id', $employeeId)->firstOrFail();
+        // Same visibility as the request itself (404 for anyone who may not see it).
+        $this->leaveService->getForViewer($request->user(), $id);
 
         return $this->leaveService->downloadAttachment($id);
     }

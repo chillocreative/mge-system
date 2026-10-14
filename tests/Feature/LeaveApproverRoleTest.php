@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Department;
 use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
@@ -52,7 +53,7 @@ class LeaveApproverRoleTest extends TestCase
         return $user;
     }
 
-    private function employeeForLeave(): Employee
+    private function employeeForLeave(?Department $department = null): Employee
     {
         $owner = User::create([
             'first_name' => 'Staff',
@@ -60,6 +61,7 @@ class LeaveApproverRoleTest extends TestCase
             'email' => 'staff-'.uniqid().'@mge-pms.test',
             'password' => bcrypt('secret'),
             'status' => 'active',
+            'department_id' => $department?->id,
         ]);
 
         return Employee::create([
@@ -68,6 +70,7 @@ class LeaveApproverRoleTest extends TestCase
             'category' => 'office',
             'hire_date' => '2020-01-01',
             'user_id' => $owner->id,
+            'department_id' => $department?->id,
         ]);
     }
 
@@ -124,8 +127,10 @@ class LeaveApproverRoleTest extends TestCase
 
     public function test_a_managers_role_user_sees_a_pending_manager_stage_request(): void
     {
+        $department = Department::create(['name' => 'Engineering', 'code' => 'ENG']);
         $manager = $this->approver('Managers');
-        $employee = $this->employeeForLeave();
+        $manager->update(['department_id' => $department->id]);
+        $employee = $this->employeeForLeave($department);
         $type = $this->leaveTypeWithOtherDesignatedApprovers();
         $request = $this->pendingRequest($employee, $type, 'manager');
 
@@ -139,8 +144,10 @@ class LeaveApproverRoleTest extends TestCase
 
     public function test_a_managers_role_user_can_approve_a_manager_stage_request(): void
     {
+        $department = Department::create(['name' => 'Engineering', 'code' => 'ENG']);
         $manager = $this->approver('Managers');
-        $employee = $this->employeeForLeave();
+        $manager->update(['department_id' => $department->id]);
+        $employee = $this->employeeForLeave($department);
         $type = $this->leaveTypeWithOtherDesignatedApprovers();
         $request = $this->pendingRequest($employee, $type, 'manager');
 

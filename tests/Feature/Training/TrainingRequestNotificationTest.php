@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Training;
 
+use App\Models\Department;
 use App\Models\Employee;
 use App\Models\TrainingRequest;
 use App\Models\User;
@@ -9,6 +10,7 @@ use App\Notifications\SystemNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class TrainingRequestNotificationTest extends TestCase
@@ -21,10 +23,11 @@ class TrainingRequestNotificationTest extends TestCase
 
         config(['notifications.email_enabled' => true]);
         Permission::findOrCreate('training.request', 'web');
-        Permission::findOrCreate('training.approve', 'web');
+        Permission::findOrCreate('training.manage', 'web');
+        Role::findOrCreate('Managers', 'web');
     }
 
-    private function user(string $name, array $permissions = [], string $status = 'active'): User
+    private function user(string $name, array $permissions = [], string $status = 'active', ?Department $department = null, ?string $role = null): User
     {
         $user = User::create([
             'first_name' => $name,
@@ -32,9 +35,11 @@ class TrainingRequestNotificationTest extends TestCase
             'email' => strtolower($name).'-'.uniqid().'@mge-eng.com',
             'password' => bcrypt('password'),
             'status' => $status,
+            'department_id' => $department?->id,
         ]);
 
         $user->givePermissionTo($permissions);
+        $role && $user->assignRole($role);
 
         return $user;
     }
@@ -47,6 +52,7 @@ class TrainingRequestNotificationTest extends TestCase
             'last_name' => $user->last_name,
             'category' => 'office',
             'user_id' => $user->id,
+            'department_id' => $user->department_id,
         ]);
     }
 
@@ -65,19 +71,23 @@ class TrainingRequestNotificationTest extends TestCase
             ->assertJsonPath('message', 'You do not have permission to perform this action.');
     }
 
-    public function test_request_is_owned_by_authenticated_users_linked_employee_and_emails_requester_and_approvers(): void
+    public function test_request_is_owned_by_authenticated_users_linked_employee_and_emails_requester_manager_and_hr(): void
     {
         Notification::fake();
 
-        $requester = $this->user('Requester', ['training.request']);
+        $engineering = Department::create(['name' => 'Engineering', 'code' => 'ENG']);
+        $finance = Department::create(['name' => 'Finance', 'code' => 'FIN']);
+
+        $requester = $this->user('Requester', ['training.request'], 'active', $engineering);
         $requesterEmployee = $this->employee($requester, 'EMP-REQUESTER');
 
         $other = $this->user('Other');
         $otherEmployee = $this->employee($other, 'EMP-OTHER');
 
-        $firstApprover = $this->user('HrOne', ['training.approve']);
-        $secondApprover = $this->user('HrTwo', ['training.approve']);
-        $inactiveApprover = $this->user('InactiveHr', ['training.approve'], 'inactive');
+        $manager = $this->user('EngManager', [], 'active', $engineering, 'Managers');
+        $hr = $this->user('Hr', ['training.manage']);
+        $inactiveManager = $this->user('InactiveManager', [], 'inactive', $engineering, 'Managers');
+        $otherDepartmentManager = $this->user('FinManager', [], 'active', $finance, 'Managers');
         $unrelatedUser = $this->user('Unrelated');
 
         $response = $this->actingAs($requester)->postJson('/api/training/requests', [
@@ -102,18 +112,20 @@ class TrainingRequestNotificationTest extends TestCase
                 && $data['extra']['training_request_id'] === $trainingRequest->id;
         });
 
-        foreach ([$firstApprover, $secondApprover] as $approver) {
-            Notification::assertSentTo($approver, SystemNotification::class, function (SystemNotification $notification) use ($approver, $trainingRequest) {
-                $data = $notification->toArray($approver);
+        Notification::assertSentTo($manager, SystemNotification::class, function (SystemNotification $notification) use ($manager, $trainingRequest) {
+            $data = $notification->toArray($manager);
 
-                return $notification->via($approver) === ['database', 'mail']
-                    && $data['title'] === 'New training request'
-                    && $data['link'] === '/hr/training'
-                    && $data['extra']['training_request_id'] === $trainingRequest->id;
-            });
-        }
+            return $notification->via($manager) === ['database', 'mail']
+                && $data['title'] === 'New training request'
+                && $data['link'] === '/hr/training'
+                && $data['extra']['training_request_id'] === $trainingRequest->id;
+        });
 
-        Notification::assertNotSentTo($inactiveApprover, SystemNotification::class);
+        // HR is informed, not asked to decide.
+        Notification::assertSentTo($hr, SystemNotification::class, fn (SystemNotification $notification) => $notification->toArray($hr)['title'] === 'Training request submitted');
+
+        Notification::assertNotSentTo($inactiveManager, SystemNotification::class);
+        Notification::assertNotSentTo($otherDepartmentManager, SystemNotification::class);
         Notification::assertNotSentTo($unrelatedUser, SystemNotification::class);
 
         $this->assertDatabaseHas('notification_logs', [
@@ -123,7 +135,7 @@ class TrainingRequestNotificationTest extends TestCase
             'status' => 'sent',
         ]);
         $this->assertDatabaseHas('notification_logs', [
-            'user_id' => $firstApprover->id,
+            'user_id' => $manager->id,
             'type' => 'training',
             'channel' => 'mail',
             'status' => 'sent',

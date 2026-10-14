@@ -30,9 +30,11 @@ class LeaveStatusNotification extends Notification
             'action_type' => $this->actionType,
             'leave_request_id' => $this->leaveRequestId,
             'type' => 'leave',
-            'link' => $this->approverAction()
-                ? '/hr/leave/approvals'
-                : '/leave/my',
+            'link' => match (true) {
+                $this->approverAction() => '/hr/leave/approvals',
+                str_starts_with($this->actionType, 'leave_info_') => '/hr/leave',
+                default => '/leave/my',
+            },
         ];
     }
 

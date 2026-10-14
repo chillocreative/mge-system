@@ -1127,8 +1127,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/records', [TrainingController::class, 'storeRecord'])->middleware('permission:training.manage');
         Route::put('/records/{id}', [TrainingController::class, 'updateRecord'])->middleware('permission:training.manage');
         Route::delete('/records/{id}', [TrainingController::class, 'destroyRecord'])->middleware('permission:training.manage');
-        Route::post('/requests/{id}/approve', [TrainingController::class, 'approveRequest'])->middleware('permission:training.approve');
-        Route::post('/requests/{id}/reject', [TrainingController::class, 'rejectRequest'])->middleware('permission:training.approve');
+        // Anyone can reach these; TrainingService decides per request (department manager / fallback Director).
+        Route::post('/requests/{id}/approve', [TrainingController::class, 'approveRequest'])->middleware('permission:training.view,training.request');
+        Route::post('/requests/{id}/reject', [TrainingController::class, 'rejectRequest'])->middleware('permission:training.view,training.request');
     });
 
     /*
