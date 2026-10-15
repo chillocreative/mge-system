@@ -12,6 +12,9 @@ class LeaveRequest extends Model
         'attachment_path', 'status', 'approved_by', 'approved_at', 'rejection_reason', 'created_by',
         'current_approval_level', 'manager_approved_by', 'manager_approved_at',
         'director_approved_by', 'director_approved_at',
+        'approved_offline', 'offline_approver_name', 'offline_approval_note', 'approval_proof_path',
+        'shortfall_days', 'notice_override_reason', 'recorded_by', 'recorded_at',
+        'original_leave_type_id', 'split_from_request_id',
     ];
 
     protected function casts(): array
@@ -23,6 +26,9 @@ class LeaveRequest extends Model
             'approved_at' => 'datetime',
             'manager_approved_at' => 'datetime',
             'director_approved_at' => 'datetime',
+            'approved_offline' => 'boolean',
+            'shortfall_days' => 'decimal:1',
+            'recorded_at' => 'datetime',
         ];
     }
 
@@ -46,6 +52,16 @@ class LeaveRequest extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function recorder(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    public function originalLeaveType(): BelongsTo
+    {
+        return $this->belongsTo(LeaveType::class, 'original_leave_type_id');
     }
 
     public function managerApprover(): BelongsTo

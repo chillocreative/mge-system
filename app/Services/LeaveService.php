@@ -9,6 +9,7 @@ use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\User;
 use App\Notifications\LeaveStatusNotification;
+use App\Services\Leave\LeaveConflicts;
 use App\Services\Leave\LeaveEngine;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
@@ -22,6 +23,7 @@ class LeaveService
     public function __construct(
         private readonly LeaveEngine $engine,
         private readonly ApprovalRouting $routing,
+        private readonly LeaveConflicts $conflicts,
     ) {}
 
     // ── Leave Requests ──
@@ -43,6 +45,9 @@ class LeaveService
         if (! empty($filters['leave_type_id'])) {
             $query->where('leave_type_id', $filters['leave_type_id']);
         }
+        if (! empty($filters['created_by'])) {
+            $query->where('created_by', $filters['created_by']);
+        }
 
         return $query->paginate($perPage);
     }
@@ -57,9 +62,9 @@ class LeaveService
         ])->findOrFail($id);
     }
 
-    public function apply(array $data, int $userId, $attachment = null): LeaveRequest
+    public function apply(array $data, int $userId, $attachment = null, $approvalProof = null): LeaveRequest
     {
-        return DB::transaction(function () use ($data, $userId, $attachment) {
+        return DB::transaction(function () use ($data, $userId, $attachment, $approvalProof) {
             $start = Carbon::parse($data['start_date']);
             $end = Carbon::parse($data['end_date']);
             $halfDay = ! empty($data['half_day']);
@@ -79,13 +84,19 @@ class LeaveService
                 $calculated = $this->engine->calculate($employee, $start, $end, $halfDay);
                 $days = $calculated->totalDeducted();
 
-                $this->engine->assertWithinBalance($employee, $leaveType, $calculated);
+                // Over-balance is allowed: flagged for the approver, and HR decides at recording
+                // whether the excess is declared unpaid.
+                $data['shortfall_days'] = $this->engine->shortfall($employee, $leaveType, $calculated);
             } else {
                 $days = $halfDay ? 0.5 : ($start->diffInDays($end) + 1);
             }
 
             if ($attachment) {
                 $data['attachment_path'] = $attachment->store('leave/attachments', 'local');
+            }
+
+            if ($approvalProof) {
+                $data['approval_proof_path'] = $approvalProof->store('leave/approval-proofs', 'local');
             }
 
             unset($data['half_day']);
@@ -106,7 +117,12 @@ class LeaveService
                 'leaveType:id,name,code,is_paid,requires_director_approval,manager_approver_id,director_approver_id',
             ]);
 
-            $this->notifyManager($request);
+            if (! empty($data['approved_offline'])) {
+                // Approval was given outside the system and recorded by the filer: it goes straight to HR.
+                $this->finalizeApproval($request, User::findOrFail($userId));
+            } else {
+                $this->notifyManager($request);
+            }
 
             return $request;
         });
@@ -288,8 +304,12 @@ class LeaveService
     {
         $pending = $this->decidablePending($actor);
 
+        // The head / project manager checks the calendar before signing, so show what overlaps.
+        $slice = $pending->forPage($page, $perPage)->values()
+            ->each(fn (LeaveRequest $r) => $r->setAttribute('conflicts', $this->conflicts->forRequest($r, $actor)));
+
         return new LengthAwarePaginator(
-            $pending->forPage($page, $perPage)->values(),
+            $slice,
             $pending->count(),
             $perPage,
             $page,
@@ -325,6 +345,7 @@ class LeaveService
             'employee:id,employee_no,first_name,last_name,user_id,department_id',
             'leaveType:id,name,code,requires_director_approval,manager_approver_id,director_approver_id',
             'managerApprover:id,first_name,last_name',
+            'creator:id,first_name,last_name',
         ])->where('status', 'pending')->orderByDesc('created_at')->get()
             ->filter(fn (LeaveRequest $r) => (int) $r->employee?->user_id !== (int) $actor->id
                 && $this->isStageApprover($r, $actor, $r->current_approval_level ?: 'manager', $roster))
@@ -346,6 +367,7 @@ class LeaveService
 
         $allowed = $actor->can('leave.manage')
             || (int) $request->employee?->user_id === (int) $actor->id
+            || (int) $request->created_by === (int) $actor->id
             || ((int) $request->employee?->user_id !== (int) $actor->id && (
                 $this->isStageApprover($request, $actor, 'manager')
                 || ($request->current_approval_level === 'director' && $this->isStageApprover($request, $actor, 'director'))
@@ -365,6 +387,197 @@ class LeaveService
             'managerApprover:id,first_name,last_name',
             'directorApprover:id,first_name,last_name',
         ]);
+    }
+
+    // ── HR recording ──
+
+    /**
+     * Approved leave waiting for HR to record, oldest first. balance_after is what is left once this
+     * request counts; below zero means the request went over the balance.
+     */
+    public function toRecord(int $perPage = 15): LengthAwarePaginator
+    {
+        $page = LeaveRequest::with([
+            'employee:id,employee_no,first_name,last_name,user_id,department_id',
+            'leaveType:id,name,code,is_paid',
+            'creator:id,first_name,last_name',
+            'approver:id,first_name,last_name',
+        ])->where('status', 'approved')->whereNull('recorded_at')->orderBy('approved_at')->paginate($perPage);
+
+        $page->getCollection()->transform(function (LeaveRequest $r) {
+            $r->setAttribute('balance_after', $this->engine->enabled() && $r->leaveType?->is_paid && $r->employee
+                ? $this->engine->available($r->employee, $r->leaveType, Carbon::parse($r->start_date)->year)
+                : null);
+
+            return $r;
+        });
+
+        return $page;
+    }
+
+    /**
+     * HR records an approved request, settling the balance. When the balance does not cover it,
+     * HR can declare the whole request ("all") or only the days beyond the balance ("excess")
+     * as unpaid leave.
+     */
+    public function record(int $id, User $actor, string $unpaid = 'none'): LeaveRequest
+    {
+        abort_unless(in_array($unpaid, ['none', 'all', 'excess'], true), 422, 'Unknown unpaid option.');
+
+        return DB::transaction(function () use ($id, $actor, $unpaid) {
+            $request = LeaveRequest::with([
+                'leaveType',
+                'employee:id,employee_no,first_name,last_name,user_id,department_id',
+            ])->findOrFail($id);
+
+            abort_if($request->status !== 'approved', 422, 'Only an approved request can be recorded.');
+            abort_if($request->recorded_at !== null, 422, 'This request has already been recorded.');
+
+            $declared = match ($unpaid) {
+                'all' => $this->declareAllUnpaid($request),
+                'excess' => $this->declareExcessUnpaid($request),
+                default => 0.0,
+            };
+
+            $request->forceFill(['recorded_by' => $actor->id, 'recorded_at' => now()])->save();
+
+            $this->sendLeaveNotification(
+                $request->employee?->user_id,
+                'Leave recorded',
+                "Your {$request->leaveType?->name} request has been recorded by HR."
+                    .($declared > 0 ? ' '.rtrim(rtrim(number_format($declared, 1), '0'), '.').' day(s) were declared unpaid leave.' : ''),
+                'leave_recorded',
+                $request->id,
+            );
+
+            return $this->loadFull($request)->load('recorder:id,first_name,last_name');
+        });
+    }
+
+    private function unpaidType(): LeaveType
+    {
+        return LeaveType::where('is_paid', false)->where('is_active', true)->orderBy('id')->first()
+            ?? abort(422, 'No unpaid leave type is configured. Add one under Manage Types.');
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function yearsOf(LeaveRequest $request): array
+    {
+        return array_values(array_unique([Carbon::parse($request->start_date)->year, Carbon::parse($request->end_date)->year]));
+    }
+
+    private function syncTypeBalances(Employee $employee, LeaveType $type, array $years): void
+    {
+        foreach ($years as $year) {
+            $this->engine->syncBalance($employee, $type, (int) $year);
+        }
+    }
+
+    /**
+     * The whole request becomes unpaid leave. Returns the days declared.
+     */
+    private function declareAllUnpaid(LeaveRequest $request): float
+    {
+        abort_if(! $request->leaveType->is_paid, 422, 'This request is already unpaid leave.');
+
+        $unpaid = $this->unpaidType();
+        $paidType = $request->leaveType;
+        $days = (float) $request->days_count;
+
+        $request->forceFill(['original_leave_type_id' => $paidType->id, 'leave_type_id' => $unpaid->id])->save();
+
+        if ($this->engine->enabled()) {
+            LeaveDay::where('leave_request_id', $request->id)->update(['leave_type_id' => $unpaid->id]);
+            $this->syncTypeBalances($request->employee, $paidType, $this->yearsOf($request));
+            $this->syncTypeBalances($request->employee, $unpaid, $this->yearsOf($request));
+        } else {
+            $year = Carbon::parse($request->start_date)->year;
+            foreach ([[$paidType->id, -$days], [$unpaid->id, $days]] as [$typeId, $delta]) {
+                $balance = $this->ensureBalance($request->employee_id, $typeId, $year);
+                $balance->used_days = max(0, (float) $balance->used_days + $delta);
+                $balance->remaining_days = (float) $balance->entitled_days - (float) $balance->used_days;
+                $balance->save();
+            }
+        }
+
+        $request->setRelation('leaveType', $unpaid);
+
+        return $days;
+    }
+
+    /**
+     * Keep the days the balance covers as paid leave and move the rest to a new unpaid request.
+     * Walks the request day by day, so weekends/holidays stay with the side they fall on.
+     * Returns the days declared unpaid.
+     */
+    private function declareExcessUnpaid(LeaveRequest $request): float
+    {
+        abort_unless($this->engine->enabled(), 422, 'Declaring only the excess as unpaid needs the leave policy engine. Declare the whole request unpaid instead.');
+        abort_if(! $request->leaveType->is_paid, 422, 'This request is already unpaid leave.');
+
+        $days = LeaveDay::where('leave_request_id', $request->id)->orderBy('date')->get();
+        abort_if($days->isEmpty(), 422, 'This request has no day-by-day record to split. Declare the whole request unpaid instead.');
+
+        // What the balance held per year before this request counted against it.
+        $allowance = [];
+        foreach ($days->where('is_deducted', true)->groupBy('year') as $year => $rows) {
+            $allowance[$year] = max(0.0, $this->engine->available($request->employee, $request->leaveType, (int) $year) + (float) $rows->sum('fraction'));
+        }
+
+        $cutoff = null;
+        foreach ($days as $day) {
+            if (! $day->is_deducted) {
+                continue;
+            }
+            if ((float) $day->fraction <= $allowance[$day->year] + 1e-6) {
+                $allowance[$day->year] -= (float) $day->fraction;
+
+                continue;
+            }
+            $cutoff = $day->date;
+            break;
+        }
+
+        abort_if($cutoff === null, 422, 'The balance covers this whole request, so there is nothing to declare unpaid.');
+
+        $moved = $days->filter(fn (LeaveDay $d) => $d->date->gte($cutoff));
+        $kept = $days->reject(fn (LeaveDay $d) => $d->date->gte($cutoff));
+
+        if ($kept->where('is_deducted', true)->isEmpty()) {
+            return $this->declareAllUnpaid($request);
+        }
+
+        $unpaid = $this->unpaidType();
+        $paidType = $request->leaveType;
+        $movedDays = (float) $moved->where('is_deducted', true)->sum('fraction');
+
+        $unpaidRequest = $request->replicate();
+        $unpaidRequest->forceFill([
+            'leave_type_id' => $unpaid->id,
+            'original_leave_type_id' => $paidType->id,
+            'split_from_request_id' => $request->id,
+            'start_date' => $moved->min('date')->toDateString(),
+            'end_date' => $request->end_date,
+            'days_count' => $movedDays,
+            'shortfall_days' => 0,
+            'recorded_by' => $request->recorded_by,
+            'recorded_at' => now(),
+        ])->save();
+
+        LeaveDay::whereIn('id', $moved->pluck('id'))->update(['leave_request_id' => $unpaidRequest->id, 'leave_type_id' => $unpaid->id]);
+
+        $request->forceFill([
+            'end_date' => $kept->max('date')->toDateString(),
+            'days_count' => (float) $kept->where('is_deducted', true)->sum('fraction'),
+        ])->save();
+
+        $years = array_values(array_unique(array_merge($this->yearsOf($request->refresh()), $this->yearsOf($unpaidRequest))));
+        $this->syncTypeBalances($request->employee, $paidType, $years);
+        $this->syncTypeBalances($request->employee, $unpaid, $years);
+
+        return $movedDays;
     }
 
     // ── Notifications ──
@@ -393,12 +606,19 @@ class LeaveService
 
     private function notifyHrOfDecision(LeaveRequest $request, string $decision, User $actor): void
     {
-        $this->notifyHr(
-            $request,
-            "Leave request {$decision}",
-            "{$request->employee?->full_name}'s {$request->leaveType?->name} request was {$decision} by {$actor->full_name}.",
-            "leave_info_{$decision}",
-        );
+        $who = "{$request->employee?->full_name}'s {$request->leaveType?->name} request";
+
+        if ($decision === 'approved') {
+            $message = $request->approved_offline
+                ? "{$who} was approved outside the system by {$request->offline_approver_name} and filed by {$actor->full_name}. Please record it."
+                : "{$who} was approved by {$actor->full_name}. Please record it.";
+
+            $this->notifyHr($request, 'Leave approved: to record', $message, 'leave_info_to_record');
+
+            return;
+        }
+
+        $this->notifyHr($request, "Leave request {$decision}", "{$who} was {$decision} by {$actor->full_name}.", "leave_info_{$decision}");
     }
 
     /**
@@ -642,5 +862,13 @@ class LeaveService
         abort_if(! $request->attachment_path || ! Storage::disk('local')->exists($request->attachment_path), 404);
 
         return Storage::disk('local')->download($request->attachment_path);
+    }
+
+    public function downloadApprovalProof(int $id)
+    {
+        $request = LeaveRequest::findOrFail($id);
+        abort_if(! $request->approval_proof_path || ! Storage::disk('local')->exists($request->approval_proof_path), 404);
+
+        return Storage::disk('local')->download($request->approval_proof_path);
     }
 }

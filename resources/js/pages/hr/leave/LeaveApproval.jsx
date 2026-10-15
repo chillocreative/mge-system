@@ -12,6 +12,28 @@ import {
 
 const stageLabel = (req) => (req.current_approval_level === 'director' ? 'Awaiting Director' : 'Awaiting Manager');
 
+const personName = (p) => `${p?.first_name ?? ''} ${p?.last_name ?? ''}`.trim();
+
+// Someone other than the employee filed it (a Site Clerk, or HR, on their behalf).
+const filedByOther = (req) => {
+    if (!req.creator) return false;
+    if (req.created_by != null && req.employee?.user_id != null) {
+        return String(req.created_by) !== String(req.employee.user_id);
+    }
+    return personName(req.creator).toLowerCase() !== personName(req.employee).toLowerCase();
+};
+
+// What each kind of calendar clash is called on screen.
+const conflictLabel = {
+    event: 'Company event',
+    holiday: 'Public holiday',
+    training: 'Training',
+    project_event: 'Project meeting/event',
+    team_leave: 'Colleague on leave',
+};
+
+const conflictDates = (c) => (c.end && c.end !== c.start ? `${formatDate(c.start)} - ${formatDate(c.end)}` : formatDate(c.start));
+
 export default function LeaveApproval() {
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -93,9 +115,9 @@ export default function LeaveApproval() {
                                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {requests.map((req) => (
-                                    <tr key={req.id} className="hover:bg-gray-50">
+                            {requests.map((req) => (
+                                <tbody key={req.id} className="group">
+                                    <tr className="group-hover:bg-gray-50">
                                         <td className="px-4 py-3">
                                             <p className="text-sm font-medium text-gray-900">{req.employee?.full_name || `${req.employee?.first_name ?? ''} ${req.employee?.last_name ?? ''}`}</p>
                                             {req.employee?.employee_no && <p className="text-xs text-gray-500">{req.employee.employee_no}</p>}
@@ -134,8 +156,43 @@ export default function LeaveApproval() {
                                             </div>
                                         </td>
                                     </tr>
-                                ))}
-                            </tbody>
+                                    <tr className="group-hover:bg-gray-50">
+                                        <td colSpan={7} className="px-4 pb-3 pt-0">
+                                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                                                {filedByOther(req) && (
+                                                    <span className="text-gray-500">Filed by {personName(req.creator)}</span>
+                                                )}
+                                                {Number(req.shortfall_days) > 0 && (
+                                                    <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700">
+                                                        Over balance by {Number(req.shortfall_days)} day(s)
+                                                    </span>
+                                                )}
+                                                {req.notice_override_reason && (
+                                                    <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700">
+                                                        Short-notice exception: {req.notice_override_reason}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="mt-2">
+                                                <p className="text-xs font-semibold uppercase text-gray-400">Calendar check</p>
+                                                {(req.conflicts || []).length === 0 ? (
+                                                    <p className="mt-1 text-xs text-green-600">No clashes found for these dates</p>
+                                                ) : (
+                                                    <ul className="mt-1 space-y-0.5 text-xs text-gray-600">
+                                                        {req.conflicts.map((c, i) => (
+                                                            <li key={`${c.kind}-${i}`}>
+                                                                <span className="font-medium text-gray-700">{conflictLabel[c.kind] || c.kind}</span>
+                                                                {' '}&middot; {c.title}
+                                                                <span className="text-gray-400"> ({conflictDates(c)})</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            ))}
                         </table>
                     </div>
 

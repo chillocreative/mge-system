@@ -39,6 +39,8 @@ export default function MyLeave() {
     const [noProfile, setNoProfile] = useState(false);
     const dragScrollRef1 = useDragScroll();
     const dragScrollRef2 = useDragScroll();
+    const dragScrollRef3 = useDragScroll();
+    const [filedByMe, setFiledByMe] = useState([]);
 
     const fetchRequests = useCallback(async (employeeId) => {
         try {
@@ -65,6 +67,13 @@ export default function MyLeave() {
             .catch(() => setNoProfile(true))
             .finally(() => setLoading(false));
     }, [fetchRequests]);
+
+    // Requests this user filed for other people (a Site Clerk filing for site staff).
+    useEffect(() => {
+        leaveService.list({ filed_by_me: 1, per_page: 50 })
+            .then((res) => setFiledByMe(res.data?.data || []))
+            .catch(() => setFiledByMe([]));
+    }, []);
 
     // (Re)load balances whenever the employee or year changes.
     useEffect(() => {
@@ -107,6 +116,9 @@ export default function MyLeave() {
         });
 
     const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
+
+    // Own requests are already in "My Requests"; keep only those filed for someone else.
+    const filedForOthers = filedByMe.filter((r) => !employee || String(r.employee_id) !== String(employee.id));
 
     if (loading) return <LoadingSpinner />;
 
@@ -240,6 +252,54 @@ export default function MyLeave() {
                         )}
                     </div>
                 </>
+            )}
+
+            {/* Requests filed on behalf of others */}
+            {filedForOthers.length > 0 && (
+                <div className="mt-8">
+                    <h2 className="mb-3 text-lg font-semibold text-gray-900">Filed on behalf of others</h2>
+                    <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
+                        <div ref={dragScrollRef3} className="overflow-x-auto cursor-grab active:cursor-grabbing">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Employee</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Type</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Dates</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Days</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {filedForOthers.map((req) => (
+                                        <tr key={req.id} className="hover:bg-gray-50">
+                                            <td className="px-4 py-3">
+                                                <p className="text-sm font-medium text-gray-900">
+                                                    {req.employee?.full_name || `${req.employee?.first_name ?? ''} ${req.employee?.last_name ?? ''}`.trim() || '-'}
+                                                </p>
+                                                {req.employee?.employee_no && <p className="text-xs text-gray-500">{req.employee.employee_no}</p>}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                                                    {req.leave_type?.name || '-'}
+                                                </span>
+                                            </td>
+                                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                                                {formatDate(req.start_date)} &rarr; {formatDate(req.end_date)}
+                                            </td>
+                                            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-gray-900">{req.days_count}</td>
+                                            <td className="px-4 py-3">
+                                                <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[req.status]}`}>
+                                                    {statusLabel(req)}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

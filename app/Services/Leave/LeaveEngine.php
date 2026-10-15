@@ -45,33 +45,32 @@ class LeaveEngine
     }
 
     /**
-     * Refuse a request that would take the employee past their balance.
+     * Days this request goes beyond the employee's balance, summed over the leave years it
+     * touches (a request spanning New Year draws on two separate balances).
      *
-     * Checked per leave year, because a request spanning New Year draws on two
-     * separate balances and could be within one while exceeding the other.
-     *
-     * Governed by allow_negative_balance: when true this warns rather than
-     * blocks, which some employers want for unpaid or compassionate leave.
+     * Informational: an over-balance request is still accepted, flagged for the approver, and
+     * HR decides at the recording step whether the excess is declared unpaid. Unpaid types have
+     * no balance, and a type that allows a negative balance may legitimately overdraw.
      */
-    public function assertWithinBalance(Employee $employee, LeaveType $leaveType, CalculatedLeave $calculated): void
+    public function shortfall(Employee $employee, LeaveType $leaveType, CalculatedLeave $calculated): float
     {
-        if ($this->policy->bool('allow_negative_balance', $leaveType->id)) {
-            return;
+        if (! $leaveType->is_paid || $this->policy->bool('allow_negative_balance', $leaveType->id)) {
+            return 0.0;
         }
+
+        $short = 0.0;
 
         foreach ($calculated->deductedByYear() as $year => $days) {
             $available = $this->balances->available($employee, $leaveType, $year);
-
-            if ($days > $available + 1e-6) {
-                abort(422, sprintf(
-                    'This request needs %.1f day(s) of %s in %d, but only %.1f day(s) remain.',
-                    $days,
-                    $leaveType->name,
-                    $year,
-                    max($available, 0),
-                ));
-            }
+            $short += max(0.0, $days - max($available, 0.0));
         }
+
+        return round($short, 1);
+    }
+
+    public function available(Employee $employee, LeaveType $leaveType, int $year): float
+    {
+        return $this->balances->available($employee, $leaveType, $year);
     }
 
     /**
@@ -132,7 +131,8 @@ class LeaveEngine
                 'carried_forward' => $summary['carried_forward'],
                 'adjustment_days' => $summary['adjustment'],
                 'used_days' => $summary['taken'],
-                'remaining_days' => $summary['available'],
+                // Unpaid leave has no entitlement, so it never shows a negative balance.
+                'remaining_days' => $leaveType->is_paid ? $summary['available'] : 0,
                 'rule_snapshot' => $this->policy->snapshot($leaveType->id),
                 'calculated_at' => Carbon::now(),
             ],

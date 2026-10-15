@@ -131,7 +131,10 @@ export default function LeaveDayBreakdown({ preview, loading, error, leaveTypeNa
                 </div>
             )}
 
-            {shortfall.length > 0 && (
+            {/* When the server reports shortfall_days the request can still be
+                submitted (HR settles the excess), so the form shows its own
+                amber notice instead of this "will be rejected" one. */}
+            {shortfall.length > 0 && preview.shortfall_days === undefined && (
                 <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700 ring-1 ring-red-200">
                     This request needs more days than remain
                     {shortfall.length === 1 && years.length > 1 ? ` in ${shortfall[0][0]}` : ''}. It will be

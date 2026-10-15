@@ -61,6 +61,7 @@ import LeaveList from '@/pages/hr/leave/LeaveList';
 import LeaveRequestForm from '@/pages/hr/leave/LeaveRequestForm';
 import LeaveApproval from '@/pages/hr/leave/LeaveApproval';
 import LeaveBalance from '@/pages/hr/leave/LeaveBalance';
+import LeaveRecord from '@/pages/hr/leave/LeaveRecord';
 import PublicHolidays from '@/pages/hr/leave/PublicHolidays';
 import MyLeave from '@/pages/hr/leave/MyLeave';
 import Training from '@/pages/hr/training/Training';
@@ -226,6 +227,7 @@ function AppRoutes() {
                     {/* HR — Leave: org-wide management (managers/HR only) */}
                     <Route element={<PermissionGate permission="leave.manage" />}>
                         <Route path="/hr/leave" element={<LeaveList />} />
+                        <Route path="/hr/leave/record" element={<LeaveRecord />} />
                         <Route path="/hr/leave/balances" element={<LeaveBalance />} />
                         <Route path="/hr/leave/holidays" element={<PublicHolidays />} />
                     </Route>

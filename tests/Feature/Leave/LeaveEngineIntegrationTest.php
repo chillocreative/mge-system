@@ -134,22 +134,23 @@ class LeaveEngineIntegrationTest extends TestCase
         $this->assertSame(3, LeaveDay::where('leave_request_id', $request->id)->where('is_deducted', false)->count());
     }
 
-    public function test_a_request_exceeding_the_balance_is_refused(): void
+    public function test_a_request_exceeding_the_balance_is_accepted_and_the_shortfall_is_flagged(): void
     {
         config(['leave.engine_enabled' => true]);
 
         $employee = $this->employee(['hire_date' => '2026-01-01']); // <2y tier: 14 days
 
-        $this->expectException(HttpException::class);
-        $this->expectExceptionMessage('only');
-
-        // Far more working days than the 14-day entitlement.
-        $this->service()->apply([
+        // Far more working days than the 14-day entitlement: HR decides at recording whether the
+        // excess is unpaid, so the request itself is no longer refused.
+        $request = $this->service()->apply([
             'employee_id' => $employee->id,
             'leave_type_id' => $this->annual()->id,
             'start_date' => '2026-03-02',
             'end_date' => '2026-04-30',
         ], $this->actor()->id);
+
+        $this->assertSame('pending', $request->status);
+        $this->assertEqualsWithDelta((float) $request->days_count - 14.0, (float) $request->shortfall_days, 0.01);
     }
 
     public function test_a_second_pending_request_is_measured_against_the_first(): void
@@ -167,16 +168,16 @@ class LeaveEngineIntegrationTest extends TestCase
             'end_date' => '2026-03-13',
         ], $actor->id);
 
-        // Another 5 working days would need 5 but only 4 remain. Without pending
-        // being counted, both would be approved and the employee would overdraw
-        // (plan 8.4).
-        $this->expectException(HttpException::class);
-        $this->service()->apply([
+        // Another 5 working days would need 5 but only 4 remain. Pending requests still count
+        // against the balance (plan 8.4), so the second one is flagged as 1 day over.
+        $second = $this->service()->apply([
             'employee_id' => $employee->id,
             'leave_type_id' => $this->annual()->id,
             'start_date' => '2026-03-16',
             'end_date' => '2026-03-20',
         ], $actor->id);
+
+        $this->assertEqualsWithDelta(1.0, (float) $second->shortfall_days, 0.01);
     }
 
     public function test_a_required_supporting_document_is_enforced(): void

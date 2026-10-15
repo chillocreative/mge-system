@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\Employee;
 use App\Models\User;
 use App\Services\ApprovalRouting;
+use App\Services\Leave\LeaveFiling;
 use Illuminate\Console\Command;
 
 class AuditApprovalRouting extends Command
@@ -14,7 +15,7 @@ class AuditApprovalRouting extends Command
 
     protected $description = 'Read-only: show who decides leave/training requests per department and what falls back to the Directors';
 
-    public function handle(ApprovalRouting $routing): int
+    public function handle(ApprovalRouting $routing, LeaveFiling $filing): int
     {
         $roster = $routing->roster();
         $users = User::pluck('department_id', 'id');
@@ -66,6 +67,25 @@ class AuditApprovalRouting extends Command
         $pmWithoutDepartment = collect($roster['projectManagers'])->filter(fn (int $id) => empty($roster['department'][$id]));
         if ($pmWithoutDepartment->isNotEmpty()) {
             $this->warn('Project Managers with no department (they cannot decide for any office): '.$pmWithoutDepartment->map(fn (int $id) => $names[$id] ?? "#{$id}")->implode(', '));
+        }
+
+        $clerks = $filing->siteClerks();
+        $this->line('Site Clerks: '.$clerks->count());
+
+        $clerkDepartments = $clerks->map(fn (User $u) => $filing->departmentOf($u))->filter()->unique();
+        $siteStaffByDepartment = Employee::where('status', 'active')->where('category', 'site')->get(['id', 'department_id', 'user_id'])
+            ->groupBy(fn (Employee $e) => $e->department_id ?: ($e->user_id ? ($users[$e->user_id] ?? null) : null) ?: 0);
+
+        foreach ($siteStaffByDepartment as $departmentId => $people) {
+            $label = $departmentId ? (Department::whereKey($departmentId)->value('name') ?? "#{$departmentId}") : 'no department';
+            if ($departmentId === 0 || ! $clerkDepartments->contains((int) $departmentId)) {
+                $this->warn("{$people->count()} site staff ({$label}) have no Site Clerk: HR has to file their leave.");
+            }
+        }
+
+        $clerksWithoutDepartment = $clerks->filter(fn (User $u) => ! $filing->departmentOf($u));
+        if ($clerksWithoutDepartment->isNotEmpty()) {
+            $this->warn('Site Clerks with no department (they cannot file for anyone): '.$clerksWithoutDepartment->map(fn (User $u) => $u->full_name)->implode(', '));
         }
 
         return self::SUCCESS;

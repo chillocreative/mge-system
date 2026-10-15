@@ -1050,6 +1050,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [LeaveController::class, 'index'])->middleware('permission:leave.view');
         Route::get('/balance', [LeaveController::class, 'balance'])->middleware('permission:leave.view');
         Route::get('/pending-approvals', [LeaveController::class, 'pendingApprovals'])->middleware('permission:leave.view');
+        Route::get('/fileable-employees', [LeaveController::class, 'fileableEmployees'])->middleware('permission:leave.request');
+        Route::get('/to-record', [LeaveController::class, 'toRecord'])->middleware('permission:leave.manage');
         Route::get('/my-employee', [LeaveController::class, 'myEmployee'])->middleware('permission:leave.request');
         Route::post('/', [LeaveController::class, 'store'])->middleware('permission:leave.request');
         // Preview the day breakdown before submitting; controller restricts a
@@ -1057,10 +1059,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/preview', [LeaveController::class, 'preview'])->middleware('permission:leave.request,leave.manage');
         Route::get('/{id}', [LeaveController::class, 'show'])->middleware('permission:leave.view');
         Route::get('/{id}/attachment', [LeaveController::class, 'downloadAttachment'])->middleware('permission:leave.view');
+        Route::get('/{id}/approval-proof', [LeaveController::class, 'downloadApprovalProof'])->middleware('permission:leave.view');
         // Gate is leave.view so designated per-type approvers (who may only hold the Employee
         // role) can reach the endpoint; LeaveService enforces stage-level authorization.
         Route::post('/{id}/approve', [LeaveController::class, 'approve'])->middleware('permission:leave.view');
         Route::post('/{id}/reject', [LeaveController::class, 'reject'])->middleware('permission:leave.view');
+        Route::post('/{id}/record', [LeaveController::class, 'record'])->middleware('permission:leave.manage');
         Route::post('/{id}/cancel', [LeaveController::class, 'cancel'])->middleware('permission:leave.request');
     });
     Route::prefix('leave-types')->group(function () {

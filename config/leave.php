@@ -40,4 +40,33 @@ return [
 
     'holiday_state' => env('LEAVE_HOLIDAY_STATE', 'Penang'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Advance Notice
+    |--------------------------------------------------------------------------
+    |
+    | Minimum days between applying and the first day of leave, by leave type
+    | code. Annual leave is applied for on a form at least 3 days ahead; other
+    | types (medical, emergency) are not bound by it. HR (leave.manage) may file
+    | an exception with a stated reason.
+    |
+    */
+
+    'notice_days' => [
+        'AL' => (int) env('LEAVE_ANNUAL_NOTICE_DAYS', 3),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Site Clerk
+    |--------------------------------------------------------------------------
+    |
+    | Designation (case-insensitive) of the clerk who files leave for the site
+    | staff of their department and records approvals received by email or
+    | WhatsApp.
+    |
+    */
+
+    'site_clerk_designation' => 'site clerk',
+
 ];

@@ -46,6 +46,26 @@ const leaveService = {
         const response = await apiClient.get('/leaves/my-employee');
         return response.data;
     },
+    // Staff the current user may file leave for, plus what else the form allows
+    // (notice exception, recording an approval received outside the system).
+    async fileableEmployees() {
+        const response = await apiClient.get('/leaves/fileable-employees');
+        return response.data;
+    },
+    // HR: approved requests waiting to be recorded.
+    async toRecord(params = {}) {
+        const response = await apiClient.get('/leaves/to-record', { params });
+        return response.data;
+    },
+    // HR: record an approved request. data.unpaid = 'none' | 'all' | 'excess'.
+    async record(id, data = {}) {
+        const response = await apiClient.post(`/leaves/${id}/record`, data);
+        return response.data;
+    },
+    // Same-origin download link for the proof of an approval given outside the system.
+    approvalProofUrl(id) {
+        return `/api/leaves/${id}/approval-proof`;
+    },
 
     // ── Leave Types ──
     async listTypes() {

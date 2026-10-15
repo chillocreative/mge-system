@@ -233,7 +233,7 @@ class DepartmentApprovalTest extends TestCase
 
         $this->actingAs($manager)->postJson("/api/leaves/{$request->id}/approve")->assertOk();
 
-        Notification::assertSentTo($hr, LeaveStatusNotification::class, fn ($n) => $n->toArray($hr)['action_type'] === 'leave_info_approved');
+        Notification::assertSentTo($hr, LeaveStatusNotification::class, fn ($n) => $n->toArray($hr)['action_type'] === 'leave_info_to_record');
         Notification::assertSentTo($staff->user, LeaveStatusNotification::class, fn ($n) => $n->toArray($staff->user)['action_type'] === 'leave_approved');
     }
 

@@ -7,15 +7,21 @@ use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Services\Leave\LeaveEngine;
+use App\Services\Leave\LeaveFiling;
 use App\Services\LeaveService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class LeaveController extends Controller
 {
     public function __construct(
         private LeaveService $leaveService,
         private LeaveEngine $engine,
+        private LeaveFiling $filing,
     ) {}
 
     // ── Leave Requests ──
@@ -24,8 +30,11 @@ class LeaveController extends Controller
     {
         $filters = $request->only(['employee_id', 'status', 'leave_type_id']);
 
-        // Restrict non-HR users to their own employee record only
-        if (! $request->user()->can('leave.manage')) {
+        if ($request->boolean('filed_by_me')) {
+            // What this user filed (a Site Clerk's filings for site staff).
+            $filters = array_merge(Arr::only($filters, ['status', 'leave_type_id']), ['created_by' => $request->user()->id]);
+        } elseif (! $request->user()->can('leave.manage')) {
+            // Restrict non-HR users to their own employee record only
             $filters['employee_id'] = Employee::where('user_id', $request->user()->id)->value('id') ?: 0;
         }
 
@@ -44,7 +53,28 @@ class LeaveController extends Controller
             'half_day' => ['nullable', 'boolean'],
             'reason' => ['nullable', 'string'],
             'attachment' => ['nullable', 'file', 'extensions:pdf,jpg,jpeg,png', 'max:1048576'],
+            // An approval the head/PM gave by email, WhatsApp or a signed form, recorded by the Site Clerk or HR.
+            'approved_offline' => ['nullable', 'boolean'],
+            'offline_approver_name' => [Rule::requiredIf(fn () => $request->boolean('approved_offline')), 'nullable', 'string', 'max:255'],
+            'offline_approval_note' => ['nullable', 'string', 'max:255'],
+            'approval_proof' => [Rule::requiredIf(fn () => $request->boolean('approved_offline')), 'nullable', 'file', 'extensions:pdf,jpg,jpeg,png', 'max:20480'],
+            'notice_override_reason' => ['nullable', 'string', 'max:500'],
         ]);
+
+        $user = $request->user();
+        $filedFor = Employee::findOrFail($validated['employee_id']);
+
+        abort_unless($this->filing->canFileFor($user, $filedFor), 403, 'You cannot file leave for this employee.');
+
+        $offline = $request->boolean('approved_offline');
+        if ($offline) {
+            abort_unless($this->filing->canRecordOfflineApproval($user, $filedFor), 403, 'Only HR or the Site Clerk can record an approval received outside the system.');
+        } else {
+            unset($validated['offline_approver_name'], $validated['offline_approval_note']);
+        }
+        $validated['approved_offline'] = $offline;
+
+        $this->enforceNotice($user, $validated);
 
         // Maternity leave is only available to female staff.
         $type = LeaveType::find($validated['leave_type_id']);
@@ -56,9 +86,10 @@ class LeaveController extends Controller
         }
 
         $attachment = $request->file('attachment');
-        unset($validated['attachment']);
+        $approvalProof = $request->file('approval_proof');
+        unset($validated['attachment'], $validated['approval_proof']);
 
-        $leave = $this->leaveService->apply($validated, $request->user()->id, $attachment);
+        $leave = $this->leaveService->apply($validated, $user->id, $attachment, $approvalProof);
 
         return $this->created($leave, 'Leave request submitted successfully.');
     }
@@ -92,10 +123,9 @@ class LeaveController extends Controller
         $employee = Employee::findOrFail($validated['employee_id']);
         $leaveType = LeaveType::findOrFail($validated['leave_type_id']);
 
-        // An employee may only preview their own leave unless they administer it.
-        $actor = $request->user();
-        if (! $actor->can('leave.manage') && $employee->user_id !== $actor->id) {
-            return $this->forbidden('You can only preview your own leave.');
+        // Only for someone the user may file leave for.
+        if (! $this->filing->canFileFor($request->user(), $employee)) {
+            return $this->forbidden('You can only preview leave you may file.');
         }
 
         if (! $this->engine->enabled()) {
@@ -116,6 +146,7 @@ class LeaveController extends Controller
             'calendar_days' => $calculated->calendarDays(),
             'deducted_days' => $calculated->totalDeducted(),
             'deducted_by_year' => $byYear,
+            'shortfall_days' => $this->engine->shortfall($employee, $leaveType, $calculated),
             'spans_multiple_years' => $calculated->spansMultipleYears(),
             'exclusions' => $calculated->exclusions(),
             'days' => $calculated->days,
@@ -181,6 +212,75 @@ class LeaveController extends Controller
     }
 
     /**
+     * Employees the current user may file leave for (themselves; HR: anyone; Site Clerk: their
+     * department's site staff), and what else they may do on the form.
+     */
+    public function fileableEmployees(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        return $this->success([
+            'employees' => $this->filing->fileableEmployees($user)->map(fn (Employee $e) => [
+                'id' => $e->id,
+                'employee_no' => $e->employee_no,
+                'name' => $e->full_name,
+                'category' => $e->category,
+                'is_self' => (int) $e->user_id === (int) $user->id,
+            ])->values(),
+            'can_override_notice' => $user->can('leave.manage'),
+            'can_record_offline_approval' => $user->can('leave.manage') || $this->filing->isSiteClerk($user),
+            'notice_days' => config('leave.notice_days'),
+        ]);
+    }
+
+    /**
+     * Approved leave waiting for HR to record.
+     */
+    public function toRecord(Request $request): JsonResponse
+    {
+        return $this->success($this->leaveService->toRecord(min($request->integer('per_page', 15), 100)));
+    }
+
+    /**
+     * HR records an approved request; unpaid = none | all | excess when the balance does not cover it.
+     */
+    public function record(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate(['unpaid' => ['nullable', 'in:none,all,excess']]);
+
+        return $this->success(
+            $this->leaveService->record($id, $request->user(), $validated['unpaid'] ?? 'none'),
+            'Leave recorded.'
+        );
+    }
+
+    /**
+     * Annual leave is applied for at least N days before it starts (config leave.notice_days).
+     * HR may file an exception, but must say why.
+     */
+    private function enforceNotice($user, array &$validated): void
+    {
+        $type = LeaveType::find($validated['leave_type_id']);
+        $noticeDays = $type ? (config('leave.notice_days')[$type->code] ?? null) : null;
+
+        if (! $noticeDays || ! Carbon::parse($validated['start_date'])->lt(Carbon::today()->addDays($noticeDays))) {
+            unset($validated['notice_override_reason']);
+
+            return;
+        }
+
+        $field = 'start_date';
+
+        if (! $user->can('leave.manage')) {
+            throw ValidationException::withMessages([$field => ["{$type->name} must be applied for at least {$noticeDays} days before it starts."]]);
+        }
+
+        if (empty($validated['notice_override_reason'])) {
+            throw ValidationException::withMessages(['notice_override_reason' => ["This is less than {$noticeDays} days' notice. State the reason for the exception."]]);
+        }
+    }
+
+    /**
      * The employee record linked to the current user (for self-service submission).
      */
     public function myEmployee(Request $request): JsonResponse
@@ -234,6 +334,16 @@ class LeaveController extends Controller
         $this->leaveService->getForViewer($request->user(), $id);
 
         return $this->leaveService->downloadAttachment($id);
+    }
+
+    /**
+     * The proof of an approval received outside the system; same visibility as the request.
+     */
+    public function downloadApprovalProof(Request $request, int $id)
+    {
+        $this->leaveService->getForViewer($request->user(), $id);
+
+        return $this->leaveService->downloadApprovalProof($id);
     }
 
     // ── Leave Types ──

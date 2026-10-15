@@ -280,6 +280,11 @@ export default function LeaveList() {
                                             <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[req.status]}`}>
                                                 {statusLabel(req)}
                                             </span>
+                                            {req.status === 'approved' && (
+                                                <span className={`ml-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${req.recorded_at ? 'bg-green-50 text-green-700 ring-1 ring-green-200' : 'bg-amber-100 text-amber-700'}`}>
+                                                    {req.recorded_at ? 'Recorded' : 'To record'}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right">
                                             {(req.status === 'pending' || req.status === 'approved') && can('leave.request') && (

@@ -98,6 +98,7 @@ const navigation = [
             { name: 'My Leave', href: '/leave/my', icon: HiOutlineCalendar, permission: 'leave.request' },
             { name: 'Leave Approvals', href: '/hr/leave/approvals', icon: HiOutlineClipboardCheck, permission: 'leave.approve' },
             { name: 'Leave (All)', href: '/hr/leave', icon: HiOutlineClipboardCheck, permission: 'leave.manage' },
+            { name: 'Leave to Record', href: '/hr/leave/record', icon: HiOutlineBadgeCheck, permission: 'leave.manage' },
             { name: 'Leave Balances', href: '/hr/leave/balances', icon: HiOutlineScale, permission: 'leave.manage' },
             { name: 'Public Holidays', href: '/hr/leave/holidays', icon: HiOutlineCalendar, permission: 'leave.manage' },
             { name: 'My Training', href: '/training/my', icon: HiOutlineAcademicCap, permission: 'training.request' },
