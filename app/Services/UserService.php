@@ -49,7 +49,7 @@ class UserService
         $user->assignRole($data['role']);
         $this->applyOrgRoleFlags($user, $data['role']);
         $this->applyRolePreset($user, $data['role']);
-        $this->grantProjectManagerAccess($user);
+        $this->syncProjectManagerAccess($user);
 
         return $user->load(['department', 'designation', 'reportsTo.designation', 'roles']);
     }
@@ -66,22 +66,34 @@ class UserService
         ]);
     }
 
-    /**
-     * A Project Manager decides leave and training for their office, so they must be able to open
-     * those pages whatever role template they were given (the "Projects" role has no leave access
-     * at all). Additive only; re-applied after a role change because that resets direct permissions.
-     */
-    private function grantProjectManagerAccess(User $user): void
+    private function isProjectManager(User $user): bool
     {
         $user->load('designation');
 
-        if (strtolower(trim((string) $user->designation?->name)) !== ApprovalRouting::PROJECT_MANAGER_DESIGNATION) {
+        return strtolower(trim((string) $user->designation?->name)) === ApprovalRouting::PROJECT_MANAGER_DESIGNATION;
+    }
+
+    /**
+     * A Project Manager decides leave and training for their office, so they must be able to open
+     * those pages whatever role template they were given (the "Projects" role has no leave access
+     * at all). Granted while the designation holds and re-applied after a role change (which resets
+     * direct permissions); withdrawn when the designation is changed away, except what the user's
+     * role template gives anyway. Approving itself never depends on these permissions.
+     */
+    private function syncProjectManagerAccess(User $user, bool $wasProjectManager = false): void
+    {
+        $existing = fn (array $names) => Permission::where('guard_name', 'web')->whereIn('name', $names)->pluck('name')->all();
+
+        if ($this->isProjectManager($user)) {
+            $user->givePermissionTo($existing(ApprovalRouting::APPROVER_PAGE_PERMISSIONS));
+
             return;
         }
 
-        $user->givePermissionTo(
-            Permission::where('guard_name', 'web')->whereIn('name', ApprovalRouting::APPROVER_PAGE_PERMISSIONS)->pluck('name')->all()
-        );
+        if ($wasProjectManager) {
+            $keep = RolePresets::for($user->roles()->pluck('name')->first());
+            $user->revokePermissionTo($existing(array_values(array_diff(ApprovalRouting::APPROVER_PAGE_PERMISSIONS, $keep))));
+        }
     }
 
     /**
@@ -97,6 +109,7 @@ class UserService
     {
         $user = $this->userRepository->findOrFail($id);
         $oldRole = $user->roles()->pluck('name')->first();
+        $wasProjectManager = $this->isProjectManager($user);
 
         $user = $this->userRepository->update($id, $data);
 
@@ -110,7 +123,7 @@ class UserService
             }
         }
 
-        $this->grantProjectManagerAccess($user);
+        $this->syncProjectManagerAccess($user, $wasProjectManager);
 
         return $user->load(['department', 'designation', 'reportsTo.designation', 'roles']);
     }
@@ -156,7 +169,7 @@ class UserService
         $user->syncRoles([$role]);
         $this->applyOrgRoleFlags($user, $role);
         $this->applyRolePreset($user, $role);
-        $this->grantProjectManagerAccess($user);
+        $this->syncProjectManagerAccess($user);
 
         $this->notifications->notify(
             $user,

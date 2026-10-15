@@ -362,4 +362,21 @@ class DepartmentApprovalTest extends TestCase
         }
         $this->assertFalse($bystander->fresh()->hasPermissionTo('leave.approve'));
     }
+
+    public function test_the_page_access_is_withdrawn_when_the_designation_changes_away_from_project_manager(): void
+    {
+        Role::findOrCreate('Employee', 'web');
+        $service = app(\App\Services\UserService::class);
+        $user = $this->user('Moving', $this->engineering, 'Employee', []);
+
+        $service->updateUser($user->id, ['designation_id' => Designation::firstOrCreate(['name' => 'Project Manager', 'department_id' => $this->engineering->id])->id]);
+        $this->assertTrue($user->fresh()->hasPermissionTo('leave.approve'));
+
+        $service->updateUser($user->id, ['designation_id' => Designation::firstOrCreate(['name' => 'Engineer', 'department_id' => $this->engineering->id])->id]);
+
+        $user = $user->fresh();
+        $this->assertFalse($user->hasPermissionTo('leave.approve'));
+        $this->assertFalse($user->hasPermissionTo('training.view'));
+        $this->assertTrue($user->hasPermissionTo('leave.view'), 'leave.view is part of the Employee template and must stay');
+    }
 }
