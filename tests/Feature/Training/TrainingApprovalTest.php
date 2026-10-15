@@ -3,6 +3,7 @@
 namespace Tests\Feature\Training;
 
 use App\Models\Department;
+use App\Models\Designation;
 use App\Models\Employee;
 use App\Models\TrainingRequest;
 use App\Models\User;
@@ -41,7 +42,7 @@ class TrainingApprovalTest extends TestCase
         $this->finance = Department::create(['name' => 'Finance', 'code' => 'FIN']);
     }
 
-    private function user(string $name, ?Department $department = null, ?string $role = null, array $permissions = ['training.view', 'training.request']): User
+    private function user(string $name, ?Department $department = null, ?string $role = null, array $permissions = ['training.view', 'training.request'], ?string $designation = null): User
     {
         $user = User::create([
             'first_name' => $name,
@@ -50,6 +51,7 @@ class TrainingApprovalTest extends TestCase
             'password' => bcrypt('secret'),
             'status' => 'active',
             'department_id' => $department?->id,
+            'designation_id' => $designation ? Designation::firstOrCreate(['name' => $designation, 'department_id' => ($department ?? $this->engineering)->id])->id : null,
         ]);
         $role && $user->assignRole($role);
         $user->givePermissionTo($permissions);
@@ -177,5 +179,25 @@ class TrainingApprovalTest extends TestCase
 
         $this->actingAs($manager)->postJson("/api/training/requests/{$request->id}/approve")->assertOk();
         $this->actingAs($manager)->postJson("/api/training/requests/{$request->id}/reject")->assertStatus(422);
+    }
+
+    public function test_a_project_manager_decides_the_heads_training_request_and_staff_ones_when_there_is_no_head(): void
+    {
+        $head = $this->user('EngHead', $this->engineering, 'Managers');
+        $pm = $this->user('EngPm', $this->engineering, null, ['training.view', 'training.request'], 'Project Manager');
+        $headRequest = $this->request($head);
+
+        $this->assertContains($headRequest->id, $this->listedIds($pm));
+        $this->actingAs($pm)->postJson("/api/training/requests/{$headRequest->id}/approve")
+            ->assertOk()->assertJsonPath('data.status', 'approved');
+
+        // A department that has no head: the Project Manager decides its staff.
+        $financePm = $this->user('FinPm', $this->finance, null, ['training.view', 'training.request'], 'Project Manager');
+        $staffRequest = $this->request($this->user('FinStaff', $this->finance));
+        $this->actingAs($financePm)->postJson("/api/training/requests/{$staffRequest->id}/reject")->assertOk();
+
+        // ...but not while the department has a head.
+        $engRequest = $this->request($this->user('EngStaff', $this->engineering));
+        $this->actingAs($pm)->postJson("/api/training/requests/{$engRequest->id}/approve")->assertForbidden();
     }
 }

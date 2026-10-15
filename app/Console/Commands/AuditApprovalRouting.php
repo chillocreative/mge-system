@@ -20,7 +20,7 @@ class AuditApprovalRouting extends Command
         $users = User::pluck('department_id', 'id');
         $names = User::get(['id', 'first_name', 'last_name'])->mapWithKeys(fn (User $u) => [$u->id => $u->full_name]);
 
-        $this->line('Directors: '.count($roster['directors']).' | Managers: '.count($roster['managers']));
+        $this->line('Directors: '.count($roster['directors']).' | Managers: '.count($roster['managers']).' | Project Managers: '.count($roster['projectManagers']));
         if ($roster['directors'] === []) {
             $this->warn('No active Directors: requests that fall back to Directors have nobody to approve them.');
         }
@@ -34,13 +34,18 @@ class AuditApprovalRouting extends Command
                 ->filter(fn (int $id) => (int) ($roster['department'][$id] ?? 0) === (int) $department->id)
                 ->map(fn (int $id) => $names[$id] ?? "#{$id}");
 
+            $projectManagers = collect($roster['projectManagers'])
+                ->filter(fn (int $id) => (int) ($roster['department'][$id] ?? 0) === (int) $department->id)
+                ->map(fn (int $id) => $names[$id] ?? "#{$id}");
+
             $rows[] = [
                 $department->name,
                 $staff->get($department->id, collect())->count(),
-                $managers->isEmpty() ? 'NONE -> Directors decide' : $managers->implode(', '),
+                $managers->isEmpty() ? 'NONE -> Project Manager / Directors decide' : $managers->implode(', '),
+                $projectManagers->isEmpty() ? '-' : $projectManagers->implode(', '),
             ];
         }
-        $this->table(['Department', 'Staff', 'Managers who decide'], $rows);
+        $this->table(['Department', 'Staff', 'Department head who decides', 'Project Manager (for heads / no head)'], $rows);
 
         $noDepartment = $staff->get(0, collect())->count();
         if ($noDepartment > 0) {
@@ -50,6 +55,17 @@ class AuditApprovalRouting extends Command
         $managersWithoutDepartment = collect($roster['managers'])->filter(fn (int $id) => empty($roster['department'][$id]));
         if ($managersWithoutDepartment->isNotEmpty()) {
             $this->warn('Managers with no department (they cannot decide for anyone): '.$managersWithoutDepartment->map(fn (int $id) => $names[$id] ?? "#{$id}")->implode(', '));
+        }
+
+        $lacksAccess = User::whereIn('id', $roster['projectManagers'])->get()
+            ->filter(fn (User $u) => array_diff(ApprovalRouting::APPROVER_PAGE_PERMISSIONS, $u->getAllPermissions()->pluck('name')->all()) !== []);
+        if ($lacksAccess->isNotEmpty()) {
+            $this->warn('Project Managers who cannot open the leave/training approval pages (missing '.implode(', ', ApprovalRouting::APPROVER_PAGE_PERMISSIONS).'): '.$lacksAccess->map(fn (User $u) => $u->full_name)->implode(', '));
+        }
+
+        $pmWithoutDepartment = collect($roster['projectManagers'])->filter(fn (int $id) => empty($roster['department'][$id]));
+        if ($pmWithoutDepartment->isNotEmpty()) {
+            $this->warn('Project Managers with no department (they cannot decide for any office): '.$pmWithoutDepartment->map(fn (int $id) => $names[$id] ?? "#{$id}")->implode(', '));
         }
 
         return self::SUCCESS;

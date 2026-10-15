@@ -7,6 +7,7 @@ use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Support\RolePresets;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Permission;
 
 class UserService
 {
@@ -48,6 +49,7 @@ class UserService
         $user->assignRole($data['role']);
         $this->applyOrgRoleFlags($user, $data['role']);
         $this->applyRolePreset($user, $data['role']);
+        $this->grantProjectManagerAccess($user);
 
         return $user->load(['department', 'designation', 'reportsTo.designation', 'roles']);
     }
@@ -62,6 +64,24 @@ class UserService
             'is_manager' => $role === 'Managers',
             'is_director' => $role === 'Directors',
         ]);
+    }
+
+    /**
+     * A Project Manager decides leave and training for their office, so they must be able to open
+     * those pages whatever role template they were given (the "Projects" role has no leave access
+     * at all). Additive only; re-applied after a role change because that resets direct permissions.
+     */
+    private function grantProjectManagerAccess(User $user): void
+    {
+        $user->load('designation');
+
+        if (strtolower(trim((string) $user->designation?->name)) !== ApprovalRouting::PROJECT_MANAGER_DESIGNATION) {
+            return;
+        }
+
+        $user->givePermissionTo(
+            Permission::where('guard_name', 'web')->whereIn('name', ApprovalRouting::APPROVER_PAGE_PERMISSIONS)->pluck('name')->all()
+        );
     }
 
     /**
@@ -89,6 +109,8 @@ class UserService
                 $this->applyRolePreset($user, $data['role']);
             }
         }
+
+        $this->grantProjectManagerAccess($user);
 
         return $user->load(['department', 'designation', 'reportsTo.designation', 'roles']);
     }
@@ -134,6 +156,7 @@ class UserService
         $user->syncRoles([$role]);
         $this->applyOrgRoleFlags($user, $role);
         $this->applyRolePreset($user, $role);
+        $this->grantProjectManagerAccess($user);
 
         $this->notifications->notify(
             $user,

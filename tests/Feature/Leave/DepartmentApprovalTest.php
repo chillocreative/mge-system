@@ -3,6 +3,7 @@
 namespace Tests\Feature\Leave;
 
 use App\Models\Department;
+use App\Models\Designation;
 use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
@@ -32,7 +33,7 @@ class DepartmentApprovalTest extends TestCase
         parent::setUp();
         config(['leave.engine_enabled' => false]);
 
-        foreach (['dashboard.view', 'leave.view', 'leave.request', 'leave.approve', 'leave.manage'] as $permission) {
+        foreach (['dashboard.view', 'leave.view', 'leave.request', 'leave.approve', 'leave.manage', 'training.view'] as $permission) {
             Permission::findOrCreate($permission, 'web');
         }
         foreach (['Managers', 'Directors', 'Admin & HR'] as $role) {
@@ -43,7 +44,7 @@ class DepartmentApprovalTest extends TestCase
         $this->finance = Department::create(['name' => 'Finance', 'code' => 'FIN']);
     }
 
-    private function user(string $name, ?Department $department = null, ?string $role = null, array $permissions = ['leave.view']): User
+    private function user(string $name, ?Department $department = null, ?string $role = null, array $permissions = ['leave.view'], ?string $designation = null): User
     {
         $user = User::create([
             'first_name' => $name,
@@ -52,6 +53,7 @@ class DepartmentApprovalTest extends TestCase
             'password' => bcrypt('secret'),
             'status' => 'active',
             'department_id' => $department?->id,
+            'designation_id' => $designation ? Designation::firstOrCreate(['name' => $designation, 'department_id' => ($department ?? $this->engineering)->id])->id : null,
         ]);
         $role && $user->assignRole($role);
         $user->givePermissionTo($permissions);
@@ -262,8 +264,102 @@ class DepartmentApprovalTest extends TestCase
 
         $this->artisan('approvals:audit')
             ->expectsOutputToContain('Directors: 1 | Managers: 1')
-            ->expectsOutputToContain('NONE -> Directors decide')
+            ->expectsOutputToContain('NONE -> Project Manager / Directors decide')
             ->expectsOutputToContain('1 staff record(s) have no department')
             ->assertSuccessful();
+    }
+
+    // ── Project Manager (designation) ──
+
+    public function test_a_project_manager_decides_the_department_heads_leave_but_not_another_offices(): void
+    {
+        $head = $this->user('EngHead', $this->engineering, 'Managers');
+        $pm = $this->user('EngPm', $this->engineering, null, ['leave.view'], 'Project Manager');
+        $otherPm = $this->user('FinPm', $this->finance, null, ['leave.view'], 'Project Manager');
+        $request = $this->pending($this->employeeOf($head));
+
+        $this->assertContains($request->id, $this->pendingIdsFor($pm));
+        $this->assertNotContains($request->id, $this->pendingIdsFor($otherPm));
+        $this->actingAs($otherPm)->postJson("/api/leaves/{$request->id}/approve")->assertForbidden();
+
+        $this->actingAs($pm)->postJson("/api/leaves/{$request->id}/approve")
+            ->assertOk()->assertJsonPath('data.status', 'approved');
+    }
+
+    public function test_a_project_manager_decides_staff_leave_when_the_department_has_no_head(): void
+    {
+        $pm = $this->user('EngPm', $this->engineering, null, ['leave.view'], 'Project Manager');
+        $request = $this->pending($this->employeeOf($this->user('EngStaff', $this->engineering)));
+
+        $this->assertContains($request->id, $this->pendingIdsFor($pm));
+        $this->actingAs($pm)->postJson("/api/leaves/{$request->id}/reject")->assertOk()->assertJsonPath('data.status', 'rejected');
+    }
+
+    public function test_a_project_manager_does_not_decide_staff_leave_while_the_department_has_a_head(): void
+    {
+        $this->user('EngHead', $this->engineering, 'Managers');
+        $pm = $this->user('EngPm', $this->engineering, null, ['leave.view'], 'Project Manager');
+        $request = $this->pending($this->employeeOf($this->user('EngStaff', $this->engineering)));
+
+        $this->assertNotContains($request->id, $this->pendingIdsFor($pm));
+        $this->actingAs($pm)->postJson("/api/leaves/{$request->id}/approve")->assertForbidden();
+    }
+
+    public function test_directors_can_still_decide_the_heads_leave_alongside_the_project_manager(): void
+    {
+        $head = $this->user('EngHead', $this->engineering, 'Managers');
+        $this->user('EngPm', $this->engineering, null, ['leave.view'], 'Project Manager');
+        $director = $this->user('Director', null, 'Directors');
+        $request = $this->pending($this->employeeOf($head));
+
+        $this->assertContains($request->id, $this->pendingIdsFor($director));
+    }
+
+    public function test_a_project_manager_is_recognised_from_the_hr_staff_record_designation(): void
+    {
+        $pmUser = $this->user('EngPm', $this->engineering);
+        $this->employeeOf($pmUser)->update(['designation_id' => Designation::firstOrCreate(['name' => 'Project Manager', 'department_id' => $this->engineering->id])->id]);
+        $request = $this->pending($this->employeeOf($this->user('EngStaff', $this->engineering)));
+
+        $this->assertContains($request->id, $this->pendingIdsFor($pmUser));
+    }
+
+    public function test_a_project_managers_own_leave_is_not_decided_by_themselves(): void
+    {
+        $pm = $this->user('EngPm', $this->engineering, null, ['leave.view'], 'Project Manager');
+        $peerPm = $this->user('EngPm2', $this->engineering, null, ['leave.view'], 'Project Manager');
+        $request = $this->pending($this->employeeOf($pm));
+
+        $this->actingAs($pm)->postJson("/api/leaves/{$request->id}/approve")->assertForbidden();
+        $this->assertContains($request->id, $this->pendingIdsFor($peerPm));
+    }
+
+    public function test_setting_the_project_manager_designation_grants_access_to_the_approval_pages(): void
+    {
+        $user = $this->user('Future', $this->engineering, null, []);
+        $this->assertFalse($user->can('leave.approve'));
+
+        app(\App\Services\UserService::class)->updateUser($user->id, ['designation_id' => Designation::firstOrCreate(['name' => 'Project Manager', 'department_id' => $this->engineering->id])->id]);
+
+        $user = $user->fresh();
+        $this->assertTrue($user->hasPermissionTo('leave.view'));
+        $this->assertTrue($user->hasPermissionTo('leave.approve'));
+        $this->assertTrue($user->hasPermissionTo('training.view'));
+    }
+
+    public function test_the_backfill_migration_gives_existing_project_managers_the_approval_page_access(): void
+    {
+        $byAccount = $this->user('ByAccount', $this->engineering, null, [], 'Project Manager');
+        $byStaffRecord = $this->user('ByStaff', $this->engineering, null, []);
+        $this->employeeOf($byStaffRecord)->update(['designation_id' => Designation::firstOrCreate(['name' => 'Project Manager', 'department_id' => $this->engineering->id])->id]);
+        $bystander = $this->user('Bystander', $this->engineering, null, []);
+
+        (require database_path('migrations/2026_10_16_000001_grant_leave_training_access_to_project_managers.php'))->up();
+
+        foreach ([$byAccount, $byStaffRecord] as $pm) {
+            $this->assertTrue($pm->fresh()->hasPermissionTo('leave.approve'));
+            $this->assertTrue($pm->fresh()->hasPermissionTo('training.view'));
+        }
+        $this->assertFalse($bystander->fresh()->hasPermissionTo('leave.approve'));
     }
 }

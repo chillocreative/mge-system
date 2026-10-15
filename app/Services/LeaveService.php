@@ -306,13 +306,14 @@ class LeaveService
     }
 
     /**
-     * Whether this user ever decides leave: a manager, a director, or the designated
-     * approver of a leave type. HR alone is not an approver.
+     * Whether this user ever decides leave: a manager, a director, a Project Manager, or the
+     * designated approver of a leave type. HR alone is not an approver.
      */
     public function isLeaveApprover(User $actor): bool
     {
         return $actor->isManagerApprover()
             || $actor->isDirectorApprover()
+            || $this->routing->isProjectManager($actor)
             || LeaveType::where('manager_approver_id', $actor->id)->orWhere('director_approver_id', $actor->id)->exists();
     }
 
