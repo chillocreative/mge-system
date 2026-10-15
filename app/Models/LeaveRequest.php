@@ -13,7 +13,7 @@ class LeaveRequest extends Model
         'current_approval_level', 'manager_approved_by', 'manager_approved_at',
         'director_approved_by', 'director_approved_at',
         'approved_offline', 'offline_approver_name', 'offline_approval_note', 'approval_proof_path',
-        'shortfall_days', 'notice_override_reason', 'recorded_by', 'recorded_at',
+        'shortfall_days', 'recorded_by', 'recorded_at',
         'original_leave_type_id', 'split_from_request_id',
     ];
 

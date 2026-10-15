@@ -12,7 +12,6 @@ use App\Services\LeaveService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -58,7 +57,6 @@ class LeaveController extends Controller
             'offline_approver_name' => [Rule::requiredIf(fn () => $request->boolean('approved_offline')), 'nullable', 'string', 'max:255'],
             'offline_approval_note' => ['nullable', 'string', 'max:255'],
             'approval_proof' => [Rule::requiredIf(fn () => $request->boolean('approved_offline')), 'nullable', 'file', 'extensions:pdf,jpg,jpeg,png', 'max:20480'],
-            'notice_override_reason' => ['nullable', 'string', 'max:500'],
         ]);
 
         $user = $request->user();
@@ -78,8 +76,6 @@ class LeaveController extends Controller
             unset($validated['offline_approver_name'], $validated['offline_approval_note']);
         }
         $validated['approved_offline'] = $offline;
-
-        $this->enforceNotice($user, $validated);
 
         // Maternity leave is only available to female staff.
         $type = LeaveType::find($validated['leave_type_id']);
@@ -232,7 +228,6 @@ class LeaveController extends Controller
                 'category' => $e->category,
                 'is_self' => (int) $e->user_id === (int) $user->id,
             ])->values(),
-            'can_override_notice' => $user->can('leave.manage'),
             'can_record_offline_approval' => $this->filing->isSiteClerk($user),
             'notice_days' => config('leave.notice_days'),
         ]);
@@ -257,32 +252,6 @@ class LeaveController extends Controller
             $this->leaveService->record($id, $request->user(), $validated['unpaid'] ?? 'none'),
             'Leave recorded.'
         );
-    }
-
-    /**
-     * Annual leave is applied for at least N days before it starts (config leave.notice_days).
-     * HR may file an exception, but must say why.
-     */
-    private function enforceNotice($user, array &$validated): void
-    {
-        $type = LeaveType::find($validated['leave_type_id']);
-        $noticeDays = $type ? (config('leave.notice_days')[$type->code] ?? null) : null;
-
-        if (! $noticeDays || ! Carbon::parse($validated['start_date'])->lt(Carbon::today()->addDays($noticeDays))) {
-            unset($validated['notice_override_reason']);
-
-            return;
-        }
-
-        $field = 'start_date';
-
-        if (! $user->can('leave.manage')) {
-            throw ValidationException::withMessages([$field => ["{$type->name} must be applied for at least {$noticeDays} days before it starts."]]);
-        }
-
-        if (empty($validated['notice_override_reason'])) {
-            throw ValidationException::withMessages(['notice_override_reason' => ["This is less than {$noticeDays} days' notice. State the reason for the exception."]]);
-        }
     }
 
     /**

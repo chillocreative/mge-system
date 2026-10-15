@@ -45,10 +45,9 @@ return [
     | Advance Notice
     |--------------------------------------------------------------------------
     |
-    | Minimum days between applying and the first day of leave, by leave type
-    | code. Annual leave is applied for on a form at least 3 days ahead; other
-    | types (medical, emergency) are not bound by it. HR (leave.manage) may file
-    | an exception with a stated reason.
+    | Days of notice leave is normally applied for, by leave type code. Annual
+    | leave is applied for on a form about 3 days ahead. This is a guideline shown
+    | on the form only: a later application is never blocked.
     |
     */
 

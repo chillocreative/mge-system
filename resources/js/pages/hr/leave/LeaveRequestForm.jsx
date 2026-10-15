@@ -14,11 +14,6 @@ const isoDate = (d) => {
     const pad = (n) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
-const todayPlus = (days) => {
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    return isoDate(d);
-};
 
 const inputClass = 'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500';
 const fileClass = 'w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-primary-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-700 hover:file:bg-primary-100';
@@ -50,7 +45,6 @@ export default function LeaveRequestForm() {
         half_day: false,
         reason: '',
         attachment: null,
-        notice_override_reason: '',
         approved_offline: false,
         offline_approver_name: '',
         offline_approval_note: '',
@@ -109,29 +103,17 @@ export default function LeaveRequestForm() {
     const isFemale = applyingEmployee?.gender === 'female';
     const visibleTypes = types.filter((t) => !genderKnown || isFemale || !/maternity/i.test(t.name || ''));
 
-    // Notice rule (e.g. Annual leave: 3 days ahead). Most people cannot file
-    // inside the window; HR can, but must say why.
+    // Guideline only (e.g. Annual leave: 3 days ahead); a later application is never blocked.
     const noticeDays = selectedType ? fileable?.notice_days?.[selectedType.code] : null;
-    const canOverrideNotice = !!fileable?.can_override_notice;
-    const noticeMin = noticeDays ? todayPlus(Number(noticeDays)) : null;
-    const needsOverrideReason = !!noticeMin && canOverrideNotice && !!form.start_date && form.start_date < noticeMin;
 
-    // A Site Clerk (or HR) recording an approval the head/PM gave outside the system.
+    // A Site Clerk recording an approval the head/PM gave outside the system.
     const showOffline = !!fileable?.can_record_offline_approval && !!selectedFileable && !selectedFileable.is_self;
     const offline = showOffline && form.approved_offline;
 
     const errorOf = (field) => fieldErrors[field]?.[0];
 
     const handleTypeChange = (typeId) => {
-        const type = types.find((t) => String(t.id) === String(typeId));
-        const days = type ? fileable?.notice_days?.[type.code] : null;
-        const min = days ? todayPlus(Number(days)) : null;
-        setForm((p) => ({
-            ...p,
-            leave_type_id: typeId,
-            // Move a too-early start date to the first allowed day (end date follows via the sync effect).
-            start_date: min && !canOverrideNotice && p.start_date < min ? min : p.start_date,
-        }));
+        setForm((p) => ({ ...p, leave_type_id: typeId }));
     };
 
     // Clear a chosen type that is no longer offered (e.g. after switching employee).
@@ -214,7 +196,6 @@ export default function LeaveRequestForm() {
             formData.append('half_day', form.half_day ? '1' : '0');
             if (form.reason) formData.append('reason', form.reason);
             if (form.attachment) formData.append('attachment', form.attachment);
-            if (needsOverrideReason) formData.append('notice_override_reason', form.notice_override_reason);
             if (offline) {
                 formData.append('approved_offline', '1');
                 formData.append('offline_approver_name', form.offline_approver_name);
@@ -318,12 +299,11 @@ export default function LeaveRequestForm() {
                                 value={form.start_date}
                                 onChange={(e) => setForm((p) => ({ ...p, start_date: e.target.value }))}
                                 required
-                                min={noticeMin && !canOverrideNotice ? noticeMin : undefined}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                             />
-                            {noticeDays && !canOverrideNotice && (
+                            {noticeDays && (
                                 <p className="mt-1 text-xs text-gray-500">
-                                    Annual leave must be applied for at least {noticeDays} days before it starts
+                                    Annual leave is normally applied for at least {noticeDays} days before it starts
                                 </p>
                             )}
                             {errorOf('start_date') && <p className="mt-1 text-xs text-red-600">{errorOf('start_date')}</p>}
@@ -363,25 +343,6 @@ export default function LeaveRequestForm() {
                     {Number(preview?.shortfall_days) > 0 && (
                         <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-700 ring-1 ring-amber-200">
                             This request goes {Number(preview.shortfall_days)} day(s) over the balance. You can still submit; HR will decide when recording whether the excess is unpaid leave.
-                        </div>
-                    )}
-
-                    {needsOverrideReason && (
-                        <div>
-                            <label className="mb-1 block text-sm font-medium text-gray-700">
-                                Reason for short-notice exception <span className="text-red-500">*</span>
-                            </label>
-                            <textarea
-                                rows={2}
-                                required
-                                value={form.notice_override_reason}
-                                onChange={(e) => setForm((p) => ({ ...p, notice_override_reason: e.target.value }))}
-                                className={inputClass}
-                            />
-                            <p className="mt-1 text-xs text-gray-500">
-                                This starts less than {noticeDays} days from today. Say why it is being filed late.
-                            </p>
-                            {errorOf('notice_override_reason') && <p className="mt-1 text-xs text-red-600">{errorOf('notice_override_reason')}</p>}
                         </div>
                     )}
 

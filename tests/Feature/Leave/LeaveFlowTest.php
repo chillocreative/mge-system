@@ -105,38 +105,16 @@ class LeaveFlowTest extends TestCase
         ] + $extra;
     }
 
-    // ── 3 days' notice ──
+    // ── Notice is a guideline, never a block ──
 
-    public function test_annual_leave_must_be_applied_for_three_days_ahead(): void
+    public function test_annual_leave_applied_with_short_notice_is_not_blocked(): void
     {
         $staff = $this->user('Staff', $this->hq);
         $employee = $this->employee($staff);
 
-        $this->actingAs($staff)->postJson('/api/leaves', $this->body($employee, 'AL', 2))
-            ->assertUnprocessable()->assertJsonValidationErrors('start_date');
-
-        $this->actingAs($staff)->postJson('/api/leaves', $this->body($employee, 'AL', 3))->assertCreated();
-    }
-
-    public function test_other_leave_types_are_not_bound_by_the_notice_rule(): void
-    {
-        $staff = $this->user('Staff', $this->hq);
-
-        $this->actingAs($staff)->postJson('/api/leaves', $this->body($this->employee($staff), 'MC', 0))->assertCreated();
-    }
-
-    public function test_hr_may_file_a_short_notice_exception_only_with_a_reason(): void
-    {
-        $hr = $this->hr();
-        $employee = $this->employee($this->user('Staff', $this->hq));
-
-        $this->actingAs($hr)->postJson('/api/leaves', $this->body($employee, 'AL', 1))
-            ->assertUnprocessable()->assertJsonValidationErrors('notice_override_reason');
-
-        $response = $this->actingAs($hr)->postJson('/api/leaves', $this->body($employee, 'AL', 1, ['notice_override_reason' => 'Family emergency']))
-            ->assertCreated();
-
-        $this->assertSame('Family emergency', $response->json('data.notice_override_reason'));
+        foreach ([0, 1, 2, 3, 10] as $startInDays) {
+            $this->actingAs($staff)->postJson('/api/leaves', $this->body($employee, 'AL', $startInDays))->assertCreated();
+        }
     }
 
     // ── Who may file for whom ──
@@ -182,7 +160,6 @@ class LeaveFlowTest extends TestCase
         $clerkView = $this->actingAs($clerk)->getJson('/api/leaves/fileable-employees')->assertOk();
         $this->assertEqualsCanonicalizing([$own->id, $worker->id], array_column($clerkView->json('data.employees'), 'id'));
         $this->assertTrue($clerkView->json('data.can_record_offline_approval'));
-        $this->assertFalse($clerkView->json('data.can_override_notice'));
 
         $plainView = $this->actingAs($plain)->getJson('/api/leaves/fileable-employees')->assertOk();
         $this->assertSame([$plainEmployee->id], array_column($plainView->json('data.employees'), 'id'));

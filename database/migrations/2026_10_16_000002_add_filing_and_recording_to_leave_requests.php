@@ -15,9 +15,8 @@ return new class extends Migration
             $table->string('offline_approval_note')->nullable();
             $table->string('approval_proof_path')->nullable();
 
-            // Days beyond the balance at the time of filing, and the reason a short-notice request was allowed.
+            // Days beyond the balance at the time of filing.
             $table->decimal('shortfall_days', 5, 1)->default(0);
-            $table->text('notice_override_reason')->nullable();
 
             // HR's recording step: approved leave is "recorded" once HR has settled the balance.
             $table->foreignId('recorded_by')->nullable()->constrained('users')->nullOnDelete();
@@ -40,7 +39,7 @@ return new class extends Migration
             $table->dropConstrainedForeignId('recorded_by');
             $table->dropColumn([
                 'approved_offline', 'offline_approver_name', 'offline_approval_note', 'approval_proof_path',
-                'shortfall_days', 'notice_override_reason', 'recorded_at',
+                'shortfall_days', 'recorded_at',
             ]);
         });
     }

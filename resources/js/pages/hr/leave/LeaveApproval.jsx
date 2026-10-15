@@ -167,11 +167,6 @@ export default function LeaveApproval() {
                                                         Over balance by {Number(req.shortfall_days)} day(s)
                                                     </span>
                                                 )}
-                                                {req.notice_override_reason && (
-                                                    <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700">
-                                                        Short-notice exception: {req.notice_override_reason}
-                                                    </span>
-                                                )}
                                             </div>
                                             <div className="mt-2">
                                                 <p className="text-xs font-semibold uppercase text-gray-400">Calendar check</p>
