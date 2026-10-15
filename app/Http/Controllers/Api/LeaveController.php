@@ -68,7 +68,12 @@ class LeaveController extends Controller
 
         $offline = $request->boolean('approved_offline');
         if ($offline) {
-            abort_unless($this->filing->canRecordOfflineApproval($user, $filedFor), 403, 'Only HR or the Site Clerk can record an approval received outside the system.');
+            abort_unless($this->filing->canRecordOfflineApproval($user, $filedFor), 403, 'Only the Site Clerk can record an approval received outside the system, for site staff.');
+
+            // The approval on hand is the head/PM's; a type that also needs the Director cannot be closed that way.
+            if (LeaveType::whereKey($validated['leave_type_id'])->value('requires_director_approval')) {
+                throw ValidationException::withMessages(['approved_offline' => ['This leave type also needs Director approval, so it cannot be recorded as already approved. File it normally.']]);
+            }
         } else {
             unset($validated['offline_approver_name'], $validated['offline_approval_note']);
         }
@@ -228,7 +233,7 @@ class LeaveController extends Controller
                 'is_self' => (int) $e->user_id === (int) $user->id,
             ])->values(),
             'can_override_notice' => $user->can('leave.manage'),
-            'can_record_offline_approval' => $user->can('leave.manage') || $this->filing->isSiteClerk($user),
+            'can_record_offline_approval' => $this->filing->isSiteClerk($user),
             'notice_days' => config('leave.notice_days'),
         ]);
     }

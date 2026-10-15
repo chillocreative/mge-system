@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Notifications\LeaveStatusNotification;
 use App\Services\Leave\LeaveConflicts;
 use App\Services\Leave\LeaveEngine;
+use App\Services\Leave\LeaveFiling;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -71,6 +72,14 @@ class LeaveService
 
             $employee = Employee::findOrFail($data['employee_id']);
             $leaveType = LeaveType::findOrFail($data['leave_type_id']);
+
+            if (! empty($data['approved_offline'])) {
+                abort_unless(
+                    app(LeaveFiling::class)->canRecordOfflineApproval(User::findOrFail($userId), $employee),
+                    403,
+                    'Only the Site Clerk can record an approval received outside the system, for site staff.'
+                );
+            }
 
             $calculated = null;
 

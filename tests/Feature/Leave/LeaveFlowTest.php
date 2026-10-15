@@ -229,7 +229,7 @@ class LeaveFlowTest extends TestCase
             ->assertUnprocessable()->assertJsonValidationErrors(['offline_approver_name', 'approval_proof']);
     }
 
-    public function test_only_hr_or_the_site_clerk_may_record_an_offline_approval_and_never_for_themselves(): void
+    public function test_only_the_site_clerk_may_record_an_offline_approval_never_hr_nor_for_themselves(): void
     {
         $head = $this->user('Head', $this->hq, 'Managers');
         $headEmployee = $this->employee($head);
@@ -243,6 +243,43 @@ class LeaveFlowTest extends TestCase
             ->post('/api/leaves', $this->body($headEmployee, 'AL', 5, $offline + ['approval_proof' => $proof()]))->assertForbidden();
         $this->actingAs($clerk)->withHeader('Accept', 'application/json')
             ->post('/api/leaves', $this->body($clerkEmployee, 'AL', 5, $offline + ['approval_proof' => $proof()]))->assertForbidden();
+
+        // HR records and settles leave but has no approval power: it cannot create approved leave this way.
+        $worker = $this->employee(null, $this->site, 'site', 'Worker');
+        $this->actingAs($this->hr())->withHeader('Accept', 'application/json')
+            ->post('/api/leaves', $this->body($worker, 'AL', 5, $offline + ['approval_proof' => $proof()]))->assertForbidden();
+        $this->assertSame(0, LeaveRequest::where('approved_offline', true)->count());
+    }
+
+    public function test_an_offline_approval_cannot_close_a_leave_type_that_needs_the_director(): void
+    {
+        $clerk = $this->user('Clerk', $this->site, null, ['leave.view', 'leave.request'], 'Site Clerk');
+        $this->employee($clerk, $this->site);
+        $worker = $this->employee(null, $this->site, 'site', 'Worker');
+        $this->type('AL')->update(['requires_director_approval' => true]);
+
+        $this->actingAs($clerk)->withHeader('Accept', 'application/json')->post('/api/leaves', $this->body($worker, 'AL', 5, [
+            'approved_offline' => true,
+            'offline_approver_name' => 'Ir. Rahman',
+            'approval_proof' => UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'),
+        ]))->assertUnprocessable()->assertJsonValidationErrors('approved_offline');
+    }
+
+    public function test_the_service_refuses_an_offline_approval_from_anyone_but_a_site_clerk(): void
+    {
+        $head = $this->user('Head', $this->hq, 'Managers');
+        $employee = $this->employee($this->user('Staff', $this->hq));
+
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+
+        app(LeaveService::class)->apply([
+            'employee_id' => $employee->id,
+            'leave_type_id' => $this->type('AL')->id,
+            'start_date' => '2026-03-02',
+            'end_date' => '2026-03-03',
+            'approved_offline' => true,
+            'offline_approver_name' => 'Someone',
+        ], $head->id);
     }
 
     // ── Balance used up ──

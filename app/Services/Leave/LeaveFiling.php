@@ -72,7 +72,9 @@ class LeaveFiling
     }
 
     /**
-     * Recording an approval received outside the system: HR, or the Site Clerk for site staff.
+     * Recording an approval received outside the system (email, WhatsApp, signed form) is the Site
+     * Clerk's job, for the site staff they file for. HR deliberately cannot: HR records and settles
+     * leave but has no approval power, so it must not be able to create already-approved leave.
      * Never for one's own leave.
      */
     public function canRecordOfflineApproval(User $actor, Employee $employee): bool
@@ -81,7 +83,7 @@ class LeaveFiling
             return false;
         }
 
-        return $actor->can('leave.manage') || ($this->isSiteClerk($actor) && $this->canFileFor($actor, $employee));
+        return $this->isSiteClerk($actor) && $this->canFileFor($actor, $employee);
     }
 
     public function departmentOf(User $user): ?int
