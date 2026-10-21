@@ -95,7 +95,7 @@ class TrainingController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'category' => ['nullable', 'string', 'max:100'],
             'reason' => ['nullable', 'string'],
-            'preferred_date' => ['nullable', 'date'],
+            'preferred_date' => ['required', 'date_format:Y-m-d'],
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],
         ]);
 
@@ -131,12 +131,14 @@ class TrainingController extends Controller
     {
         $employee = $this->trainingService->myEmployee($request->user()->id);
 
+        $notice = $this->trainingService->noticeRules();
+
         if (! $employee) {
-            return $this->success(['employee' => null, 'records' => [], 'requests' => []]);
+            return $this->success(['employee' => null, 'records' => [], 'requests' => [], 'notice' => $notice]);
         }
 
         return $this->success(array_merge(
-            ['employee' => $employee],
+            ['employee' => $employee, 'notice' => $notice],
             $this->trainingService->myData($employee->id),
         ));
     }

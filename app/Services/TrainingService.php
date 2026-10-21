@@ -6,6 +6,7 @@ use App\Models\Employee;
 use App\Models\TrainingRecord;
 use App\Models\TrainingRequest;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
 
@@ -185,6 +186,27 @@ class TrainingService
         return $page;
     }
 
+    /**
+     * How far ahead of the training date a request has to be filed (HRDF needs 14 days).
+     * Dates are counted from today in the company's timezone, not the UTC app clock.
+     *
+     * @return array{min_days: int, recommended_days: int, hrdf_days: int, earliest_date: string, recommended_date: string}
+     */
+    public function noticeRules(): array
+    {
+        $today = Carbon::now(config('training.timezone'))->startOfDay();
+        $min = (int) config('training.min_notice_days');
+        $recommended = max($min, (int) config('training.recommended_notice_days'));
+
+        return [
+            'min_days' => $min,
+            'recommended_days' => $recommended,
+            'hrdf_days' => (int) config('training.hrdf_notice_days'),
+            'earliest_date' => $today->copy()->addDays($min)->toDateString(),
+            'recommended_date' => $today->copy()->addDays($recommended)->toDateString(),
+        ];
+    }
+
     public function createRequest(array $data, User $requester): TrainingRequest
     {
         $employee = Employee::where('user_id', $requester->id)->first();
@@ -192,6 +214,16 @@ class TrainingService
         if (! $employee) {
             throw ValidationException::withMessages([
                 'employee' => 'No employee profile is linked to your account. Please ask HR to link your staff record.',
+            ]);
+        }
+
+        $notice = $this->noticeRules();
+
+        if (empty($data['preferred_date']) || $data['preferred_date'] < $notice['earliest_date']) {
+            throw ValidationException::withMessages([
+                'preferred_date' => "Training must be requested at least {$notice['min_days']} days before the training date "
+                    ."(ideally {$notice['recommended_days']} days / 3 weeks) because the HRDF application needs {$notice['hrdf_days']} days. "
+                    .'The earliest date you can choose is '.Carbon::parse($notice['earliest_date'])->format('j M Y').'.',
             ]);
         }
 

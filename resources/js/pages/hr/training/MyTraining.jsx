@@ -25,6 +25,7 @@ export default function MyTraining() {
     const dragScrollRef1 = useDragScroll();
     const dragScrollRef2 = useDragScroll();
     const [requests, setRequests] = useState([]);
+    const [notice, setNotice] = useState(null);
     const [loading, setLoading] = useState(true);
     const [modal, setModal] = useState(false);
     const [form, setForm] = useState(emptyForm);
@@ -37,6 +38,7 @@ export default function MyTraining() {
                 setEmployee(r.data?.employee || null);
                 setRecords(r.data?.records || []);
                 setRequests(r.data?.requests || []);
+                setNotice(r.data?.notice || null);
             })
             .catch(() => {})
             .finally(() => setLoading(false));
@@ -53,7 +55,7 @@ export default function MyTraining() {
                 title: form.title,
                 category: form.category || null,
                 reason: form.reason || null,
-                preferred_date: form.preferred_date || null,
+                preferred_date: form.preferred_date,
                 estimated_cost: form.estimated_cost === '' ? null : Number(form.estimated_cost),
             });
             toast.success('Training request submitted');
@@ -192,6 +194,16 @@ export default function MyTraining() {
                                 <input type="text" required value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="e.g. Confined Space Safety" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                                 {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title[0]}</p>}
                             </div>
+                            {notice && (
+                                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                                    Apply at least <strong>{notice.min_days} days</strong> before the training date — ideally <strong>3 weeks ({notice.recommended_days} days)</strong> ahead. HRDF needs {notice.hrdf_days} days' notice, so earlier requests leave HR time to apply.
+                                </div>
+                            )}
+                            {notice && form.preferred_date >= notice.earliest_date && form.preferred_date < notice.recommended_date && (
+                                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                                    This is within the minimum notice but under 3 weeks away, so HR will have little time to lodge the HRDF application. Pick a later date if you can.
+                                </div>
+                            )}
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-gray-700">Category</label>
@@ -201,8 +213,9 @@ export default function MyTraining() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">Preferred Date</label>
-                                    <input type="date" value={form.preferred_date} onChange={(e) => setForm((p) => ({ ...p, preferred_date: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Training Date *</label>
+                                    <input type="date" required min={notice?.earliest_date} value={form.preferred_date} onChange={(e) => { setForm((p) => ({ ...p, preferred_date: e.target.value })); setErrors((p) => ({ ...p, preferred_date: undefined })); }} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                    {errors.preferred_date && <p className="mt-1 text-xs text-red-500">{errors.preferred_date[0]}</p>}
                                 </div>
                             </div>
                             <div>

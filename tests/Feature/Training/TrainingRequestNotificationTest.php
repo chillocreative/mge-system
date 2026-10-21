@@ -44,6 +44,11 @@ class TrainingRequestNotificationTest extends TestCase
         return $user;
     }
 
+    private function trainingDate(): string
+    {
+        return now('Asia/Kuala_Lumpur')->addDays(21)->toDateString();
+    }
+
     private function employee(User $user, string $number): Employee
     {
         return Employee::create([
@@ -66,7 +71,7 @@ class TrainingRequestNotificationTest extends TestCase
         $this->employee($user, 'EMP-NO-PERM');
 
         $this->actingAs($user)
-            ->postJson('/api/training/requests', ['title' => 'First Aid'])
+            ->postJson('/api/training/requests', ['title' => 'First Aid', 'preferred_date' => $this->trainingDate()])
             ->assertForbidden()
             ->assertJsonPath('message', 'You do not have permission to perform this action.');
     }
@@ -95,6 +100,7 @@ class TrainingRequestNotificationTest extends TestCase
             'title' => 'Confined Space Safety',
             'category' => 'Safety',
             'reason' => 'Required for site work',
+            'preferred_date' => $this->trainingDate(),
         ]);
 
         $response->assertCreated();
@@ -148,7 +154,7 @@ class TrainingRequestNotificationTest extends TestCase
         $requester = $this->user('Unlinked', ['training.request']);
 
         $this->actingAs($requester)
-            ->postJson('/api/training/requests', ['title' => 'First Aid'])
+            ->postJson('/api/training/requests', ['title' => 'First Aid', 'preferred_date' => $this->trainingDate()])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('employee');
 
