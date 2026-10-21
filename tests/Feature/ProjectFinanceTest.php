@@ -44,6 +44,22 @@ class ProjectFinanceTest extends TestCase
         $this->assertSame('Delay by 5 days', $claim->payment_timing);
     }
 
+    public function test_subcontractor_claim_list_filters_by_subcontractor_name(): void
+    {
+        $project = $this->project();
+        foreach ([['Lukman Rosli Resources', 1], ['SCL Services Sdn Bhd', 2], ['Lukman Trading', 3]] as [$name, $amount]) {
+            ProjectSubcontractorClaim::create(['project_id' => $project->id, 'subcontractor' => $name, 'amount' => $amount]);
+        }
+        $editor = $this->actor();
+
+        $amounts = fn (string $query) => collect($this->actingAs($editor)->getJson('/api/project-finance/subcontractor-claims?'.$query)->assertOk()->json('data.data'))->pluck('amount')->sort()->values()->all();
+
+        $this->assertSame(['1.00', '2.00', '3.00'], $amounts(''));
+        $this->assertSame(['1.00', '3.00'], $amounts('vendor=lukman'));
+        $this->assertSame(['2.00'], $amounts('vendor=SCL'));
+        $this->assertSame([], $amounts('vendor=nobody'));
+    }
+
     public function test_import_keeps_same_invoice_when_do_differs(): void
     {
         $s = new Spreadsheet;

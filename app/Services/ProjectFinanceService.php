@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ProjectBudget;
+use App\Models\ProjectClientClaim;
 use App\Models\ProjectExpense;
 use App\Models\ProjectSubcontractorClaim;
 use App\Models\ProjectVendorPayment;
@@ -17,7 +18,7 @@ class ProjectFinanceService
     // Dates before this are spreadsheet placeholders (e.g. 1900-01-01), never real finance dates.
     private const MIN_VALID_DATE = '2000-01-01';
 
-    private array $map = ['expenses' => ProjectExpense::class, 'budgets' => ProjectBudget::class, 'vendor-payments' => ProjectVendorPayment::class, 'subcontractor-claims' => ProjectSubcontractorClaim::class];
+    private array $map = ['expenses' => ProjectExpense::class, 'budgets' => ProjectBudget::class, 'vendor-payments' => ProjectVendorPayment::class, 'subcontractor-claims' => ProjectSubcontractorClaim::class, 'client-claims' => ProjectClientClaim::class];
 
     public function __construct(private MaterialService $materials) {}
 
@@ -28,7 +29,9 @@ class ProjectFinanceService
 
     public function list(string $resource, array $filters, int $perPage = 20)
     {
-        return $this->filteredQuery($resource, $filters)->with('project:id,name,code')->latest()->paginate($perPage);
+        $with = $resource === 'client-claims' ? ['project:id,name,code', 'client:id,company_name'] : ['project:id,name,code'];
+
+        return $this->filteredQuery($resource, $filters)->with($with)->latest()->paginate($perPage);
     }
 
     public function expenseSummary(array $filters): array
@@ -56,6 +59,12 @@ class ProjectFinanceService
         if (! empty($filters['vendor']) && in_array($resource, ['expenses', 'vendor-payments'], true)) {
             $q->where('vendor', 'like', '%'.$filters['vendor'].'%');
         }
+        if (! empty($filters['vendor']) && $resource === 'subcontractor-claims') {
+            $q->where('subcontractor', 'like', '%'.$filters['vendor'].'%');
+        }
+        if (! empty($filters['vendor']) && $resource === 'client-claims') {
+            $q->whereHas('client', fn ($c) => $c->withTrashed()->where('company_name', 'like', '%'.$filters['vendor'].'%'));
+        }
         if (! empty($filters['payment_method']) && $resource === 'expenses') {
             $q->where('payment_method', $filters['payment_method']);
         }
@@ -71,7 +80,7 @@ class ProjectFinanceService
         }
         $data['created_by'] = $userId;
 
-        return $this->model($resource)::create($data)->load('project:id,name,code');
+        return $this->model($resource)::create($data)->load($resource === 'client-claims' ? ['project:id,name,code', 'client:id,company_name'] : ['project:id,name,code']);
     }
 
     public function update(string $resource, int $id, array $data)
@@ -91,7 +100,7 @@ class ProjectFinanceService
         }
         $m->update($data);
 
-        return $m->fresh('project:id,name,code');
+        return $m->fresh($resource === 'client-claims' ? ['project:id,name,code', 'client:id,company_name'] : ['project:id,name,code']);
     }
 
     private function calculateManualExpense(array $data): array
@@ -134,6 +143,8 @@ class ProjectFinanceService
                 }
             } if ($model === ProjectSubcontractorClaim::class && ! empty($filters['vendor'])) {
                 $x->where('subcontractor', 'like', '%'.$filters['vendor'].'%');
+            } if ($model === ProjectClientClaim::class && ! empty($filters['vendor'])) {
+                $x->whereHas('client', fn ($c) => $c->withTrashed()->where('company_name', 'like', '%'.$filters['vendor'].'%'));
             }
 
             // A row with no valid date lands in the '' bucket (NULL period); it is reported separately
@@ -146,14 +157,17 @@ class ProjectFinanceService
         $actual = $q(ProjectExpense::class, $this->validDate('expense_date'), 'amount');
         // A claim is placed by the date it was submitted; when that is missing or invalid
         // (e.g. a 1900 placeholder from a spreadsheet) fall back to certified, then paid date.
-        $claims = $q(ProjectSubcontractorClaim::class, 'COALESCE('.implode(', ', array_map(fn ($c) => $this->validDate($c), ['submitted_date', 'certified_date', 'paid_date'])).')', 'certified_amount');
-        $months = collect($budget->keys())->merge($actual->keys())->merge($claims->keys())->reject(fn ($m) => $m === '')->unique()->sort()->values();
+        $claimDate = 'COALESCE('.implode(', ', array_map(fn ($c) => $this->validDate($c), ['submitted_date', 'certified_date', 'paid_date'])).')';
+        $claims = $q(ProjectSubcontractorClaim::class, $claimDate, 'certified_amount');
+        // Client claims are income (money the client owes the company), kept apart from the cost-side series.
+        $clientClaims = $q(ProjectClientClaim::class, $claimDate, 'certified_amount');
+        $months = collect($budget->keys())->merge($actual->keys())->merge($claims->keys())->merge($clientClaims->keys())->reject(fn ($m) => $m === '')->unique()->sort()->values();
 
-        $rows = $months->map(fn ($m) => ['month' => $m, 'budgeted_cost' => $budget[$m] ?? 0.0, 'actual_cost' => $actual[$m] ?? 0.0, 'certified_claims' => $claims[$m] ?? 0.0])->all();
+        $rows = $months->map(fn ($m) => ['month' => $m, 'budgeted_cost' => $budget[$m] ?? 0.0, 'actual_cost' => $actual[$m] ?? 0.0, 'certified_claims' => $claims[$m] ?? 0.0, 'client_claims' => $clientClaims[$m] ?? 0.0])->all();
 
         // Amounts that carry no usable date are still money: surface them as an explicit last row
         // (only when the report is not narrowed to a date range, which they could never match).
-        $undated = ['budgeted_cost' => $budget[''] ?? 0.0, 'actual_cost' => $actual[''] ?? 0.0, 'certified_claims' => $claims[''] ?? 0.0];
+        $undated = ['budgeted_cost' => $budget[''] ?? 0.0, 'actual_cost' => $actual[''] ?? 0.0, 'certified_claims' => $claims[''] ?? 0.0, 'client_claims' => $clientClaims[''] ?? 0.0];
         if (! $isDateFiltered && array_sum($undated) > 0) {
             $rows[] = ['month' => 'No date', 'undated' => true] + $undated;
         }

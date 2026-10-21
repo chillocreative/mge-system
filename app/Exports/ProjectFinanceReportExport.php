@@ -12,11 +12,11 @@ class ProjectFinanceReportExport implements FromArray, ShouldAutoSize, WithHeadi
 
     public function array(): array
     {
-        return array_map(fn ($row) => [$row['month'] ?? '', $row['budgeted_cost'] ?? 0, $row['actual_cost'] ?? 0, $row['certified_claims'] ?? 0], $this->rows);
+        return array_map(fn ($row) => [$row['month'] ?? '', $row['budgeted_cost'] ?? 0, $row['actual_cost'] ?? 0, $row['certified_claims'] ?? 0, $row['client_claims'] ?? 0], $this->rows);
     }
 
     public function headings(): array
     {
-        return ['Month', 'Budgeted Cost', 'Actual Cost', 'Certified Claims'];
+        return ['Month', 'Budgeted Cost', 'Actual Cost', 'Subcontractor Claims (Certified)', 'Client Claims (Certified)'];
     }
 }

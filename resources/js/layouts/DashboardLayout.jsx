@@ -9,6 +9,7 @@ import {
     HiOutlineUserGroup,
     HiOutlineOfficeBuilding,
     HiOutlineCurrencyDollar,
+    HiOutlineReceiptTax,
     HiOutlineShieldCheck,
     HiOutlineGlobe,
     HiOutlineMail,
@@ -60,6 +61,7 @@ const navigation = [
                 name: 'Project Finances', icon: HiOutlineDocumentText,
                 children: [
                     { name: 'Expenses', href: '/projects/finance/expenses', icon: HiOutlineDocumentText, permission: 'projects.view' },
+                    { name: 'Client Claims', href: '/projects/finance/client-claims', icon: HiOutlineReceiptTax, permission: 'projects.view' },
                     { name: 'Vendor Payments', href: '/projects/finance/vendor-payments', icon: HiOutlineCash, permission: 'projects.view' },
                     { name: 'Subcontractor Claims', href: '/projects/finance/subcontractor-claims', icon: HiOutlineClipboardCheck, permission: 'projects.view' },
                     { name: 'Budget', href: '/projects/finance/budgets', icon: HiOutlineCurrencyDollar, permission: 'projects.view' },
