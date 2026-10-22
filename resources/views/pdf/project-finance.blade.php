@@ -26,7 +26,7 @@
         </tbody>
     </table>
 @elseif ($resource === 'client-claims')
-    @php($columns = ['project' => 'Project', 'client' => 'Client', 'claim_no' => 'Claim No', 'invoice_no' => 'Invoice No', 'do_no' => 'DO No', 'submitted_date' => 'Submitted Date', 'certified_date' => 'Certified Date', 'paid_date' => 'Paid Date', 'amount' => 'Claim Amount (RM)', 'certified_amount' => 'Certified Amount (RM)'])
+    @php($columns = ['project' => 'Project', 'client' => 'Client', 'claim_no' => 'Claim No', 'invoice_no' => 'Invoice No', 'do_no' => 'DO No', 'submitted_date' => 'Submitted Date', 'certified_date' => 'Certified Date', 'voucher_no' => 'No. Baucar', 'paid_date' => 'Paid Date', 'amount' => 'Claim Amount (RM)', 'certified_amount' => 'Certified Amount (RM)'])
     <table>
         <thead><tr>@foreach ($columns as $label)<th>{{ $label }}</th>@endforeach</tr></thead>
         <tbody>
@@ -39,6 +39,7 @@
                 <td>{{ $row->do_no }}</td>
                 <td>{{ $row->submitted_date?->format('Y-m-d') }}</td>
                 <td>{{ $row->certified_date?->format('Y-m-d') }}</td>
+                <td>{{ $row->voucher_no }}</td>
                 <td>{{ $row->paid_date?->format('Y-m-d') }}</td>
                 <td>{{ $row->amount }}</td>
                 <td>{{ $row->certified_amount }}</td>

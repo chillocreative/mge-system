@@ -58,8 +58,9 @@ class ProjectClientClaimTest extends TestCase
 
         $this->actingAs($this->editor())->postJson('/api/project-finance/client-claims', [
             'project_id' => $project->id, 'client_id' => $client->id, 'claim_no' => 'CC-01', 'invoice_no' => 'INV-9', 'do_no' => 'DO-3',
-            'submitted_date' => '2026-10-01', 'certified_date' => '2026-10-10', 'paid_date' => '2026-10-20', 'amount' => 1500.50, 'certified_amount' => 1400,
+            'submitted_date' => '2026-10-01', 'certified_date' => '2026-10-10', 'voucher_no' => 'BC-0042', 'paid_date' => '2026-10-20', 'amount' => 1500.50, 'certified_amount' => 1400,
         ])->assertCreated()
+            ->assertJsonPath('data.voucher_no', 'BC-0042')
             ->assertJsonPath('data.client.company_name', 'Acme Berhad')
             ->assertJsonPath('data.project.name', 'Bridge')
             ->assertJsonPath('data.claim_no', 'CC-01')
@@ -67,7 +68,7 @@ class ProjectClientClaimTest extends TestCase
             ->assertJsonPath('data.certified_amount', '1400.00')
             ->assertJsonPath('data.payment_timing', 'Early by 11 days');
 
-        $this->assertDatabaseHas('project_client_claims', ['client_id' => $client->id, 'claim_no' => 'CC-01', 'status' => 'submitted', 'created_by' => User::latest('id')->value('id')]);
+        $this->assertDatabaseHas('project_client_claims', ['client_id' => $client->id, 'claim_no' => 'CC-01', 'voucher_no' => 'BC-0042', 'status' => 'submitted', 'created_by' => User::latest('id')->value('id')]);
         // It is a separate record type: nothing lands in subcontractor claims.
         $this->assertDatabaseCount('project_subcontractor_claims', 0);
     }
@@ -84,6 +85,19 @@ class ProjectClientClaimTest extends TestCase
             ->assertUnprocessable()->assertJsonValidationErrors('client_id');
 
         $this->assertDatabaseCount('project_client_claims', 0);
+    }
+
+    public function test_voucher_number_is_optional_and_limited_to_255_characters(): void
+    {
+        $editor = $this->editor();
+        $payload = ['project_id' => $this->project()->id, 'client_id' => $this->client()->id, 'amount' => 10];
+
+        $this->actingAs($editor)->postJson('/api/project-finance/client-claims', $payload)->assertCreated();
+        $this->actingAs($editor)->postJson('/api/project-finance/client-claims', $payload + ['voucher_no' => str_repeat('x', 256)])
+            ->assertUnprocessable()->assertJsonValidationErrors('voucher_no');
+
+        $this->assertDatabaseCount('project_client_claims', 1);
+        $this->assertNull(ProjectClientClaim::first()->voucher_no);
     }
 
     public function test_viewing_needs_projects_view_and_changing_needs_projects_edit(): void
@@ -112,8 +126,8 @@ class ProjectClientClaimTest extends TestCase
         $other = $this->client('Beta Sdn Bhd');
         $claim = ProjectClientClaim::create(['project_id' => $project->id, 'client_id' => $acme->id, 'amount' => 100]);
 
-        $this->actingAs($editor)->putJson("/api/project-finance/client-claims/{$claim->id}", ['client_id' => $other->id, 'certified_amount' => 80, 'certified_date' => '2026-11-02'])
-            ->assertOk()->assertJsonPath('data.client.company_name', 'Beta Sdn Bhd')->assertJsonPath('data.certified_amount', '80.00');
+        $this->actingAs($editor)->putJson("/api/project-finance/client-claims/{$claim->id}", ['client_id' => $other->id, 'certified_amount' => 80, 'certified_date' => '2026-11-02', 'voucher_no' => 'BC-0100'])
+            ->assertOk()->assertJsonPath('data.client.company_name', 'Beta Sdn Bhd')->assertJsonPath('data.certified_amount', '80.00')->assertJsonPath('data.voucher_no', 'BC-0100');
 
         $this->actingAs($editor)->deleteJson("/api/project-finance/client-claims/{$claim->id}")->assertOk();
         $this->assertDatabaseCount('project_client_claims', 0);
@@ -184,18 +198,19 @@ class ProjectClientClaimTest extends TestCase
     public function test_excel_export_lists_project_and_client_names(): void
     {
         $project = $this->project();
-        ProjectClientClaim::create(['project_id' => $project->id, 'client_id' => $this->client('Acme Berhad')->id, 'claim_no' => 'CC-7', 'submitted_date' => '2026-10-05', 'amount' => 1200, 'certified_amount' => 1100]);
+        ProjectClientClaim::create(['project_id' => $project->id, 'client_id' => $this->client('Acme Berhad')->id, 'claim_no' => 'CC-7', 'voucher_no' => 'BC-7', 'submitted_date' => '2026-10-05', 'amount' => 1200, 'certified_amount' => 1100]);
 
         $response = $this->actingAs($this->editor())->get('/api/project-finance/client-claims/export');
         $response->assertOk();
 
         $sheet = IOFactory::load($response->baseResponse->getFile()->getPathname())->getActiveSheet()->toArray();
 
-        $this->assertSame(['id', 'project', 'client', 'claim_no', 'invoice_no', 'do_no', 'submitted_date', 'certified_date', 'paid_date', 'amount', 'certified_amount', 'status', 'notes'], $sheet[0]);
+        $this->assertSame(['id', 'project', 'client', 'claim_no', 'invoice_no', 'do_no', 'submitted_date', 'certified_date', 'voucher_no', 'paid_date', 'amount', 'certified_amount', 'status', 'notes'], $sheet[0]);
         $this->assertSame('Bridge', $sheet[1][1]);
         $this->assertSame('Acme Berhad', $sheet[1][2]);
         $this->assertSame('CC-7', $sheet[1][3]);
         $this->assertSame('2026-10-05', $sheet[1][6]);
+        $this->assertSame('BC-7', $sheet[1][8]);
     }
 
     public function test_pdf_export_and_report_exports_render(): void

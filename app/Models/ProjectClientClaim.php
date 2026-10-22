@@ -9,7 +9,7 @@ class ProjectClientClaim extends Model
 {
     protected $appends = ['payment_timing'];
 
-    protected $fillable = ['project_id', 'client_id', 'claim_no', 'invoice_no', 'do_no', 'submitted_date', 'certified_date', 'paid_date', 'amount', 'certified_amount', 'status', 'notes', 'created_by'];
+    protected $fillable = ['project_id', 'client_id', 'claim_no', 'invoice_no', 'do_no', 'submitted_date', 'certified_date', 'voucher_no', 'paid_date', 'amount', 'certified_amount', 'status', 'notes', 'created_by'];
 
     protected function casts(): array
     {
