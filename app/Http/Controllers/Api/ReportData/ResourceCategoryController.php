@@ -52,6 +52,21 @@ class ResourceCategoryController extends Controller
         return $this->index($projectId, $request);
     }
 
+    // One name added from the site log form, so a new machinery type needs no trip to the category editor.
+    public function add(int $projectId, Request $request): JsonResponse
+    {
+        Project::findOrFail($projectId);
+        $validated = $request->validate([
+            'kind' => ['required', 'in:worker,machinery'],
+            'name' => ['required', 'string', 'max:100'],
+        ]);
+
+        return $this->success([
+            'name' => $this->categories->addName($projectId, $validated['kind'], $validated['name']),
+            'effective' => $this->categories->namesFor($projectId, $validated['kind']),
+        ], 'Added to the list.');
+    }
+
     public function seedDefaults(int $projectId, Request $request): JsonResponse
     {
         Project::findOrFail($projectId);

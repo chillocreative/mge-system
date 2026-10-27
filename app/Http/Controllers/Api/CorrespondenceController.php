@@ -9,6 +9,7 @@ use App\Models\CorrespondencePartyReview;
 use App\Models\ProjectCorrespondence;
 use App\Services\CorrespondenceService;
 use App\Services\CorrespondenceWorkflowService;
+use App\Support\DownloadFilename;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -258,7 +259,7 @@ class CorrespondenceController extends Controller
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.correspondence', ['c' => $c]);
 
-        return $pdf->download('correspondence-'.($c->reference_no ?: $c->id).'.pdf');
+        return $pdf->download('correspondence-'.DownloadFilename::safe((string) ($c->reference_no ?: $c->id), (string) $c->id).'.pdf');
     }
 
     /**

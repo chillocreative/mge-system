@@ -14,6 +14,7 @@ use App\Services\AssetService;
 use App\Services\FileUploadService;
 use App\Services\ReportData\ResourceCategoryService;
 use App\Services\SiteLogApprovalService;
+use App\Support\DownloadFilename;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -299,7 +300,7 @@ class SiteLogController extends Controller
             'logo' => $this->logoData(),
         ])->setPaper('a4');
 
-        return $pdf->download("site-log-report-{$project->code}-{$request->string('month')}.pdf");
+        return $pdf->download('site-log-report-'.DownloadFilename::safe((string) $project->code, 'project').'-'.$request->string('month').'.pdf');
     }
 
     private function logoData(): ?string

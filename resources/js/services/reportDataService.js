@@ -37,6 +37,7 @@ const reportDataService = {
     async deleteTest(projectId, id) { return (await apiClient.delete(p(projectId, `/tests/${id}`))).data; },
 
     async getCategories(projectId, kind) { return (await apiClient.get(p(projectId, '/resource-categories'), { params: { kind } })).data; },
+    async addCategory(projectId, kind, name) { return (await apiClient.post(p(projectId, '/resource-categories/add'), { kind, name })).data; },
     async replaceCategories(projectId, kind, rows) { return (await apiClient.put(p(projectId, `/resource-categories?kind=${kind}`), { kind, rows })).data; },
     async seedCategories(projectId, kind) { return (await apiClient.post(p(projectId, `/resource-categories/seed-defaults?kind=${kind}`))).data; },
 

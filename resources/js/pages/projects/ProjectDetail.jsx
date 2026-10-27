@@ -747,6 +747,8 @@ const WEATHER_CONDITIONS = [
     { value: 'clear', label: 'Clear / Sunny (Cerah)' },
 ];
 const weatherConditionLabel = (v) => WEATHER_CONDITIONS.find((c) => c.value === v)?.label || v;
+const NEW_TYPE_OPTION = '__new_type__';
+
 const emptySiteLogForm = () => ({
     log_date: new Date().toISOString().split('T')[0],
     site_id: '',
@@ -774,6 +776,9 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
 
     const [workerTypes, setWorkerTypes] = useState(WORKER_TYPES);
     const [machineryTypes, setMachineryTypes] = useState(MACHINERY_TYPES);
+    const [addingTypeRow, setAddingTypeRow] = useState(null);
+    const [newTypeName, setNewTypeName] = useState('');
+    const [savingType, setSavingType] = useState(false);
 
     useEffect(() => {
         projectSiteService.list(project.id, true).then((r) => setSites(r.data || [])).catch(() => setSites([]));
@@ -814,8 +819,27 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
     };
 
     const addMachinery = () => setForm((p) => ({ ...p, machinery: [...p.machinery, { machinery_type: machineryTypes[0], quantity: 1 }] }));
-    const removeMachinery = (idx) => setForm((p) => ({ ...p, machinery: p.machinery.filter((_, i) => i !== idx) }));
+    const removeMachinery = (idx) => { setAddingTypeRow(null); setForm((p) => ({ ...p, machinery: p.machinery.filter((_, i) => i !== idx) })); };
     const updateMachinery = (idx, field, value) => setForm((p) => ({ ...p, machinery: p.machinery.map((m, i) => i === idx ? { ...m, [field]: value } : m) }));
+
+    // A type that is not in the project's list yet: store it once, then it is offered on every log.
+    const saveNewMachineryType = async () => {
+        const name = newTypeName.trim();
+        if (!name || addingTypeRow === null) return;
+        setSavingType(true);
+        try {
+            const res = await reportDataService.addCategory(project.id, 'machinery', name);
+            setMachineryTypes(res.data.effective);
+            updateMachinery(addingTypeRow, 'machinery_type', res.data.name);
+            setAddingTypeRow(null);
+            setNewTypeName('');
+            toast.success(`"${res.data.name}" added to this project's machinery list`);
+        } catch (err) {
+            toast.error(err.response?.data?.errors?.name?.[0] || err.response?.data?.message || 'Failed to add machinery type');
+        } finally {
+            setSavingType(false);
+        }
+    };
 
     const addWorker = () => setForm((p) => ({ ...p, workers: [...p.workers, { worker_type: workerTypes[0], count: 1 }] }));
     const removeWorker = (idx) => setForm((p) => ({ ...p, workers: p.workers.filter((_, i) => i !== idx) }));
@@ -832,6 +856,7 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
     }));
 
     const openCreate = () => {
+        setAddingTypeRow(null);
         setEditingId(null);
         setForm(emptySiteLogForm());
         setPendingFiles([]);
@@ -840,6 +865,7 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
     };
 
     const openEdit = (log) => {
+        setAddingTypeRow(null);
         setEditingId(log.id);
         setForm({
             log_date: log.log_date ? String(log.log_date).slice(0, 10) : '',
@@ -886,8 +912,9 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
                     const fd = new FormData();
                     pendingFiles.forEach((f) => fd.append('files[]', f));
                     await projectService.uploadSiteLogFile(project.id, savedLogId, fd);
-                } catch {
-                    toast.error('Log saved, but attachments failed to upload');
+                } catch (uploadErr) {
+                    const reason = uploadErr.response?.data?.message;
+                    toast.error(`Log saved, but attachments failed to upload${reason ? `: ${reason}` : ''}`);
                 }
             }
             setShowForm(false);
@@ -1084,9 +1111,11 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
                         ) : (
                             <div className="space-y-2">
                                 {form.machinery.map((m, i) => (
-                                    <div key={i} className="flex items-center gap-2">
-                                        <select value={m.machinery_type} onChange={(e) => updateMachinery(i, 'machinery_type', e.target.value)} className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                                    <div key={i}>
+                                    <div className="flex items-center gap-2">
+                                        <select value={m.machinery_type} onChange={(e) => { if (e.target.value === NEW_TYPE_OPTION) { setAddingTypeRow(i); setNewTypeName(''); } else updateMachinery(i, 'machinery_type', e.target.value); }} className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
                                             {(m.machinery_type && !machineryTypes.includes(m.machinery_type) ? [m.machinery_type, ...machineryTypes] : machineryTypes).map((t) => <option key={t} value={t}>{t}</option>)}
+                                            {canEdit && <option value={NEW_TYPE_OPTION}>+ Add new type…</option>}
                                         </select>
                                         <input type="number" min="1" value={m.quantity} onChange={(e) => updateMachinery(i, 'quantity', e.target.value)} className="w-16 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
                                         {machineryAssets.length > 0 && (
@@ -1096,6 +1125,14 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
                                             </select>
                                         )}
                                         <button type="button" onClick={() => removeMachinery(i)} className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"><HiOutlineX className="h-3.5 w-3.5" /></button>
+                                    </div>
+                                    {addingTypeRow === i && (
+                                        <div className="mt-1.5 flex items-center gap-2 rounded-lg bg-primary-50 p-2">
+                                            <input type="text" autoFocus maxLength={100} value={newTypeName} onChange={(e) => setNewTypeName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveNewMachineryType(); } if (e.key === 'Escape') setAddingTypeRow(null); }} placeholder="New machinery type, e.g. Jet Grouting Machine" className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500" />
+                                            <button type="button" disabled={savingType || !newTypeName.trim()} onClick={saveNewMachineryType} className="rounded-lg bg-primary-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-primary-700 disabled:opacity-50">{savingType ? 'Adding...' : 'Add type'}</button>
+                                            <button type="button" onClick={() => setAddingTypeRow(null)} className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs text-gray-600 hover:bg-white">Cancel</button>
+                                        </div>
+                                    )}
                                     </div>
                                 ))}
                             </div>
@@ -1129,7 +1166,7 @@ export function SiteLogsTab({ project, canEdit, onRefresh }) {
                         )}
                         <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
                             <HiOutlineUpload className="h-3.5 w-3.5" /> Choose files
-                            <input type="file" multiple className="hidden" onChange={(e) => { setPendingFiles((p) => [...p, ...Array.from(e.target.files)]); e.target.value = ''; }} />
+                            <input type="file" multiple className="hidden" onChange={(e) => { const picked = Array.from(e.target.files); e.target.value = ''; if (picked.length) setPendingFiles((p) => [...p, ...picked]); }} />
                         </label>
                     </div>
 

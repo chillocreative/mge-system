@@ -263,6 +263,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('{project}/resource-categories')->middleware('permission:projects.view')->group(function () {
             Route::get('/', [ResourceCategoryController::class, 'index']);
             Route::put('/', [ResourceCategoryController::class, 'replace'])->middleware('permission:projects.edit');
+            Route::post('/add', [ResourceCategoryController::class, 'add'])->middleware('permission:projects.edit');
             Route::post('/seed-defaults', [ResourceCategoryController::class, 'seedDefaults'])->middleware('permission:projects.edit');
         });
 
