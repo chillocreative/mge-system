@@ -72,11 +72,6 @@ export default function Login() {
         }
     };
 
-    const fillDemo = (email) => {
-        setFormData({ email, password: 'password' });
-        setErrors({});
-    };
-
     const inputBase =
         'w-full rounded-xl border bg-white/5 px-4 py-3.5 text-sm text-white placeholder-white/40 backdrop-blur transition-all duration-200 focus:outline-none focus:ring-2';
     const inputOk = `${inputBase} border-white/15 hover:border-white/30 focus:border-lime-400/70 focus:ring-lime-400/20`;
@@ -181,29 +176,6 @@ export default function Login() {
                             </span>
                         </button>
                     </form>
-
-                    <div className="mt-8">
-                        <div className="relative flex items-center py-2">
-                            <div className="flex-grow border-t border-white/10" />
-                            <span className="mx-4 flex-shrink text-[10px] font-black uppercase tracking-[0.2em] text-emerald-200/40">Quick Access</span>
-                            <div className="flex-grow border-t border-white/10" />
-                        </div>
-                        <div className="mt-4 grid grid-cols-1 gap-2.5">
-                            {[
-                                { role: 'Project Director', email: 'admin@mge-pms.test', icon: '🏗️' },
-                            ].map((acc) => (
-                                <button key={acc.email} type="button" onClick={() => fillDemo(acc.email)}
-                                    className="group flex w-full items-center gap-4 rounded-xl border border-white/10 bg-white/5 p-3 text-left transition-all hover:border-lime-400/40 hover:bg-lime-400/5 active:scale-[0.99]">
-                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-base">{acc.icon}</span>
-                                    <div className="flex-1 overflow-hidden">
-                                        <div className="text-sm font-bold text-white">{acc.role}</div>
-                                        <div className="truncate text-xs text-emerald-200/50">{acc.email}</div>
-                                    </div>
-                                    <svg className="h-4 w-4 text-lime-400 opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
 
                     <p className="mt-7 text-center text-sm font-medium text-emerald-200/60">
                         Unauthorized access is prohibited.{' '}
